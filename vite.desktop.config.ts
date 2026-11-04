@@ -1,0 +1,3 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+export default defineConfig({root:'desktop',base:'./',publicDir:'public',plugins:[react()],build:{outDir:'build',cssCodeSplit:false,rollupOptions:{input:{prepare:'desktop/prepare.html',offline:'desktop/offline.html','preview-tools':'src/desktop/preview-tools.ts','station-workspace':'src/desktop/station-workspace.tsx'},output:{assetFileNames:asset=>asset.names?.some(name=>name.endsWith('.css'))?'style.css':'assets/[name]-[hash][extname]',entryFileNames:chunk=>['preview-tools','station-workspace'].includes(chunk.name)?chunk.name+'.js':'assets/[name]-[hash].js'}},chunkSizeWarningLimit:1000}});

@@ -1,0 +1,25 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <application android:label="@string/app_name" android:icon="@drawable/stati_icon"
+        android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true" android:usesCleartextTraffic="false"
+        android:theme="@android:style/Theme.Translucent.NoTitleBar">
+        <meta-data android:name="asset_statements" android:resource="@string/asset_statements"/>
+        <activity android:name="org.hapiproducts.stati.UpdateActivity" android:exported="true" android:theme="@style/StatiUpdateTheme" android:configChanges="orientation|screenSize">
+            <meta-data android:name="android.support.customtabs.trusted.DEFAULT_URL" android:value="https://stati.ciani01.org/"/>
+            <meta-data android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR" android:resource="@color/surface"/>
+            <meta-data android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR" android:resource="@color/surface"/>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts"/>
+            <intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="stati-update" android:host="check"/></intent-filter>
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+            <intent-filter android:autoVerify="${verifyAppLinks}">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="stati.ciani01.org"/>
+            </intent-filter>
+        </activity>
+        <activity android:name="com.google.androidbrowserhelper.trusted.LauncherActivity" android:exported="false"><meta-data android:name="android.support.customtabs.trusted.DEFAULT_URL" android:value="https://stati.ciani01.org/"/></activity>
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.updates" android:grantUriPermissions="true" android:exported="false"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths"/></provider>
+    </application>
+</manifest>

@@ -1,0 +1,82 @@
+{
+  "name": "stati",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Hapi Products",
+  "type": "module",
+  "description": "Stați by Hapi Products — church presentation station",
+  "scripts": {
+    "dev": "npm run build:web && wrangler dev",
+    "build:web": "vite build",
+    "build": "npm run build:web && npm run typecheck && wrangler deploy --dry-run",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types",
+    "db:local": "wrangler d1 migrations apply stati --local",
+    "db:verify-restore": "node scripts/verify-d1-restore.mjs",
+    "test": "vitest run",
+    "desktop": "npm run build:desktop-ui && electron desktop/main.cjs",
+    "desktop:pack": "npm run build:desktop-ui && electron-builder --config desktop/builder.json --win --x64 --dir",
+    "deploy": "npm run build:web && wrangler deploy --env production --keep-vars",
+    "build:desktop-ui": "node scripts/prepare-desktop-assets.mjs && vite build --config vite.desktop.config.ts",
+    "test:desktop": "node --test tests/*.test.cjs",
+    "android:apk:test": "node scripts/build-android.mjs",
+    "android:release": "node scripts/build-android.mjs --release",
+    "android:signing:setup": "node scripts/local-android-release.mjs --setup-only",
+    "android:release:local": "node scripts/local-android-release.mjs",
+    "windows:release": "npm run build:desktop-ui && node scripts/build-windows-release.mjs",
+    "android:signing:backup": "node scripts/local-android-release.mjs --backup",
+    "android:signing:verify-backup": "node scripts/verify-signing-backup.mjs",
+    "android:signing:verify-backup-ui": "electron scripts/verify-signing-backup-ui.cjs",
+    "release:preview": "node scripts/publish-preview.mjs",
+    "desktop:mac-test": "npm run build:desktop-ui && electron scripts/run-mac-test.cjs",
+    "release:prepare": "node scripts/prepare-preview.mjs",
+    "release:fast": "node scripts/prepare-preview.mjs --publish",
+    "mac:preview": "npm run build:desktop-ui && node scripts/build-mac-preview.mjs"
+  },
+  "main": "desktop/main.cjs",
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
+    "@zxing/browser": "^0.2.1",
+    "electron-updater": "^6.8.9",
+    "file-type": "22.2.0",
+    "image-size": "2.0.4",
+    "jszip": "^3.10.2",
+    "linkedom": "^0.18.13",
+    "lucide-react": "^1.55.0",
+    "pdfjs-dist": "^6.4.299",
+    "pptxgenjs": "^4.0.1",
+    "protobufjs": "^8.8.1",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tesseract.js": "^7.0.0",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "@cloudflare/workers-types": "^5.20261012.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.149.0"
+  },
+  "overrides": {
+    "image-size": "$image-size"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hapi-Products/stati.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Hapi-Products/stati/issues"
+  }
+}

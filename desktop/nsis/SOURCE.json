@@ -1,0 +1,7 @@
+{
+  "package": "app-builder-lib",
+  "version": "26.17.0",
+  "source": "templates/nsis/uninstaller.nsh",
+  "upstreamSha256": "9ee2dac4593478083e8aa6f8487287ce9401006ccd50ecc538871d133ea4a42c",
+  "change": "Add a compile-time selection marker and guard only the global SHCNE_ASSOCCHANGED refresh with ifNot isUpdated and andIfNot isKeepShortcuts; preserve all other uninstall behavior."
+}

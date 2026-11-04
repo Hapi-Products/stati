@@ -1,0 +1,1 @@
+export function serviceContent(plan:{title:string;date:string;time:string;notes?:string;tasks?:{text:string}[];songs?:{title:string;contentHash:string;arrangement?:{name:string;slides:number[]}}[]}):string;

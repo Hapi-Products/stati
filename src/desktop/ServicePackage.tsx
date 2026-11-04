@@ -1,0 +1,17 @@
+import {useEffect,useRef,useState} from 'react';
+import {Download,Package} from 'lucide-react';
+import './service-package.css';
+export type ServicePackageResult={canceled?:boolean;path?:string;filename?:string;bytes?:number;songCount?:number;audioCount?:number;complete?:boolean;missing?:{position:number;title:string;filename:string;reason:string}[];warnings?:string[];sha256?:string};
+export type ServicePackageBridge={exportServicePackage?:(id:string,options:{includeAudio:boolean})=>Promise<ServicePackageResult>};
+export function ServicePackage({serviceId,disabled,active=true,bridge=window.stati,beforeExport}:{serviceId:string;disabled:boolean;active?:boolean;bridge?:ServicePackageBridge;beforeExport?:()=>Promise<boolean>}){
+ const epoch=useRef(0),running=useRef(false),[includeAudio,setIncludeAudio]=useState(false),[busy,setBusy]=useState(false),[result,setResult]=useState<ServicePackageResult|null>(null),[error,setError]=useState('');
+ useEffect(()=>{epoch.current++;running.current=false;setBusy(false);setResult(null);setError('');return()=>{epoch.current++;};},[serviceId,bridge,active]);
+ async function exportPackage(){
+  if(!active||disabled||running.current||!bridge.exportServicePackage)return;const revision=epoch.current;running.current=true;setBusy(true);setError('');setResult(null);
+  try{if(beforeExport&&!await beforeExport())throw Error('Save this service before exporting. Your open changes were kept.');if(revision!==epoch.current)return;const value=await bridge.exportServicePackage(serviceId,{includeAudio});if(revision===epoch.current&&!value.canceled)setResult(value);}
+  catch(failure){if(revision===epoch.current)setError((failure as Error).message||'The service package could not be exported.');}
+  finally{if(revision===epoch.current){running.current=false;setBusy(false);}}
+ }
+ if(!bridge.exportServicePackage)return null;
+ return <details className="service-secondary service-package"><summary><Package size={16} aria-hidden="true"/>Portable service package</summary><p>Save a ZIP with this service’s songs, order and notes for a USB drive or another computer.</p><label className="service-package-audio"><input type="checkbox" checked={includeAudio} disabled={disabled||busy||!active} onChange={event=>setIncludeAudio(event.target.checked)}/>Choose MP3s for this export</label><p className="muted caption">MP3 selection is optional and applies only to this ZIP. Missing or changed song files are listed in the package.</p><button type="button" className="button small" disabled={disabled||busy||!active} onClick={()=>void exportPackage()}><Download size={16} aria-hidden="true"/>{busy?'Exporting…':'Export service package'}</button>{error&&<p className="inline-error" role="alert">{error}</p>}{result&&<div className="service-package-result" role="status"><strong>{result.complete?'Package exported':'Package exported with warnings'}</strong><span>{result.filename||'Service ZIP'} · {result.songCount||0} song file{result.songCount===1?'':'s'} · {result.audioCount||0} MP3{result.audioCount===1?'':'s'}</span><p>{result.complete?'Review this package on the other computer before service.':'Check the warnings and missing-file list before using this package.'}</p>{!!result.missing?.length&&<ul>{result.missing.map(item=><li key={item.position}>{item.position}. {item.title}: {item.reason}</li>)}</ul>}{result.warnings?.map((warning,index)=><p key={index}>{warning}</p>)}</div>}</details>;
+}

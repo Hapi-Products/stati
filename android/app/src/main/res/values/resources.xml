@@ -1,0 +1,5 @@
+<resources>
+    <string name="check_updates">Check updates</string>
+    <color name="surface">#F8F9FC</color>
+    <string name="asset_statements" translatable="false">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://stati.ciani01.org\"}}]</string>
+</resources>

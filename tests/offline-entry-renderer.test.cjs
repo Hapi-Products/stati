@@ -1,0 +1,15 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{parseHTML}=require('linkedom');
+const flush=()=>new Promise(done=>setImmediate(done));
+function fixture(state){
+ const {window,document}=parseHTML(fs.readFileSync('desktop/index.html','utf8')),callbacks={},calls={open:0,operator:0,workspace:0};for(const dialog of document.querySelectorAll('dialog'))dialog.close=()=>dialog.removeAttribute('open');
+ const api={identityStatus:async()=>({presentation:'window',canSkip:false}),accessStatus:async()=>({allowed:true}),state,updateState:async()=>({phase:'disabled',message:'Isolated fixture'}),openOfflineDesk:async()=>{calls.open++;return{ok:true};},operator:async()=>{calls.operator++;},workspaceOpen:async()=>{calls.workspace++;}};
+ window.stati=new Proxy(api,{get:(target,key)=>target[key]||(String(key).startsWith('on')?(callback=>{callbacks[key]=callback;return()=>{};}):async()=>({}))});const context={window,document,Event:window.Event,console,setInterval:()=>0,clearInterval(){},setTimeout:()=>0,clearTimeout(){},IntersectionObserver:class{observe(){}disconnect(){}}};vm.createContext(context);vm.runInContext(fs.readFileSync('desktop/renderer.js','utf8'),context);
+ const visible=element=>{if(!element)return false;for(let node=element;node&&node.nodeType===1;node=node.parentElement)if(node.hidden)return false;const workspaceContent=element.closest('#workspace-shell > aside,#workspace-shell > main');return !(workspaceContent&&document.body.classList.contains('identifying'));};
+ return{window,document,calls,context,entry:()=>[...document.querySelectorAll('button')].find(button=>/Open protected offline service/.test(button.textContent)&&visible(button))};
+}
+test('cold start exposes protected offline entry while the first online state request is still pending',async()=>{
+ const f=fixture(()=>new Promise(()=>{}));await flush();await flush();const button=f.entry();assert.ok(button,'Offline service entry must remain visible while offline state is pending');assert.equal(button.id,'offline-start');assert.equal(button.closest('#offline-entry').parentElement,f.document.body);assert.equal(button.disabled,false);button.click();await flush();assert.equal(f.calls.open,1);assert.equal(f.calls.operator,0);assert.equal(f.calls.workspace,0);assert.equal(vm.runInContext('operatorChosen',f.context),false);
+});
+test('an offline cold-start failure leaves a visible protected-copy entry and cannot grant an online workspace',async()=>{
+ const f=fixture(async()=>{throw Error('Network unavailable.');});await flush();await flush();const button=f.entry();assert.ok(button,'Offline entry must remain visible after first state request fails');button.click();await flush();assert.equal(f.calls.open,1);assert.equal(f.calls.operator,0);assert.equal(f.calls.workspace,0);assert.equal(vm.runInContext('operatorChosen',f.context),false);assert.equal(f.document.getElementById('identity-error').hidden,false);assert.match(f.document.getElementById('identity-error').textContent,/Network unavailable/);
+});

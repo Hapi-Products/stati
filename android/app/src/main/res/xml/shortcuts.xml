@@ -1,0 +1,1 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"><shortcut android:shortcutId="check_updates" android:enabled="true" android:shortcutShortLabel="@string/check_updates"><intent android:action="org.hapiproducts.stati.CHECK_UPDATES" android:targetPackage="@string/application_id" android:targetClass="org.hapiproducts.stati.UpdateActivity"/></shortcut></shortcuts>

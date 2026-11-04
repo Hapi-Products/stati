@@ -1,0 +1,13 @@
+import {z} from 'zod';
+import {HttpError,json} from './core';
+const releaseSchema=z.object({id:z.enum(['windows-test','android-test']),version:z.string().regex(/^\d+\.\d+\.\d+$/),filename:z.string().regex(/^[A-Za-z0-9._-]+$/),objectKey:z.string().regex(/^releases\/[A-Za-z0-9/._-]+$/),bytes:z.number().int().positive().max(500*1024*1024),sha256:z.string().regex(/^[a-f0-9]{64}$/),test:z.literal(true)});
+export async function releases(env:Env){const rows=await env.DB.prepare("SELECT value FROM settings WHERE key IN ('release_windows-test','release_android-test')").all<{value:string}>();return rows.results.map(row=>releaseSchema.parse(JSON.parse(row.value)));}
+export async function download(r:Request,env:Env,id:string){const release=(await releases(env)).find(value=>value.id===id);if(!release)throw new HttpError(404,'This test build is not available yet.');
+ const metadata=await env.FILES.head(release.objectKey);if(!metadata||metadata.size!==release.bytes)throw new HttpError(503,'This test build is temporarily unavailable.');
+ let offset=0,length=release.bytes,partial=false;const requestedRange=r.headers.get('range'),ifRange=r.headers.get('if-range');const header=ifRange&&ifRange!==metadata.httpEtag?null:requestedRange;
+ if(header){const match=header.match(/^bytes=(\d+)-(\d*)$/);if(!match)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+release.bytes}});offset=Number(match[1]);const end=match[2]?Math.min(Number(match[2]),release.bytes-1):release.bytes-1;if(!Number.isSafeInteger(offset)||offset>=release.bytes||end<offset)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+release.bytes}});length=end-offset+1;partial=true;}
+ const object=r.method==='HEAD'?metadata:await env.FILES.get(release.objectKey,partial?{range:{offset,length}}:undefined);if(!object||object.size!==release.bytes)throw new HttpError(503,'This test build is temporarily unavailable.');
+ const headers=new Headers({'Content-Type':release.id==='android-test'?'application/vnd.android.package-archive':'application/octet-stream','Content-Disposition':`attachment; filename="${release.filename}"`,'Content-Length':String(length),'Accept-Ranges':'bytes','ETag':object.httpEtag,'X-Checksum-SHA256':release.sha256});if(partial)headers.set('Content-Range',`bytes ${offset}-${offset+length-1}/${release.bytes}`);
+ return new Response(r.method==='HEAD'?null:('body'in object?object.body as ReadableStream:null),{status:partial?206:200,headers});
+}
+export async function releaseList(env:Env){return json((await releases(env)).map(({objectKey,...release})=>({...release,url:'/api/downloads/'+release.id})));}

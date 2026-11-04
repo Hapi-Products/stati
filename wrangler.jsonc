@@ -1,0 +1,102 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stati",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2026-10-11",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/app-version.json"
+    ]
+  },
+  "vars": {
+    "APP_ORIGIN": "http://localhost:8787",
+    "RP_ID": "localhost",
+    "ORG_NAME": "Sta\u021bi"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "stati",
+      "database_id": "00000000-0000-4000-8000-000000000001",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "stati-files"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
+  },
+  "env": {
+    "production": {
+      "name": "stati",
+      "workers_dev": false,
+      "routes": [
+        {
+          "pattern": "stati.ciani01.org",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "APP_ORIGIN": "https://stati.ciani01.org",
+        "RP_ID": "stati.ciani01.org",
+        "ORG_NAME": "Sta\u021bi"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "stati",
+          "database_id": "00000000-0000-4000-8000-000000000001",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "FILES",
+          "bucket_name": "stati-files"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "TASK_EVENTS",
+            "class_name": "TaskEvents"
+          }
+        ]
+      }
+    }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TASK_EVENTS",
+        "class_name": "TaskEvents"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1-task-events",
+      "new_sqlite_classes": [
+        "TaskEvents"
+      ]
+    }
+  ]
+}

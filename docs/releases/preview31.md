@@ -1,0 +1,11 @@
+# Stați preview 31
+
+Approving a new connection on the PC now requires a currently selected user. Administrator selection still requires the account PIN or phone passkey. Changing user, cancelling a phone unlock, locking/sleeping Windows, replacing the pairing or quitting immediately drops that selection's authority. Short server leases renew while the selected user is active, including when the window is hidden; background receiving and clocks continue independently. The Who are you card includes a check/update control without exposing administrator settings.
+
+Retained inbox cards now reconcile explicit expiry and durable saved/rejected decisions after temporary cloud rows are cleaned up. A bounded station list cannot hide waiting files or cancel an active download merely through omission. Expired or unavailable temporary files keep their metadata; saved local copies keep Open, Show, Rename, Copy, Email and Prepare actions. Automatic administrator delivery rechecks the sender's current role at download and acknowledgement; declined acknowledgement preserves the local recovery copy and cloud queue for operator review.
+
+Earlier desktop improvements remain: white identity card over the blurred background outside service, windowed identity during service, Skip for now from five minutes before service until its end, selected-service playlists, larger italic Amen/Amin and lyric search excerpts. Desktop shortcut and update refresh protections from preview30 remain.
+
+This release requires its coordinated server migration/update. Older previews can still select a profile and reach their existing update controls, but native connection approval requires this new version. Existing approved sending and the website administrator approval flow remain available. These authorization changes do not add a new organization or multi-church boundary.
+
+Unsigned Windows preview. Local verification and packaged-source checks do not replace physical Windows11, iPhone and ProPresenter7.11 acceptance or Windows production signing. The first transition from an older uninstaller may still redraw desktop icons once. App-owned saved files, receipts, songs and previous published installers are preserved.

@@ -1,0 +1,6 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');const {contrastColor}=require('../desktop/clock-contrast.cjs');
+const size={width:100,height:100},display={x:0,y:0,width:1000,height:1000},bounds={x:300,y:300,width:350,height:140};
+function bitmap(bright){const pixels=Buffer.alloc(100*100*4,bright);for(let y=30;y<44;y++)for(let x=30;x<65;x++){const i=(y*100+x)*4;pixels[i]=pixels[i+1]=pixels[i+2]=255-bright;}return pixels;}
+test('automatic contrast ignores the clock tint and chooses black on a white surrounding page',()=>assert.equal(contrastColor(bitmap(255),size,bounds,display),'#151515'));
+test('automatic contrast chooses white on dark surrounding content, including a second display origin',()=>{assert.equal(contrastColor(bitmap(0),size,bounds,display),'#ffffff');assert.equal(contrastColor(bitmap(255),size,{...bounds,x:bounds.x-1000},{...display,x:-1000}),'#151515');});
+test('contrast hysteresis avoids flickering on medium backgrounds and handles display edges',()=>{const pixels=Buffer.alloc(100*100*4,145);assert.equal(contrastColor(pixels,size,bounds,display,'#ffffff'),'#ffffff');assert.equal(contrastColor(pixels,size,bounds,display,'#151515'),'#151515');assert.ok(['#ffffff','#151515'].includes(contrastColor(pixels,size,{x:0,y:0,width:350,height:140},display)));});

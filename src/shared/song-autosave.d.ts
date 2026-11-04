@@ -1,0 +1,2 @@
+type Result={contentHash:string;path:string;title:string;playlistMessage?:string};
+export function createSongAutosave<T>(options:{save:(id:string,hash:string,data:T)=>Promise<Result>;onState?:(value:{state:'saved'|'pending'|'saving'|'error';error:string})=>void;onSaved?:(result:Result)=>void;delay?:number;timers?:{setTimeout:typeof setTimeout;clearTimeout:typeof clearTimeout}}):{open:(value:{id:string;contentHash:string;data:T})=>void;edit:(data:T)=>void;flush:(options?:{force?:boolean})=>Promise<Result|null>;pause:()=>void;discard:()=>void;dispose:()=>void};

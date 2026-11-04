@@ -1,0 +1,23 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),JSZip=require('jszip');
+const {buildOutputLayouts,OUTPUT_LAYOUT_BOUNDS,outputLayoutIssues}=require('../src/shared/output-layout.js');
+const {buildOutputPresentation,buildOutputPowerPoint}=require('../desktop/output-layouts.cjs');
+const {decode}=require('../desktop/presentation.cjs'),{rtfPlain}=require('../desktop/rtf-text.cjs');
+const source=()=>[{section:'Verse 1',text:'One lyric line\nSecond lyric line\nThird lyric line\nFourth lyric line\nFifth lyric line\nSixth lyric line'},{section:'Chorus',text:'Împreună cântăm\nUltimul rând'}];
+const words=slides=>slides.flatMap(slide=>slide.text.match(/\S+/gu)||[]);
+test('six-line church and two-line online cues preserve source sections, words and original input',()=>{
+ const input=source(),before=structuredClone(input),model=buildOutputLayouts(input);assert.deepEqual(input,before);assert.equal(model.church.length,2);assert.equal(model.stream.length,4);assert.ok(model.church.every(cue=>cue.text.split('\n').length<=6));assert.ok(model.stream.every(cue=>cue.text.split('\n').length<=2));assert.deepEqual(words(model.stream),words(input));assert.deepEqual(model.stream.map(cue=>cue.section),['Verse 1','Verse 1','Verse 1','Chorus']);assert.equal(model.missingTranslations,4);
+});
+test('manual translations bind to exact lyric cues without inventing words or dropping blank timing cues',()=>{
+ const input=source(),initial=buildOutputLayouts(input),translations={[initial.stream[1].key]:'Traducere\nAl doilea rând'},model=buildOutputLayouts(input,{translations});assert.equal(model.translation.length,model.stream.length);assert.deepEqual(model.translation.map(cue=>cue.text),['','Traducere\nAl doilea rând','','']);const changed=structuredClone(input);changed[0].text=changed[0].text.replace('Third lyric line','Different words');assert.equal(buildOutputLayouts(changed,{translations}).translation[1].text,'');assert.equal(model.missingTranslations,3);
+});
+test('independent ProPresenter copies have fresh identities, positioned overlays and no invented ending text',()=>{
+ const original=source(),model=buildOutputLayouts(original),base={title:'Separate online copy',layoutCopy:'stream-lyrics',fontSize:96,linesPerSlide:2,slides:model.stream},one=decode(buildOutputPresentation(base)),two=decode(buildOutputPresentation(base));assert.notEqual(one.uuid.string,two.uuid.string);assert.equal(one.cues.length,4);for(const [index,cue]of one.cues.entries()){const slide=cue.actions[0].slide.presentation.baseSlide,element=slide.elements[0].element;assert.equal(!!slide.drawsBackgroundColor,false);assert.equal(slide.backgroundColor.alpha||0,0);assert.deepEqual(element.bounds.origin,{x:120,y:90});assert.equal(slide.elements.length,1);assert.equal(rtfPlain(Buffer.from(element.text.rtfData,'base64').toString('latin1')),model.stream[index].text);}
+ const church=decode(buildOutputPresentation({...base,title:'Separate church copy',layoutCopy:'church',linesPerSlide:6,slides:model.church}));assert.equal(church.cues.length,2);assert.equal(church.cues[0].actions[0].slide.presentation.baseSlide.drawsBackgroundColor,true);assert.deepEqual(original,source());
+ const translation=decode(buildOutputPresentation({...base,layoutCopy:'stream-translation',slides:model.translation}));assert.equal(translation.cues.length,4);assert.equal(translation.cues[0].actions[0].slide.presentation.baseSlide.elements[0].element.bounds.origin.y,OUTPUT_LAYOUT_BOUNDS['stream-translation'].y);
+});
+test('PowerPoint review copies preserve blank translations and position the supplied lower text',async()=>{
+ const model=buildOutputLayouts(source()),slides=model.translation.map((cue,index)=>({...cue,text:index===1?'Traducere':''})),bytes=await buildOutputPowerPoint({title:'Translation review',layoutCopy:'stream-translation',slides,fontSize:96,linesPerSlide:2}),zip=await JSZip.loadAsync(bytes),paths=Object.keys(zip.files).filter(name=>/^ppt\/slides\/slide\d+\.xml$/.test(name));assert.equal(paths.length,4);assert.match(await zip.file('ppt/slides/slide2.xml').async('string'),/Traducere/);assert.doesNotMatch(await zip.file('ppt/slides/slide1.xml').async('string'),/<a:t>/);
+});
+test('output validation rejects unsupported profiles, excess translation lines and unreadable text before building a copy',()=>{
+ assert.throws(()=>buildOutputPresentation({title:'Invalid',layoutCopy:'stream-lyrics',slides:[{section:'Verse',text:'a\nb\nc'}],linesPerSlide:2}),/two|2 lines/);assert.throws(()=>buildOutputPresentation({title:'Invalid',layoutCopy:'unknown',slides:source()}),/layout|copy/);assert.equal(outputLayoutIssues([{section:'Verse',text:'a\x00b'}],'church').length,1);assert.throws(()=>buildOutputLayouts(Array.from({length:501},()=>source()[0])),/500/);
+});

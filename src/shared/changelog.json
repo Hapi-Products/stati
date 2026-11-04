@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "releases": [
+    {
+      "version": "0.1.0-preview.39",
+      "label": "Preview 39",
+      "publishedAt": "2026-10-28T04:16:00Z",
+      "title": "Clearer services, library actions and compact tasks",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "Keep pastors in Team while hiding them from PC profiles; verified PC administrators see current connections.",
+        "Keep service schedule and notes open, place leadership beside Close, show first-slide previews and allow repeated songs in the running order.",
+        "Add library songs to services or request a separate group version or recoverable deletion on the updated PC app.",
+        "Open tasks from the entire card or comment count, use compact comments and attach images with remove and Undo.",
+        "Use matching team-role icons and a compact account save button.",
+        "Unsigned Windows preview; physical Windows, phone/iPad and ProPresenter 7.11 acceptance remain. Mac stays paused."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.39"
+    },
+    {
+      "version": "0.1.0-preview.38",
+      "label": "Preview 38",
+      "publishedAt": "2026-10-27T14:13:12Z",
+      "title": "One workspace, compact songs and simpler planning",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "Prepare, Library and Services stay inside the main Windows window, with recoverable drafts and protected profile switching.",
+        "Browse compact song rows and actual slide previews; original and group versions remain separate across the website and computer.",
+        "Drag library songs into services and reorder them, with keyboard alternatives and reliable date/time editing.",
+        "Use collapsible task statuses, autosaved details, clear author identity and reversible deletion of tasks and comments.",
+        "Find clearer phone role controls and compact account/computer actions; only admins rename, and disconnecting removes only your own access.",
+        "Create new slides from any authenticated active Windows role; send typed lyrics or supported files from phones for operator review.",
+        "Clear completed upload history without deleting files or breaking receipts; keep PowerPoint conversion manual and linked-change attention concise.",
+        "Mac and the fourth output remain paused. This unsigned preview still needs physical Windows, phone/iPad and ProPresenter7.11 acceptance."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.38"
+    },
+    {
+      "version": "0.1.0-preview.37",
+      "label": "Preview 37",
+      "publishedAt": "2026-10-26T22:28:10Z",
+      "title": "Church workflows and protected song updates",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "Review likely guitar chords before removing them, then apply selected changes or undo exactly.",
+        "Create named group copies without changing the generic song, and filter the shared library by group.",
+        "Protect incoming PC downloads with a 2 GiB reserve and keep low-space deliveries retryable.",
+        "Claim and finalize a service order; an approved worship member can explicitly take over for an absent leader.",
+        "Share chord-sheet images and PDFs across the approved ministry team, with authenticated viewing and deliberate removal.",
+        "Track feedback through New, In progress and Complete, with urgent flags and replies.",
+        "Enable an exact PowerPoint/ProPresenter pair for protected two-way lyric updates, with backups and warnings for missing or conflicting files.",
+        "Mac app development and the proposed fourth ProPresenter output remain on hold."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.37"
+    },
+    {
+      "version": "0.1.0-preview.36",
+      "label": "Preview 36",
+      "publishedAt": "2026-10-24T16:30:10Z",
+      "title": "Editor repair and Windows background alerts",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "Fixes the blank editor after deleting or changing saved lyrics. The autosave timer now works in the real browser renderer, and reopening retains the draft.",
+        "A recovery screen can display and copy the saved draft after a display error, without rewriting the draft or library file.",
+        "Computers is first and opens by default. Page changes replace the previous song/service view; repeated tab switching is checked with real page components.",
+        "Windows alerts keep working while the app window is closed, at background startup, during Skip and while no profile is selected. Private details appear only with a current unlocked profile.",
+        "Notifications clear private details when identity changes, avoid replaying old file history and retain their twenty-minute expiry. Explicit Exit still closes the app.",
+        "A library with no shared snapshot says it is waiting for the computer’s first sync. Previously shared songs remain readable with the PC off."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.36"
+    },
+    {
+      "version": "0.1.0-preview.35",
+      "label": "Preview 35",
+      "publishedAt": "2026-10-24T03:59:35Z",
+      "title": "Song library on the homepage",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "Accounts with song access now open the library on the website homepage. File sending stays in Computers.",
+        "A computer’s last shared lyrics remain readable while that PC is offline and outside service hours. The page shows the last sync and refreshes without losing searches or service edits.",
+        "The PC shares new conversions and saved songs promptly even without a selected service. Library includes a Sync phones control and sharing status.",
+        "Computers that finish loading after the page opens are selected correctly. A missing first sync is explained; songs must reach the cloud once before they can be read with the PC off.",
+        "If every library file is unreadable, the previous shared songs are preserved. A verified empty folder can still share an empty catalog."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.35"
+    },
+    {
+      "version": "0.1.0-preview.34",
+      "label": "Preview 34",
+      "publishedAt": "2026-10-24T03:44:10Z",
+      "title": "Desktop connection repair and the Stați icon",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "The computer keeps its saved connection after startup and profile sign-in. Retrying pairing reuses the existing or unfinished connection instead of replacing it.",
+        "The phone code screen stays on phones and tablets. Desktop browsers sign in with a passkey, including when browser access was remembered.",
+        "Fixed-window attempt lockouts have been removed. Incorrect PINs and codes still fail; a correct PIN or code remains usable after repeated mistakes.",
+        "Bookmarks and iPhone Home Screen shortcuts use the supplied Stați logo. Existing shortcuts may need to be added again to refresh an older cached icon."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.34"
+    },
+    {
+      "version": "0.1.0-preview.33",
+      "label": "Preview 33",
+      "publishedAt": "2026-10-23T22:51:20Z",
+      "title": "Shared songs, services and ministry roles",
+      "areas": [
+        "Windows",
+        "Website",
+        "Server"
+      ],
+      "highlights": [
+        "The identity prompt has a dark blurred backdrop and white account card. Skip for now stays hidden after leaving fullscreen.",
+        "Worship leaders can approve worship members and assign worship roles. Pastors can view songs and send files while editing stays restricted.",
+        "Approved worship teams and choir directors can browse a computer’s songs and arrange services from phones or the PC. Conversion and ProPresenter work stay on the PC.",
+        "Song search updates as you type, with list/grid first-slide previews. Services use numbered song cards, reordering and automatic saving with a Save fallback.",
+        "Existing lyric edits save into the same library file, preserving its title and presentation identity. Immediate refresh inside ProPresenter 7.11 still needs PC verification.",
+        "New playlists use date/time names. Retry and ordering changes protect existing playlists and manually added entries.",
+        "The Windows installer is about 147 MB, down from 192 MB. Its bundled OCR and PDF tools were checked offline.",
+        "Automatic cleanup for shared services is still being prepared; current services and playlists are kept."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.33"
+    },
+    {
+      "version": "0.1.0-preview.32",
+      "label": "Preview 32",
+      "publishedAt": "2026-10-22T23:48:32Z",
+      "title": "Safer song conversion",
+      "areas": [
+        "Windows",
+        "Server"
+      ],
+      "highlights": [
+        "Different songs that share an opening line are compared using their complete lyrics, so a song is not silently skipped.",
+        "Batch conversion checks saved output before resuming. Exports create the format you requested, including ProPresenter files.",
+        "Delayed PIN, phone unlock and profile selection responses cannot replace a newer profile choice."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.32"
+    },
+    {
+      "version": "0.1.0-preview.31",
+      "label": "Preview 31",
+      "publishedAt": "2026-10-22T23:20:10Z",
+      "title": "Connection approvals and file status",
+      "areas": [
+        "Windows",
+        "Server"
+      ],
+      "highlights": [
+        "PC connection approvals require the currently selected user. Switching users, cancelling an unlock, locking Windows or quitting clears that authority.",
+        "Received-file cards retain saved, rejected and expired status after temporary cloud records are cleaned up. Saved files keep their download and file actions.",
+        "Automatic administrator delivery checks the sender’s current role again. The profile picker also includes a way to check for app updates."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.31"
+    },
+    {
+      "version": "0.1.0-preview.30",
+      "label": "Preview 30",
+      "publishedAt": "2026-10-21T19:52:19Z",
+      "title": "Services, lyrics and desktop updates",
+      "areas": [
+        "Windows"
+      ],
+      "highlights": [
+        "Service plans can queue local ProPresenter playlists and add songs saved for the selected service, with waiting and synced status.",
+        "Song search includes matching lyrics from later slides. The final Amen or Amin is slightly larger, italic and not bold.",
+        "The identity prompt follows service times, with Skip for now available from five minutes before service through its end.",
+        "Windows updates avoid creating desktop shortcuts and reduce desktop icon refreshes. An update from an older installer may still redraw icons once."
+      ],
+      "url": "https://github.com/markusciani/stati-releases/releases/tag/v0.1.0-preview.30"
+    }
+  ]
+}

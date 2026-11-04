@@ -1,0 +1,93 @@
+/* One-screen send: a dedicated phone composition over the shared working system. */
+.phone-navigation-more{display:none!important}
+.send-workspace>.subtitle{max-width:36ch}
+.one-screen-send{padding:0;border:0;background:transparent;max-width:600px}
+.send-destination{background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:8px;margin:0 0 22px}
+.send-destination>summary{display:flex;align-items:center;gap:12px;min-height:72px;padding:14px;cursor:pointer;list-style:none}
+.send-destination>summary::-webkit-details-marker{display:none}
+.send-destination>summary::after{content:none!important}
+.send-destination>summary>span{flex:1;min-width:0}
+.send-destination small{display:block;font-size:12px;color:var(--ui-secondary);margin-bottom:2px}
+.send-destination strong{display:block;font-size:15px;font-weight:500;overflow-wrap:anywhere}
+.send-destination[open]>summary>svg:last-child{transform:rotate(180deg)}
+.send-destination-options{padding:0 14px 14px}
+.send-destination-options .computer-choices{gap:8px}
+.send-destination-options .computer-option{padding:12px 48px 12px 12px;min-height:76px}
+.send-destination-options .computer-option span{font-size:14px}
+.send-destination-options .computer-option small{margin:0;font-size:12px}
+.send-destination-options .button{margin-top:14px}
+.one-screen-send .send-content-tabs{margin:0 0 16px;padding:4px;border:0;min-height:46px}
+.one-screen-send .choose-file{min-height:196px;margin:0;padding:24px;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:8px;gap:14px}
+.one-screen-send .choose-file strong{font-size:18px;font-weight:600}
+.one-screen-send .choose-file .hint{font-size:13px;text-align:center}
+.one-screen-send .send-text-guidance{font-size:13px;margin:17px 0 22px;max-width:36ch}
+.one-screen-send .send-button{margin:0;padding:0}
+.one-screen-send .send-button>.button{min-height:54px}
+.one-screen-send .send-text-fields textarea{min-height:160px}
+.phone-more-links{display:grid;background:var(--ui-surface);border-radius:8px;overflow:hidden}
+.phone-more-links>button,.phone-more-links>a{display:flex;align-items:center;gap:14px;border:0;border-bottom:1px solid var(--ui-border);background:transparent;color:var(--ui-text);padding:18px;text-align:left;font:inherit;min-height:76px}
+.phone-more-links>:last-child{border:0}.phone-more-links span{flex:1}.phone-more-links small{display:block;font-size:13px;color:var(--ui-secondary);margin-top:3px}
+/* Touch tablets also need readable fields; narrow-screen rules alone miss iPads. */
+@media(any-pointer:coarse){
+ body .shell input,body .shell textarea,body .shell select,body .modal input,body .modal textarea,body .modal select,body .shell .song-library .song-library-toolbar input,body .shell .worship-heading .worship-computer select{font-size:16px}
+}
+@media(max-width:760px){
+ html{-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
+ .shell{padding:0 max(20px,env(safe-area-inset-left)) calc(106px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-right));max-width:760px}
+ .shell>header{height:calc(76px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);border:0;gap:8px}
+ .shell>header .brand{font-size:22px;letter-spacing:-.025em;gap:8px}.shell>header .brand img{width:30px;height:30px}
+ .shell .header-actions{gap:6px}.shell .account-link{padding:0;min-width:40px;min-height:44px}.shell .account-link .avatar{width:34px;height:34px}
+ .shell>main{padding-top:12px;min-width:0}
+ .shell>.app-tabs{position:fixed;inset:auto 0 0;z-index:10;margin:0;padding:9px max(10px,env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));height:calc(82px + env(safe-area-inset-bottom));min-height:0;display:flex;flex-direction:row;background:var(--ui-surface);border:0;border-radius:0;backdrop-filter:none;gap:0}
+ .shell>.app-tabs>.wide-navigation-item{display:none}
+ .shell>.app-tabs>.phone-navigation-more{display:flex!important}
+ .shell>.app-tabs button{flex:1;min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px 2px;font-size:11px;border-radius:0;color:var(--ui-secondary);background:transparent!important}
+ .shell>.app-tabs button svg{width:22px;height:22px;box-sizing:content-box;padding:4px 14px;margin-top:-4px;margin-bottom:-4px;border-radius:99px}
+ .shell>.app-tabs button.selected{color:var(--ui-text);font-weight:650}.shell>.app-tabs button.selected svg{background:var(--ui-selected)}
+ .shell .workspace-page h1{font-size:32px;font-weight:650;line-height:1.1;letter-spacing:-.03em;margin:10px 0 12px}
+ .shell .workspace-page>.subtitle,.send-workspace>.subtitle{font-size:15px;line-height:1.45;margin:0 0 26px}
+ .shell .one-screen-send{padding:0;border:0;background:transparent}
+ .shell .send-destination>summary{min-height:72px}
+ .shell .delivery-status{margin-top:24px}.shell .delivery-status>summary{min-height:48px;font-size:14px}
+ .shell .worship-heading{align-items:center;gap:12px;margin-bottom:20px}.shell .worship-heading h1{margin:10px 0 12px}
+ .shell .worship-heading .worship-computer{max-width:48%;margin:0}.shell .worship-heading .worship-computer select{width:132px;min-height:44px;padding:8px 26px 8px 10px;font-size:16px}
+ .shell .worship-heading .worship-computer>svg{display:none}
+ .shell .worship-sections{display:flex;gap:4px;background:var(--ui-subtle);border-radius:8px;padding:4px;margin:0 0 20px}
+ .shell .worship-sections .button{flex:1;min-width:0;min-height:44px;padding:8px 6px;gap:5px;font-size:13px;white-space:nowrap;border-radius:5px}
+ .shell .worship-sections .button svg{width:16px;height:16px}
+ .shell .worship-sections .button[aria-pressed=true]{background:var(--ui-surface)}
+ .shell .song-library .song-library-toolbar{gap:8px;margin-bottom:14px}.shell .song-library .song-library-search{min-height:48px}.shell .song-library .song-library-toolbar input{font-size:16px}
+ .shell .song-library .song-select{padding:12px 4px;min-height:74px;gap:12px}.shell .song-library-info strong{font-size:15px}.shell .song-library-info small{font-size:12px;margin-top:3px}
+ .shell .song-library .library-slide-preview{width:48px}.shell .song-action-menu summary{width:44px;height:44px;min-height:44px}
+ .shell .song-library .library-context.has-selection{display:grid;grid-template-columns:104px minmax(0,1fr);gap:6px 14px;padding:0 0 18px}
+ .shell .library-context.has-selection>.library-slide-preview{grid-column:1;grid-row:1/5;width:104px;align-self:start}
+ .shell .library-context.has-selection>.library-context-heading,.shell .library-context.has-selection>.library-context-meta,.shell .library-context.has-selection>.button.primary,.shell .library-context.has-selection>.muted{grid-column:2;margin:0}
+ .shell .library-context.has-selection>.library-context-heading h3{margin:0;font-size:15px}.shell .library-context.has-selection>.button.primary{justify-self:start;min-height:44px;font-size:13px}
+ .shell .local-services .service-editor-heading{align-items:flex-start}.shell .local-services .service-editor-heading h3{font-size:19px;line-height:1.35}
+ .shell .local-services .service-song-card{padding:10px 8px;border-radius:8px}.shell .local-services .service-song-row strong{font-size:15px;line-height:1.4}
+ .shell .local-services .service-reorder,.shell .local-services .service-song-menu>summary{width:44px;height:44px;min-height:44px}.shell .local-services .service-song-actions{padding-left:0}
+ .shell .local-services .service-song-search{min-height:48px}.shell .service-menu-items .button{min-height:44px}
+ .shell .tasks-heading{align-items:center;gap:12px}.shell .tasks-heading h1{font-size:30px}.shell .tasks-heading p{font-size:14px;line-height:1.5}.shell .task-board{display:flex;flex-direction:column;gap:12px;margin-top:24px}.shell .task-column{width:100%;border:0;border-radius:8px;background:var(--ui-subtle)}
+ .shell .task-column>summary{min-height:58px;padding:16px;font-size:15px}.shell .task-card{border:0;padding:12px;border-radius:7px}.shell .task-open>strong{font-size:15px}.shell .task-card-preview{font-size:14px}.shell .task-icon{width:44px;height:44px;min-height:44px}.shell .task-drag{width:36px;min-width:36px;height:44px;min-height:44px}.shell .task-comment-form textarea{font-size:16px}
+ .shell .team-list .row{padding:16px 0;border:0;border-bottom:1px solid var(--ui-border);border-radius:0;background:transparent;margin:0;gap:10px;flex-wrap:wrap}.shell .team-list .row>.team-member-controls{flex:1 1 100%;padding-left:54px;justify-content:flex-start;gap:8px}.shell .team-role-picker{min-height:44px;font-size:13px}.shell .team-list .row strong{font-size:16px}.shell .team-list .row small{font-size:13px}
+ .shell .account-profile .profile{margin:20px 0}.shell .account-profile>form{margin-bottom:28px}.shell .account-profile details.card{padding:14px 16px}.shell .account-profile summary{min-height:44px;font-size:15px}.shell .account-profile .fields{gap:12px}.shell .account-profile .account-computer-row{min-height:52px}.shell .account-profile .account-icon{min-width:44px;min-height:44px}.shell .account-profile .privacy-link{min-height:44px}
+ .shade{padding:16px}.modal{max-height:calc(100dvh - 32px);padding:24px 20px}.close{min-width:44px;min-height:44px;top:8px;right:8px}.worship-song h2{font-size:24px;padding-right:36px}.worship-song-lyrics{font-size:17px;line-height:1.65}
+ input,select,textarea{font-size:16px}
+}
+@media(hover:hover) and (pointer:fine){.phone-more-links>button:hover,.phone-more-links>a:hover{background:var(--ui-hover)}}
+@media(prefers-reduced-motion:no-preference){.send-destination[open] .send-destination-options{animation:send-reveal .16s cubic-bezier(.16,1,.3,1)}@keyframes send-reveal{from{opacity:.6;transform:translateY(-4px)}to{opacity:1;transform:none}}}
+
+/* Compact service and feedback controls requested after the phone review. */
+.service-editor-heading>.service-leader-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.service-details .service-date-fields>label,.service-notes label{margin:0!important}
+.service-details .service-date-fields{gap:10px}.service-notes label{gap:6px}.service-notes textarea{min-height:64px}
+.tasks-workspace .task-editor{max-width:680px;padding:16px;margin-bottom:16px}
+.tasks-workspace .task-editor label{margin:10px 0;gap:5px}.tasks-workspace .task-editor textarea{min-height:72px}
+.tasks-workspace .task-detail-meta{margin:6px 0 10px}.tasks-workspace .task-comments{margin-top:10px;padding-top:5px}
+.tasks-workspace .task-notes li{padding:7px 0}.tasks-workspace .task-notes p{margin-top:3px;line-height:1.4}
+.task-note-count{border:0;background:transparent;padding:6px;min-height:32px;cursor:pointer}
+.team-member-controls .team-role-picker{width:36px;min-width:36px;height:36px;min-height:36px;padding:0;justify-content:center}.team-member-controls .team-role-picker select{min-height:100%}
+.account-name-form>.account-save{align-self:end;width:40px;min-width:40px;height:40px;min-height:40px;margin:0 0 1px;padding:0}
+@media(max-width:760px){.shell .account-name-form>.account-save{width:44px;min-width:44px;height:44px;min-height:44px}.shell .team-member-controls .team-role-picker{width:44px;padding:0}.shell .local-services .service-date-fields{gap:10px}.service-editor-heading{flex-wrap:wrap}.service-editor-title{flex:1;min-width:140px}}
+
+@media(max-width:760px){.shell .team-member-controls .team-role-picker,.shell .team-member-controls .team-action{width:44px;min-width:44px;height:44px;min-height:44px;padding:0;justify-content:center}}

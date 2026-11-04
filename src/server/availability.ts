@@ -1,0 +1,3 @@
+import {accountSetupWindow} from '../shared/services';
+import {now} from './core';
+export async function availability(env:Env){const schedule=accountSetupWindow();const online=!!await env.DB.prepare("SELECT d.id FROM devices d JOIN users u ON u.id=d.owner_id WHERE d.revoked_at IS NULL AND d.last_seen>? AND u.status='active' LIMIT 1").bind(now()-45).first();const open=schedule.accountCreationAllowed||online;const admin=!!await env.DB.prepare("SELECT id FROM users WHERE status='active' AND role='admin' LIMIT 1").first();return{open,accountCreationAllowed:open,skipAccountSetup:!open,computerOnline:online,accountCodeRequired:admin,serviceWindowEndsAt:schedule.serviceWindowEndsAt};}

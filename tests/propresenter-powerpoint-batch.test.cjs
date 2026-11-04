@@ -1,0 +1,18 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
+const {buildPresentation}=require('../desktop/presentation.cjs');
+const {readPowerPointSource,exportProPresenterFiles}=require('../desktop/propresenter-powerpoint-batch.cjs');
+const data={title:'Rehearsal song',slides:[{section:'Verse',text:'Together we sing\nWith grateful hearts'},{section:'Chorus',text:'Let every voice\nRise in praise'}],fontSize:72,amenFontSize:40,language:'eng'};
+async function fixture(t){const root=await fs.mkdtemp(path.join(os.tmpdir(),'stati-pro-pptx-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));const source=path.join(root,'Original.pro'),output=path.join(root,'PowerPoints');await fs.mkdir(output);const bytes=buildPresentation(data);await fs.writeFile(source,bytes);return{root,source,output,bytes};}
+test('native ProPresenter batch exports editable lyric PowerPoints and retains both existing destinations and original bytes',async t=>{
+ const f=await fixture(t),progress=[];await fs.writeFile(path.join(f.output,'Rehearsal song.pptx'),'Keep existing');
+ const result=await exportProPresenterFiles({files:[f.source],directory:f.output,onProgress:value=>progress.push(value)});assert.equal(result.results[0].status,'converted');assert.notEqual(result.results[0].filename,'Rehearsal song.pptx');assert.deepEqual(await fs.readFile(f.source),f.bytes);assert.equal(await fs.readFile(path.join(f.output,'Rehearsal song.pptx'),'utf8'),'Keep existing');
+ const zip=await require('jszip').loadAsync(await fs.readFile(result.results[0].path));const slides=Object.keys(zip.files).filter(name=>/^ppt\/slides\/slide\d+\.xml$/.test(name));assert.equal(slides.length,2);const xml=await zip.file(slides[0]).async('string');assert.match(xml,/Together we sing/);assert.match(xml,/<a:srgbClr val="000000"/);assert.doesNotMatch(xml,/<p:pic/);assert.ok(progress.some(value=>value.phase==='building'));
+});
+test('native reverse conversion rejects symlinks, wrong formats and files without editable lyrics',async t=>{
+ const f=await fixture(t),link=path.join(f.root,'Linked.pro');await fs.symlink(f.source,link);await assert.rejects(readPowerPointSource(link),/regular/);await assert.rejects(readPowerPointSource(path.join(f.root,'Anything.txt')),/ProPresenter/);const empty=buildPresentation({...data,slides:[{section:'Verse',text:'Ordinary words here'}]});const doc=require('../desktop/presentation.cjs').decode(empty);for(const cue of doc.cues)for(const action of cue.actions||[])for(const item of action.slide?.presentation?.baseSlide?.elements||[])delete item.element.text;const protobuf=require('protobufjs/light'); // Build a textless fixture through the shipped schema.
+ const schema=protobuf.Root.fromJSON(require('../src/shared/propresenter-schema.json')).lookupType('rv.data.Presentation');await fs.writeFile(f.source,Buffer.from(schema.encode(schema.create(doc)).finish()));await assert.rejects(readPowerPointSource(f.source),/no editable lyrics/);
+});
+test('a canceled reverse batch writes nothing and lost authority never becomes a per-file success',async t=>{
+ const f=await fixture(t),controller=new AbortController();controller.abort();const stopped=await exportProPresenterFiles({files:[f.source],directory:f.output,signal:controller.signal});assert.equal(stopped.stopped,true);assert.deepEqual(await fs.readdir(f.output),[]);
+ await assert.rejects(exportProPresenterFiles({files:[f.source],directory:f.output,checkActive:()=>{throw Error('Identity changed');}}),/Identity changed/);assert.deepEqual(await fs.readdir(f.output),[]);
+});

@@ -1,0 +1,63 @@
+{
+  "appId": "org.hapiproducts.stati",
+  "productName": "Sta\u021bi",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "desktop/**/*",
+    "public/brand-icon.png",
+    "public/icon-512.png",
+    "package.json",
+    "src/shared/propresenter-schema.json",
+    "src/shared/song-language.js",
+    "src/shared/lyric-labels.js",
+    "src/shared/ui-tokens.css",
+    "src/shared/file-name.js",
+    "src/shared/lyric-layout.js",
+    "src/shared/output-layout.js",
+    "src/shared/song-ending-style.js",
+    "src/shared/service-arrangement.js",
+    "src/shared/arial-bold-widths.json",
+    "vendor/propresenter-7.11/LICENSE",
+    "vendor/propresenter-7.11/SOURCE.md",
+    "vendor/tesseract-data/LICENSE",
+    "vendor/tesseract-data/SOURCE.json",
+    "!node_modules/lucide-react{,/**/*}",
+    "src/shared/service-schedule.json",
+    "src/shared/preview-scheduler.js",
+    "src/shared/profile-photo.js",
+    "!desktop/public{,/**/*}",
+    "!**/node_modules/@napi-rs/canvas-darwin-*{,/**/*}",
+    "!**/node_modules/tesseract.js{,/**/*}",
+    "!**/node_modules/tesseract.js-core{,/**/*}",
+    "!**/node_modules/pdfjs-dist{,/**/*}"
+  ],
+  "win": {
+    "target": [
+      "nsis"
+    ],
+    "icon": "public/icon-512.png",
+    "signAndEditExecutable": true
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": false,
+    "shortcutName": "Sta\u021bi",
+    "include": "desktop/windows-installer.nsh"
+  },
+  "asar": true,
+  "publish": {
+    "provider": "github",
+    "owner": "markusciani",
+    "repo": "stati-releases",
+    "releaseType": "draft"
+  },
+  "artifactName": "Stati-Setup-${version}-${arch}.${ext}",
+  "asarUnpack": [
+    "desktop/verify-signature.ps1",
+    "desktop/powerpoint.ps1",
+    "desktop/desktop-shortcut.ps1"
+  ]
+}

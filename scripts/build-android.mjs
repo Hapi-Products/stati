@@ -1,0 +1,22 @@
+import {spawnSync} from 'node:child_process';
+import {existsSync} from 'node:fs';
+import {readFile,writeFile,mkdir,copyFile} from 'node:fs/promises';
+import {homedir} from 'node:os';
+import {resolve,join} from 'node:path';
+const release=process.argv.includes('--release');
+const signing=['STATI_ANDROID_KEYSTORE','STATI_ANDROID_STORE_PASSWORD','STATI_ANDROID_KEY_ALIAS','STATI_ANDROID_KEY_PASSWORD'];
+if(release&&!signing.every(name=>process.env[name]))throw new Error('Production signing requires all four STATI_ANDROID signing variables. No unsigned release will be distributed.');
+const sdk=process.env.ANDROID_HOME||process.env.ANDROID_SDK_ROOT||join(homedir(),'Library/Android/sdk');
+if(!existsSync(sdk))throw new Error('Install the Android SDK and set ANDROID_HOME.');
+await writeFile('android/local.properties','sdk.dir='+sdk.replaceAll('\\','/').replaceAll(':','\\:')+'\n');
+const tasks=release?[':app:assembleRelease',':app:bundleRelease',':app:lintRelease']:[':app:assembleDebug',':app:lintDebug'];
+const command=process.platform==='win32'?'gradlew.bat':'./gradlew';
+const result=spawnSync(command,[...tasks,'--console=plain'],{cwd:resolve('android'),encoding:'utf8',maxBuffer:10*1024*1024,shell:process.platform==='win32'});
+const redact=value=>[process.env.STATI_ANDROID_STORE_PASSWORD,process.env.STATI_ANDROID_KEY_PASSWORD].filter(Boolean).reduce((output,secret)=>output.replaceAll(secret,'[REDACTED]'),value||'');process.stdout.write(redact(result.stdout));process.stderr.write(redact(result.stderr));
+if(result.status!==0)process.exit(result.status||1);
+const version=JSON.parse(await readFile('package.json','utf8')).version;
+await mkdir('release',{recursive:true});
+const output='release/Stati-Android-'+version+(release?'':'-test')+'.apk';
+await copyFile(release?'android/app/build/outputs/apk/release/app-release.apk':'android/app/build/outputs/apk/debug/app-debug.apk',output);
+if(release){await copyFile('android/app/build/outputs/bundle/release/app-release.aab','release/Stati-Android-'+version+'.aab');await(await import('./write-android-update.mjs')).writeAndroidUpdate(sdk,version,output);}
+console.log('Built '+output+(release?'':' (test signing; production origin verification remains required).'));

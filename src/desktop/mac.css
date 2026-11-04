@@ -1,0 +1,7 @@
+@import url('../../desktop/mac.css');
+html[data-platform=darwin] .desktop-prepare{padding-top:58px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+html[data-platform=darwin] .desktop-prepare>.prepare-tabs{padding-top:58px;background:var(--ui-bg)}
+html[data-platform=darwin] .prepare-tabs button{border-radius:8px;font-weight:500;min-height:38px}
+html[data-platform=darwin] .panel,html[data-platform=darwin] .service-plan-card,html[data-platform=darwin] .library-song{border-radius:11px}
+html[data-platform=darwin] .offline-desk{padding-top:60px;background:var(--ui-subtle)}
+html[data-platform=darwin] .slide-stage{border-radius:7px}

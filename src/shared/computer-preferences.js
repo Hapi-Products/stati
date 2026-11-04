@@ -1,0 +1,6 @@
+const valid=id=>typeof id==='string'&&/^[\w-]{20,60}$/.test(id);
+export function normalizeComputerPreferences(value){const favorites=[...new Set(Array.isArray(value?.favorites)?value.favorites.filter(valid):[])].slice(0,100);const recent={};if(value?.recent&&typeof value.recent==='object')for(const [id,time] of Object.entries(value.recent).filter(([,time])=>typeof time==='number'&&Number.isFinite(time)).sort((a,b)=>b[1]-a[1]).slice(0,100))if(valid(id)&&typeof time==='number'&&Number.isFinite(time)&&time>0)recent[id]=time;return {favorites,recent};}
+export function loadComputerPreferences(storage,userId){try{return normalizeComputerPreferences(JSON.parse(storage.getItem('stati-computers:'+userId)||'{}'));}catch{return normalizeComputerPreferences(null);}}
+export function saveComputerPreferences(storage,userId,value){try{storage.setItem('stati-computers:'+userId,JSON.stringify(normalizeComputerPreferences(value)));return true;}catch{return false;}}
+// Preferences change ordering only. The authorized server list remains the sole source of computers.
+export function rankComputers(computers,preferences){return [...computers].sort((a,b)=>Number(preferences.favorites.includes(b.id))-Number(preferences.favorites.includes(a.id))||(preferences.recent[b.id]||0)-(preferences.recent[a.id]||0)||a.name.localeCompare(b.name));}

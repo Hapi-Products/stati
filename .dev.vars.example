@@ -1,0 +1,2 @@
+# Local development only. Replace the placeholder with a unique random secret.
+ENROLLMENT_SECRET=replace-with-a-long-random-local-development-secret

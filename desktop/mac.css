@@ -1,0 +1,37 @@
+/* macOS appearance only. Windows keeps its existing Fluent layout. */
+html[data-platform=darwin]{--ui-font:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;--ui-bg:#ecebec;--ui-surface:#fff;--ui-subtle:#f5f4f5;--ui-border:#d9d7da;--ui-accent:#007aff;--ui-selected:#dce9fa;--ui-radius:11px}
+html[data-platform=darwin] body{font-size:13px;line-height:1.5}
+html[data-platform=darwin] #native-titlebar{display:block;position:fixed;top:0;left:0;right:0;height:48px;z-index:29;-webkit-app-region:drag}
+html[data-platform=darwin] #workspace-shell>aside{width:238px;padding:66px 14px 14px;gap:22px;background:color-mix(in srgb,var(--ui-bg) 90%,transparent);border-right:1px solid var(--ui-border)}
+html[data-platform=darwin] #workspace-shell>main{margin-left:238px;padding:54px 32px 34px;background:var(--ui-subtle)}
+html[data-platform=darwin] .brand{font-size:20px;letter-spacing:-.4px;padding:0 10px}
+html[data-platform=darwin] .brand img{width:38px;height:38px;border-radius:10px}
+html[data-platform=darwin] nav{gap:3px}
+html[data-platform=darwin] nav button{min-height:38px;padding:7px 10px;gap:10px;font-size:13px;border-radius:8px}
+html[data-platform=darwin] nav button svg{width:25px;height:25px;padding:4px;border-radius:6px;background:color-mix(in srgb,var(--ui-secondary) 18%,transparent);stroke-width:1.7}
+html[data-platform=darwin] nav button.active{background:color-mix(in srgb,var(--ui-secondary) 15%,transparent);color:var(--ui-text);font-weight:500}
+html[data-platform=darwin] nav button.active:before{display:none}
+html[data-platform=darwin] .station-actions{margin-bottom:20px}
+html[data-platform=darwin] h1{font-size:26px;letter-spacing:-.55px;font-weight:650}
+html[data-platform=darwin] h2{font-size:15px;letter-spacing:-.15px}
+html[data-platform=darwin] button,html[data-platform=darwin] input,html[data-platform=darwin] select,html[data-platform=darwin] textarea{border-radius:7px;font-size:13px;min-height:30px}
+html[data-platform=darwin] input[type=checkbox]{min-height:16px}
+html[data-platform=darwin] .card,html[data-platform=darwin] .receive-control{border:1px solid var(--ui-border);border-radius:11px;box-shadow:0 1px 1px #00000003;background:var(--ui-surface)}
+html[data-platform=darwin] #settings-panel>.card{padding:18px 20px;margin-bottom:18px}
+html[data-platform=darwin] #settings-panel>.card>label{padding:10px 0;margin:0;border-bottom:1px solid var(--ui-border)}
+html[data-platform=darwin] #settings-panel>.card>label:last-child{border-bottom:0}
+html[data-platform=darwin] #settings-panel>.identity-settings>label{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:20px}
+html[data-platform=darwin] #settings-panel>.identity-settings>label select{width:auto;max-width:55%;margin:0}
+html[data-platform=darwin] #settings-panel>.card p:empty{display:none}
+html[data-platform=darwin] .bottom>button{min-height:32px;font-size:12px}
+html[data-platform=darwin] .sidebar-join{padding:15px 8px;margin-bottom:12px;border-bottom:0}
+html[data-platform=darwin] .authenticator-code{font-family:ui-monospace,monospace;font-size:20px}
+html[data-platform=darwin] .operator-modal{border-radius:16px;box-shadow:0 18px 60px #0002}
+html[data-platform=darwin] body.identifying .operator-modal{--ui-surface:#fff;--ui-text:#1d1d1f;--ui-secondary:#68666d;background:var(--ui-surface);color:var(--ui-text)}
+html[data-platform=darwin] #operator-shade{padding-top:64px;background:var(--ui-bg)}
+html[data-platform=darwin] .operator{border-radius:10px;min-height:100px}
+html[data-platform=darwin] #privacy-gate{padding-top:64px}
+html[data-platform=darwin] #offline-entry{bottom:16px;right:18px}
+html[data-platform=darwin] dialog{border-radius:14px;box-shadow:0 18px 65px #0003}
+@media(prefers-color-scheme:dark){html[data-platform=darwin]{--ui-bg:#252628;--ui-surface:#303133;--ui-subtle:#27282a;--ui-text:#f0f0f2;--ui-secondary:#b0afb4;--ui-border:#424346;--ui-hover:#3a3b3d;--ui-accent:#0a84ff;--ui-accent-text:#fff;--ui-selected:#284a73}html[data-platform=darwin] body.identifying .operator-modal{--ui-surface:#303133;--ui-text:#f0f0f2;--ui-secondary:#b0afb4}}
+@media(forced-colors:active){html[data-platform=darwin]{--ui-bg:Canvas;--ui-surface:Canvas;--ui-subtle:Canvas;--ui-text:CanvasText;--ui-border:ButtonBorder;--ui-accent:Highlight;--ui-accent-text:HighlightText}}

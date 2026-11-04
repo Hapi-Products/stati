@@ -1,0 +1,30 @@
+/* Compact library: the website shares the station's type, surfaces and row rhythm. */
+body{font-family:var(--ui-font);min-height:100dvh}
+.shell{width:100%;max-width:1280px;padding:0 32px 48px}
+.shell>header{height:92px;border-bottom:1px solid var(--ui-border);gap:16px}.shell>header .brand{font-size:23px;letter-spacing:-.025em}.shell>header .brand img{width:32px;height:32px}
+.shell>.app-tabs{display:flex;gap:4px;align-items:center;justify-content:flex-start;margin:20px 0 32px;border:0;background:transparent;padding:0;border-radius:0}
+.shell>.app-tabs button{flex:0 1 auto;min-height:42px;gap:9px;padding:10px 17px;border-radius:7px;color:var(--ui-secondary)}.shell>.app-tabs button.selected{background:var(--ui-selected);color:var(--ui-text)}
+.shell>main{min-width:0}.workspace-page{min-width:0}.workspace-page h1{font-size:26px;letter-spacing:-.025em}.workspace-page>.subtitle{font-size:14px;max-width:65ch}
+.shell .card{box-shadow:none}.shell .button{border-radius:7px}.shell .song-library.panel{padding:0;border:0;background:transparent}
+.shell .worship-workspace{min-width:0}.shell .song-library-results{margin:0}.shell .library-context{margin:0}
+.shell .song-library .song-library-count{font-size:12px}.shell .song-library .song-library-toolbar input{font-size:15px}
+.shell .worship-tabs{margin-bottom:24px}.shell .song-header-pill{font-size:12px;background:var(--ui-surface)}
+.shell .header-actions{gap:12px}.shell .account-link{padding:4px;min-width:42px;min-height:42px}
+::selection{background:var(--ui-selected);color:var(--ui-text)}input,textarea{caret-color:var(--ui-accent)}*{scrollbar-width:thin;scrollbar-color:var(--ui-border) transparent}
+button,summary,.button{touch-action:manipulation;-webkit-user-select:none;user-select:none}a{text-underline-offset:3px}button:active,.button:active{filter:brightness(.94)}
+@media(min-width:1000px){.shell{display:grid;grid-template-columns:190px minmax(0,1fr);column-gap:40px}.shell>header{grid-column:1/-1}.shell>.app-tabs{grid-column:1;display:flex;flex-direction:column;align-items:stretch;align-self:start;margin-top:30px;gap:6px;position:sticky;top:24px}.shell>.app-tabs button{justify-content:flex-start;padding:11px 14px}.shell>main{grid-column:2;padding-top:30px;grid-row:2}.shell .worship-workspace>h1{margin-top:0}}
+@media(max-width:999px){.shell{max-width:900px;padding-inline:24px}.shell>.app-tabs{margin-bottom:26px}.shell>.app-tabs button{flex:1;padding-inline:10px}.shell .library-browser{gap:18px}}
+@media(max-width:600px){html{overscroll-behavior-y:none}.shell{padding:0 max(16px,env(safe-area-inset-left)) calc(26px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right))}.shell>header{height:76px;padding-top:env(safe-area-inset-top);gap:10px}.shell>header .brand{font-size:22px;gap:8px}.shell .header-actions{gap:7px}.shell>.app-tabs{gap:2px;margin:14px 0 24px;overflow:visible}.shell>.app-tabs button{display:flex;flex-direction:column;gap:5px;font-size:11px;min-height:58px;padding:8px 5px;border-radius:7px;white-space:nowrap}.shell>.app-tabs button svg{width:20px;height:20px}.workspace-page h1{font-size:24px;margin-bottom:18px}.shell .song-header-pill{padding-inline:8px;gap:4px}.shell .song-header-pill .song-connection-status{font-size:11px}.shell .card{padding:18px}.shell input,.shell textarea,.shell select,.shell .song-library .song-library-toolbar input{font-size:16px;max-width:100%}.shell .song-library .song-library-toolbar{margin-bottom:14px}.shell .worship-tabs{gap:4px}.shell .worship-tabs button{padding:9px;min-height:42px;font-size:12px}.shell .button,.shell summary{min-height:42px}.shell .song-action-menu summary{min-height:44px}.shell .library-context.has-selection{padding-top:0}.shell .song-select:active{background:var(--ui-selected)}}
+@media(hover:none){.song-library .song-select:hover,.shell .button:hover{background:var(--ui-surface)}.song-library .song-library-card.is-selected .song-select:hover{background:var(--ui-selected)}.shell .button.primary:hover{background:var(--ui-accent)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.fixture-banner{padding:10px 16px;margin:0;text-align:center;background:#fff0b3;color:#302600;font-size:12px}
+.worship-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}.worship-heading h1{margin:0}.worship-heading .worship-computer{display:flex;align-items:center;flex-direction:row;gap:7px;margin:0;max-width:220px}.worship-heading .worship-computer select{width:170px;max-width:100%;min-height:38px;margin:0;font-size:13px}.worship-sections{margin:0 0 20px;gap:4px}.worship-sections .button{border:0;background:transparent;min-height:38px;padding:8px 12px;font-size:13px}.worship-sections .button[aria-pressed=true]{background:var(--ui-selected);color:var(--ui-text);border:0}
+@media(max-width:600px){.worship-heading{gap:10px;margin-bottom:16px}.worship-heading h1{margin:0}.worship-heading .worship-computer{max-width:160px}.worship-heading .worship-computer select{width:132px;font-size:16px}.worship-heading .worship-computer>svg{display:none}.worship-sections{margin-bottom:16px}.worship-sections .button{min-height:42px;padding:8px 10px}.fixture-banner{font-size:11px;padding:7px 10px}}
+.task-column>summary::after,.task-comments>summary::after,.song-action-menu>summary::after,.service-song-menu>summary::after,.service-plan-menu>summary::after{content:none!important}
+.shell .local-services.panel{border:0;padding:0;background:transparent}
+@media(max-width:600px){.shell{padding-bottom:calc(110px + env(safe-area-inset-bottom))}}
+@media(min-width:761px){.shell .worship-workspace .service-date-fields{grid-template-columns:minmax(0,1fr) 160px 130px}.shell .worship-workspace .service-date-fields>label:first-child{grid-column:auto}}
+@media(max-width:600px){
+ .shell>.app-tabs{margin:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom));min-height:74px}
+ .shell .local-services .service-editor{gap:10px;margin-top:12px;padding-top:12px}
+}

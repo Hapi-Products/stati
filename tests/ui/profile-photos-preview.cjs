@@ -1,0 +1,29 @@
+// Isolated real renderer and native photo-loading policy; no accounts or production API.
+const http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path');
+const {createProfilePhotos}=require('../../desktop/profile-photos.cjs');
+(async()=>{
+ const samples=JSON.parse(await fs.readFile('tests/fixtures/profile-photos.json','utf8')).fixtures;
+ const decoded=JSON.parse(await fs.readFile(process.env.STATI_PHOTO_CHECK||path.resolve('../stati-backups/profile-photos_2026-10-20/native-photo-policy-check.json'),'utf8'));
+ const requests=new Map();let chosen=false;
+ const members=samples.map((sample,index)=>({id:'isolated-photo-person-'+String(index+1).padStart(8,'0'),first_name:sample.extension.toUpperCase()+' photo',last_initial:'T',has_photo:1,role:'member'}));
+ const source=await fs.readFile('desktop/renderer.js','utf8');let html=await fs.readFile('desktop/index.html','utf8');
+ html=html.replace(/<meta http-equiv="Content-Security-Policy"[^>]+>/,'').replace('<script src="renderer.js"></script>','<script src="fixture.js"></script><script src="renderer.js"></script>');
+ html=html.replace('stati://app/preview-tools.js','/preview-tools.js');
+ html=html.replace('<body class="identifying">','<body class="identifying"><div style="position:fixed;z-index:99999;bottom:0;left:0;right:0;padding:8px;text-align:center;background:#fff0b3;color:#201800;font:12px system-ui">Local profile-photo test · synthetic images · no accounts or production connection</div>');
+ const photos=createProfilePhotos({fetchPhoto:async id=>{const index=members.findIndex(member=>member.id===id);if(index<0)return new Response(null,{status:404});const count=(requests.get(id)||0)+1;requests.set(id,count);if(index===0&&count===1)return new Response('Temporary fixture failure',{status:503});const bytes=Buffer.from(samples[index].base64,'base64');return new Response(bytes,{headers:{'Content-Length':String(bytes.length)}});},thumbnail:(_bytes,info)=>{const result=decoded.results.find(item=>item.mime===info.mime);if(!result?.dataURL)throw Error('Missing checked native thumbnail');return result.dataURL;}});
+ const state=()=>({paired:true,adminUnlocked:false,organization:'',device:{name:'Local photo verification',operator_id:chosen?members[0].id:null},members,transfers:chosen?members.map((member,index)=>({id:'isolated-file-'+index,sender_id:member.id,has_photo:1,first_name:member.first_name,last_initial:member.last_initial,filename:'Photo check '+(index+1)+'.txt',bytes:24,status:'delivered',saved:true,created_at:1792342800})):[],requests:[],accessRequests:[],receiver:{id:'isolated-receiver'}});
+ const bridge=`const callbacks={};const call=async(method,args=[])=>{const response=await fetch('/__fixture',{method:'POST',headers:{'Content-Type':'application/json','X-Stati-Fixture':'1'},body:JSON.stringify({method,args})});if(!response.ok)throw Error('Local fixture unavailable');return response.json();};window.stati=new Proxy({identityStatus:async()=>({presentation:'window'}),accessStatus:async()=>({allowed:true}),state:()=>call('state'),filePreview:async()=>({kind:'text',text:'Local profile-photo verification.'}),senderPhoto:id=>call('photo',[id]),operator:id=>call('operator',[id]),workspaceOpen:async()=>({ok:true}),updateState:async()=>({phase:'disabled',message:'Local fixture'})},{get:(target,key)=>target[key]||(String(key).startsWith('on')?(callback=>{callbacks[key]=callback;return()=>{};}):async()=>({}))});window.statiThumbnail=async()=>({text:'Local profile-photo verification.'});window.statiPlayPreview=async()=>null;`;
+ const server=http.createServer(async(req,res)=>{try{
+  const pathname=new URL(req.url,'http://localhost').pathname;
+  if(pathname==='/__fixture'){
+   if(req.method!=='POST'||req.headers['x-stati-fixture']!=='1')throw Error('Fixture request refused');let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>5000)throw Error('Too large');}const {method,args}=JSON.parse(raw);let result;
+   if(method==='state')result=state();else if(method==='photo'){try{result=await photos.load(args[0]);}catch{result=null;}}else if(method==='operator'){chosen=!!args[0];photos.clear();result={ok:true};}else throw Error('Unknown local fixture');
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(result));return;
+  }
+  if(pathname==='/'){res.writeHead(200,{'Content-Type':'text/html'});res.end(html);return;}
+  if(pathname==='/fixture.js'||pathname==='/renderer.js'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end(pathname==='/fixture.js'?bridge:source);return;}
+  if(pathname.startsWith('/preview-')||pathname.startsWith('/assets/')){const relative=pathname.slice(1);if(relative.includes('..')||!/^[-A-Za-z0-9_.\/]+$/.test(relative)){res.writeHead(404);res.end();return;}const bytes=await fs.readFile(path.join(process.env.STATI_PHOTO_BUILD||'desktop/build',relative));res.writeHead(200,{'Content-Type':'text/javascript'});res.end(bytes);return;}
+  const files={'/desktop.css':'desktop/desktop.css','/src/shared/ui-tokens.css':'src/shared/ui-tokens.css','/public/brand-icon.png':'public/brand-icon.png'};if(!files[pathname]){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':pathname.endsWith('.png')?'image/png':'text/css'});res.end(await fs.readFile(files[pathname]));
+ }catch(error){res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({error:error.message}));}});
+ server.listen(0,'127.0.0.1',()=>console.log(JSON.stringify({url:'http://127.0.0.1:'+server.address().port+'/'})));let closing=false;async function stop(){if(closing)return;closing=true;photos.clear();await photos.drain();server.closeAllConnections();server.close();process.exit(0);}process.on('SIGINT',()=>void stop());process.on('SIGTERM',()=>void stop());
+})().catch(error=>{console.error(error.message);process.exitCode=1;});

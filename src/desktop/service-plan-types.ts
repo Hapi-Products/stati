@@ -1,0 +1,14 @@
+export type ServiceTask={id:string;text:string;done:boolean};
+export type ServiceArrangement={name:string;slides:number[]};
+export type ServiceSong={id:string;songId:string;title:string;filename:string;contentHash:string;reviewed:boolean;arrangement?:ServiceArrangement};
+export type ServiceVersionSummary={id:string;serviceRevision:number;approvedAt:number;approvedBy:string;approvedByLabel:string;contentHash:string};
+export type ServiceVersionLyrics={songId:string;contentHash:string;title:string;filename:string;text:string;fontSize:number;available?:boolean;matchesReference?:boolean};
+export type ServiceVersionSnapshot=ServiceVersionSummary&{plan:ServicePlan;lyrics:ServiceVersionLyrics[]};
+export type ServiceVersions={versions:ServiceVersionSummary[];latestApproved:ServiceVersionSummary|null;snapshot:ServiceVersionSnapshot|null;current:{plan:ServicePlan;lyrics:ServiceVersionLyrics[]};canApprove:boolean};
+export type ServicePlaylist={phase:'waiting'|'error'|'synced'|'disabled'|'review';message:string;playlistName?:string};
+export type ServiceLeadership={leaderId:string|null;leaderLabel:string|null;revision:number;isLeader:boolean;canClaim:boolean;canTakeOver:boolean;canEdit:boolean;canAcknowledge:boolean;finalizedRevision:number|null;finalizedAt:number|null;acknowledgedRevision:number|null;acknowledgedAt:number|null;acknowledgedByLabel:string|null};
+export type ServiceLeadershipAction={type:'claim-leadership'|'release-leadership'|'finalize-order'|'acknowledge-order';id:string;expectedRevision:number;expectedLeadershipRevision:number;takeOver?:boolean};
+export type ServicePlan={id:string;title:string;date:string;time:string;notes:string;reviewed:boolean;archived:boolean;tasks:ServiceTask[];songs:ServiceSong[];status?:string;templateId?:string;active?:boolean;revision?:number;approvedVersionId?:string;approvedRevision?:number;playlist?:ServicePlaylist;leadership?:ServiceLeadership};
+export type ServiceTemplate={id:string;name:string;time:string;weekday:number|null;archived:boolean;notes:string;tasks:ServiceTask[];songs:ServiceSong[]};
+export type ServiceAction=ServiceLeadershipAction|{type:'select';id:string|null}|{type:'create';title:string;date:string;time:string}|{type:'save';id:string;plan:ServicePlan}|{type:'duplicate';id:string;date?:string}|{type:'archive';id:string;archived:boolean}|{type:'template-save';id:string;name:string;weekday:number|null}|{type:'template-create';templateId:string;date:string;title?:string;time?:string}|{type:'template-archive';id:string;archived:boolean};
+export type ServiceReadiness={ready:boolean;checklistStatus:string;checkedAt:number;items:{id:string;songId:string;title:string;status:'ready'|'missing'|'changed'|'unreviewed'|'unreadable';message:string}[]};

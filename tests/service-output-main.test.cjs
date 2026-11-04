@@ -1,0 +1,18 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('desktop/main.cjs','utf8'),definition=source.match(/^function playlistManager\(\).*$/m)?.[0];assert.ok(definition,'Actual native playlist manager definition');
+const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);return{promise,resolve};};
+function fixture(){let scope={credential:'paired-device',deviceId:'station',userId:'person',generation:1};const calls=[],held={};let configured;const context={localPlaylistManager:undefined,app:{getPath:()=>'/trusted/user-data'},safeStorage:{protected:true},playlistPlans:()=>({approved:true}),sharedServiceOperator:()=>scope,savedLyricsDirectory:async()=>{if(held.directory)return held.directory();return'/trusted/Lyrics';},require:name=>{if(name==='./service-playlist-sync.cjs')return{createServicePlaylistSync:options=>{configured=options;return{};}};if(name==='./service-output.cjs')return{serviceOutputReferences:async(directory,plan,options)=>{options.checkActive();calls.push({directory,plan,options});if(held.output)await held.output(options);options.checkActive();return[{songId:'resolved'}];}};throw Error('Unexpected boundary '+name);}};vm.createContext(context);vm.runInContext(definition+'\nplaylistManager();',context);return{read:(plan,options)=>configured.readLibrary('station',plan,options),calls,held,get scope(){return scope;},set scope(value){scope=value;}};}
+const plan={id:'approved-service',approvedVersionId:'version',songs:[{id:'appearance',songId:'saved-song',contentHash:'approved-hash'}]};
+test('main pins the operator before resolving Lyrics and rejects a switch, device change or lock during that await',async()=>{
+ for(const change of [scope=>({...scope,generation:2}),scope=>({...scope,userId:'another'}),scope=>({...scope,credential:'different'}),scope=>({...scope,deviceId:'different'}),()=>null]){const f=fixture(),gate=deferred();f.held.directory=()=>gate.promise;const pending=f.read(plan);f.scope=change(f.scope);gate.resolve('/trusted/Lyrics');await assert.rejects(pending,/selected user changed/);assert.equal(f.calls.length,0);}
+});
+test('ordinary same-profile cancellation during Lyrics lookup prevents generating managed service copies',async()=>{
+ const f=fixture(),gate=deferred(),controller=new AbortController();f.held.directory=()=>gate.promise;const pending=f.read(plan,{signal:controller.signal});controller.abort();gate.resolve('/trusted/Lyrics');await assert.rejects(pending,{name:'AbortError'});assert.equal(f.calls.length,0);
+});
+test('main forwards the playlist job signal and exact pinned plan into output preparation',async()=>{
+ const f=fixture(),controller=new AbortController();assert.equal((await f.read(plan,{signal:controller.signal})).length,1);assert.equal(f.calls[0].directory,'/trusted/Lyrics');assert.equal(f.calls[0].plan,plan);assert.equal(f.calls[0].options.signal,controller.signal);assert.equal(f.calls[0].options.allowUnavailable,true);
+ const gate=deferred();f.held.output=async options=>{await gate.promise;options.checkActive();};const pending=f.read(plan,{signal:controller.signal});await new Promise(done=>setImmediate(done));controller.abort();gate.resolve();await assert.rejects(pending,{name:'AbortError'});
+});
+test('empty plans still require a current uncanceled operator while generating no files',async()=>{
+ const f=fixture();assert.equal((await f.read({songs:[]})).length,0);assert.equal(f.calls.length,0);f.scope=null;await assert.rejects(f.read({songs:[]}),/Choose your profile/);const valid=fixture(),controller=new AbortController();controller.abort();await assert.rejects(valid.read({songs:[]},{signal:controller.signal}),{name:'AbortError'});
+});

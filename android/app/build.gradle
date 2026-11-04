@@ -1,0 +1,55 @@
+plugins { id 'com.android.application' }
+
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+def parts = appVersion.tokenize('.').collect { it.toInteger() }
+if(parts.size()!=3 || parts[0]>2000 || parts[1]>999 || parts[2]>999) throw new GradleException('Use a supported stable app version.')
+def appVersionCode = parts[0]*1000000 + parts[1]*1000 + parts[2]
+if(appVersionCode<1) throw new GradleException('Android versionCode must increase from a positive stable version.')
+
+def signingFile = providers.environmentVariable('STATI_ANDROID_KEYSTORE').orNull
+def storePassValue = providers.environmentVariable('STATI_ANDROID_STORE_PASSWORD').orNull
+def alias = providers.environmentVariable('STATI_ANDROID_KEY_ALIAS').orNull
+def keyPassValue = providers.environmentVariable('STATI_ANDROID_KEY_PASSWORD').orNull
+def values = [signingFile, storePassValue, alias, keyPassValue]
+if (values.any { it } && !values.every { it }) throw new GradleException('Supply all four STATI_ANDROID signing variables.')
+
+android {
+    namespace 'org.hapiproducts.stati'
+    buildFeatures { resValues true }
+    compileSdk 36
+    defaultConfig {
+        applicationId 'org.hapiproducts.stati'
+        minSdk 28
+        targetSdk 36
+        versionCode appVersionCode
+        versionName appVersion
+        resValue 'string', 'app_name', 'Stați'
+        resValue 'string', 'application_id', 'org.hapiproducts.stati'
+        manifestPlaceholders = [verifyAppLinks:'true']
+    }
+    signingConfigs {
+        if (signingFile) {
+            release {
+                storeFile = file(signingFile)
+                storeType = 'PKCS12'
+                storePassword = storePassValue
+                keyAlias = alias
+                keyPassword = keyPassValue
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-test'
+            resValue 'string', 'app_name', 'Stați (Test)'
+            resValue 'string', 'application_id', 'org.hapiproducts.stati.debug'
+            manifestPlaceholders = [verifyAppLinks:'false']
+        }
+        release {
+            minifyEnabled false
+            if (signingFile) signingConfig signingConfigs.release
+        }
+    }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4' }

@@ -1,0 +1,1 @@
+const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('signingRecovery',Object.freeze({save:(password,confirmation)=>ipcRenderer.invoke('save-signing-recovery',password,confirmation)}));

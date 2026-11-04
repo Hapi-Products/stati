@@ -1,0 +1,1 @@
+<resources><style name="StatiUpdateTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:colorAccent">#5055D6</item><item name="android:windowLightStatusBar">true</item><item name="android:statusBarColor">#F6F7FB</item><item name="android:navigationBarColor">#F6F7FB</item></style></resources>

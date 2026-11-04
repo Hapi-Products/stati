@@ -1,0 +1,35 @@
+import {env,SELF} from 'cloudflare:test';
+import {afterEach,expect,it} from 'vitest';
+import {hash,now,token} from '../src/server/core';
+import {taskImageRoute,cleanupTaskImageUploads} from '../src/server/task-images';
+import photos from './fixtures/profile-photos.json';
+const png=Uint8Array.from(atob(photos.fixtures.find(file=>file.extension==='png')!.base64),value=>value.charCodeAt(0));
+const objects=new Set<string>();afterEach(async()=>{if(objects.size)await env.FILES.delete([...objects]);objects.clear();});
+async function actor(){const id=crypto.randomUUID(),session=token();await env.DB.batch([env.DB.prepare("INSERT INTO users(id,first_name,last_initial,role,status,created_at) VALUES(?,'Image','T','member','active',?)").bind(id,now()),env.DB.prepare('INSERT INTO sessions VALUES(?,?,?)').bind(await hash(session),id,now()+86400)]);return{id,cookie:'stati_access=isolated-test-access; stati_session='+session};}
+async function fixture(){const owner=await actor(),taskId=crypto.randomUUID();const response=await SELF.fetch('http://localhost:8787/api/tasks',{method:'POST',headers:{Origin:'http://localhost:8787',Cookie:owner.cookie,'Content-Type':'application/json'},body:JSON.stringify({action:'create',id:taskId,title:'Image task',body:'Local fixture only',urgent:false})});expect(response.status).toBe(200);return{owner,taskId};}
+function request(taskId:string,id:string,person:Awaited<ReturnType<typeof actor>>,method='PUT',data:Uint8Array=png){objects.add('task-images/'+id);return new Request('http://localhost:8787/api/tasks/'+taskId+'/images/'+id,{method,headers:{Origin:'http://localhost:8787',Cookie:person.cookie,'X-Filename':'image.png',...(method==='PUT'?{'Content-Length':String(data.length)}:{})},...(method==='PUT'?{body:data.slice().buffer}:{})});}
+it('task image upload has immutable retry identity and authenticated reads; removal can be undone',async()=>{const {owner,taskId}=await fixture(),id=crypto.randomUUID();expect((await SELF.fetch(request(taskId,id,owner))).status).toBe(201);expect((await SELF.fetch(request(taskId,id,owner))).status).toBe(200);const detail=await(await SELF.fetch('http://localhost:8787/api/tasks/'+taskId,{headers:{Cookie:owner.cookie}})).json<{images:{id:string}[]}>();expect(detail.images.map(image=>image.id)).toEqual([id]);const image=await SELF.fetch(request(taskId,id,owner,'GET'));expect(image.status).toBe(200);expect(new Uint8Array(await image.arrayBuffer())).toEqual(png);expect((await SELF.fetch(new Request(image.url))).status).toBe(403);expect((await SELF.fetch(request(taskId,id,owner,'DELETE'))).status).toBe(200);expect((await SELF.fetch(request(taskId,id,owner,'GET'))).status).toBe(404);await cleanupTaskImageUploads(env);expect((await SELF.fetch(request(taskId,id,owner,'POST'))).status).toBe(200);expect((await SELF.fetch(request(taskId,id,owner,'GET'))).status).toBe(200);});
+it('another member cannot attach or remove a task image, and spoofed bytes are rejected',async()=>{const {owner,taskId}=await fixture(),other=await actor(),id=crypto.randomUUID();expect((await SELF.fetch(request(taskId,id,other))).status).toBe(403);expect((await SELF.fetch(request(taskId,id,owner,'PUT',new TextEncoder().encode('not an image')))).status).toBe(415);expect((await SELF.fetch(request(taskId,id,owner))).status).toBe(201);expect((await SELF.fetch(request(taskId,id,other,'DELETE'))).status).toBe(409);});
+it('concurrent uploads enforce the six-image task limit at the authoritative insert',async()=>{const {owner,taskId}=await fixture(),ids=Array.from({length:7},()=>crypto.randomUUID());const results=await Promise.all(ids.map(id=>SELF.fetch(request(taskId,id,owner))));expect(results.filter(result=>result.status===201)).toHaveLength(6);expect(results.filter(result=>result.status===409)).toHaveLength(1);});
+it('account revocation during storage cannot publish the image and its failed bytes remain cleanup-tracked',async()=>{const {owner,taskId}=await fixture(),id=crypto.randomUUID();const FILES=new Proxy(env.FILES,{get(target,property){if(property==='put')return async(...args:unknown[])=>{const saved=await Reflect.apply(target.put,target,args);await env.DB.prepare("UPDATE users SET status='removed' WHERE id=?").bind(owner.id).run();return saved;};const value=Reflect.get(target,property);return typeof value==='function'?value.bind(target):value;}});await expect(taskImageRoute(request(taskId,id,owner),{...env,FILES},taskId,id)).rejects.toMatchObject({status:409});expect(await env.DB.prepare('SELECT state FROM feedback_task_images WHERE id=?').bind(id).first()).toEqual({state:'failed'});});
+
+it('failed image cleanup rotates beyond the first fifty records and retries failed deletions without removing undo images',async()=>{
+ const {owner,taskId}=await fixture(),ids=Array.from({length:51},()=>crypto.randomUUID()),removed=crypto.randomUUID(),active=crypto.randomUUID();
+ await env.DB.batch([...ids,removed,active].map(id=>env.DB.prepare("INSERT INTO feedback_task_images(id,task_id,author_id,filename,content_type,bytes,sha256,object_key,upload_token,state,created_at,upload_expires_at) VALUES(?,?,?,'image.png','image/png',1,?,?,?, ?,?,?)").bind(id,taskId,owner.id,'a'.repeat(64),'task-images/'+id,crypto.randomUUID(),id===removed?'removed':id===active?'active':'failed',now()-90000,now()-89000)));
+ const visits:string[]=[];const FILES=new Proxy(env.FILES,{get(target,property){if(property==='delete')return async(name:string)=>{visits.push(name);if(visits.length===1)throw Error('Temporary R2 failure');};const value=Reflect.get(target,property);return typeof value==='function'?value.bind(target):value;}});
+ await cleanupTaskImageUploads({...env,FILES});expect(visits).toHaveLength(50);await cleanupTaskImageUploads({...env,FILES});
+ expect(new Set(visits).size).toBe(51);expect(visits).not.toContain('task-images/'+removed);expect(visits).not.toContain('task-images/'+active);expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM feedback_task_images WHERE task_id=? AND state='failed'").bind(taskId).first()).toEqual({count:51});
+});
+
+it('keeps an active task image and its exact bytes after upload expiry and repeated cleanup',async()=>{
+ const {owner,taskId}=await fixture(),id=crypto.randomUUID();
+ expect((await SELF.fetch(request(taskId,id,owner))).status).toBe(201);
+ await env.DB.prepare('UPDATE feedback_task_images SET created_at=?,upload_expires_at=? WHERE id=?').bind(now()-7*86400,now()-6*86400,id).run();
+ for(let cycle=0;cycle<3;cycle++)await cleanupTaskImageUploads(env);
+ expect(await env.DB.prepare('SELECT state FROM feedback_task_images WHERE id=?').bind(id).first()).toEqual({state:'active'});
+ for(let open=0;open<2;open++){
+  const image=await SELF.fetch(request(taskId,id,owner,'GET'));expect(image.status).toBe(200);expect(new Uint8Array(await image.arrayBuffer())).toEqual(png);
+ }
+ const detail=await(await SELF.fetch('http://localhost:8787/api/tasks/'+taskId,{headers:{Cookie:owner.cookie}})).json<{images:{id:string}[]}>();
+ expect(detail.images.map(image=>image.id)).toEqual([id]);
+});

@@ -1,0 +1,10 @@
+{
+ "name":"stati-rebuild-local",
+ "main":"./rebuild-worker.ts",
+ "compatibility_date":"2026-10-11",
+ "compatibility_flags":["nodejs_compat"],
+ "assets":{"directory":"../../dist","binding":"ASSETS","not_found_handling":"single-page-application","run_worker_first":["/*"]},
+ "vars":{"APP_ORIGIN":"http://localhost:52940","RP_ID":"localhost","ORG_NAME":"Isolated browser check"},
+ "d1_databases":[{"binding":"DB","database_name":"stati-rebuild-local","database_id":"00000000-0000-4000-8000-000000000001","migrations_dir":"../../migrations"}],
+ "r2_buckets":[{"binding":"FILES","bucket_name":"stati-rebuild-local"}]
+}

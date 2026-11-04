@@ -1,0 +1,23 @@
+{
+  "description": "Synthetic 16 by 12 solid-color images generated locally with sharp. No user photographs.",
+  "fixtures": [
+    {
+      "extension": "jpg",
+      "width": 16,
+      "height": 12,
+      "base64": "/9j/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAMABADASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAABf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIABYY//2Q=="
+    },
+    {
+      "extension": "png",
+      "width": 16,
+      "height": 12,
+      "base64": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAGElEQVQokWMIzOsiCTGMasgbDaVAbGEAAEih9sH9OHAxAAAAAElFTkSuQmCC"
+    },
+    {
+      "extension": "webp",
+      "width": 16,
+      "height": 12,
+      "base64": "UklGRjIAAABXRUJQVlA4ICYAAACQAQCdASoQAAwAAUAmJQBOl0AAcwAA/uxw34oBSOHO/N9j2mAAAA=="
+    }
+  ]
+}

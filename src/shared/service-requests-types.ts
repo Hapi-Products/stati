@@ -1,0 +1,9 @@
+export type ServiceRequestStatus='waiting'|'received'|'needs-correction'|'approved'|'added';
+export type ServiceRequestAttachmentReference={transferId:string;sha256:string};
+export type ServiceRequestAttachment=ServiceRequestAttachmentReference&{filename:string;bytes:number;available:boolean};
+export type ServiceRequestContent={title:string;body:string;placement:string;deadline:number|null;assigneeId:string|null;attachment:ServiceRequestAttachmentReference|null};
+export type ServiceRequestItem=Omit<ServiceRequestContent,'attachment'>&{id:string;revision:number;status:ServiceRequestStatus;statusNote:string;authorId:string;authorName:string;assigneeName:string|null;attachment:ServiceRequestAttachment|null;createdAt:number;updatedAt:number;approvedAt:number|null;addedAt:number|null;canReplace:boolean};
+export type ServiceRequestPerson={id:string;name:string};
+export type ServiceRequestSnapshot={items:ServiceRequestItem[];attachments:ServiceRequestAttachment[];assignees:ServiceRequestPerson[];userId:string;canSubmit:boolean;canManage:boolean;archived:boolean};
+export type ServiceRequestAction=({type:'create';id:string}&ServiceRequestContent)|({type:'replace';id:string;revision:number}&ServiceRequestContent)|{type:'status';id:string;revision:number;status:'received'|'needs-correction'|'added';note?:string};
+export type ServiceRequestsBridge={listServiceRequests?:(serviceId:string)=>Promise<ServiceRequestSnapshot>;changeServiceRequest?:(serviceId:string,action:ServiceRequestAction)=>Promise<ServiceRequestSnapshot>;onIdentityRequired?:(callback:(value?:unknown)=>void)=>(()=>void)};
