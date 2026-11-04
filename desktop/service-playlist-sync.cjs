@@ -65,7 +65,7 @@ function createServicePlaylistSync({userData,protection,plansStore,apiFactory=cr
  }
  // Atomic file replacement allows UI reads to use the last durable snapshot
  // without waiting for a network sync that may include ten slow API requests.
- async function list(user){const [data,plans,config]=await Promise.all([ledger(user),plansStore.list(user),settings()]);return summaries(data,plans,config);}
+ async function list(user,{plans:knownPlans}={}){const [data,plans,config]=await Promise.all([ledger(user),knownPlans??plansStore.list(user),settings()]);return summaries(data,plans,config);}
  const canceled=signal=>{if(signal?.aborted){const error=Error('Service playlist sync canceled.');error.code='ABORTED';throw error;}};
  function apiFor(data,config){return apiFactory({baseUrl:'http://127.0.0.1:'+config.port+'/',blockedPlaylistIds:Object.values(data.services).filter(record=>record.pendingWrite&&record.playlistId).map(record=>record.playlistId)});}
  const failure=(record,error)=>{if(error.code==='WRITE_UNCONFIRMED'||record.pendingWrite){record.pendingWrite=true;record.phase='review';record.message='An earlier playlist update needs review in ProPresenter before more changes.';}else if(error.code==='CREATE_UNCONFIRMED'){record.phase='review';record.message='Playlist creation is not confirmed. Stați will look for its saved name without creating another copy.';}else{if(error.code==='CREATE_REJECTED'&&error.definiteRejection===true)record.createAttempted=false;record.phase=['CONNECTION_LOST','TIMEOUT','ABORTED','PRESENTATION_NOT_FOUND','LIBRARY_NOT_FOUND'].includes(error.code)?'waiting':'error';record.message=typeof error.message==='string'?error.message.slice(0,600):'Could not sync this service playlist.';}};

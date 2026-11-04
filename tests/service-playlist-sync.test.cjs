@@ -182,3 +182,10 @@ test('appearance-scoped arranged references sync independently and arrangement e
  const firstUuid=crypto.randomUUID(),secondUuid=crypto.randomUUID(),manager=f.make(async()=>[{songId:source.songId,appearanceId:first.id,uuid:firstUuid},{songId:source.songId,appearanceId:second.id,uuid:secondUuid}]);assert.equal((await manager.sync(user))[0].phase,'synced');assert.deepEqual(f.remote.playlists.get(plan.id).items.map(item=>item.presentationUuid),[firstUuid,secondUuid]);
  current=(await f.store.list(user))[0];await f.store.change(user,{type:'save',id:plan.id,plan:{...current,songs:[{...first,arrangement:{name:'Changed',slides:[1]}},second]}});assert.equal((await manager.list(user))[0].phase,'waiting');
 });
+
+test('summary rendering reuses the authoritative plans without another queued cloud read',async t=>{
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'stati-summary-snapshot-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));
+ let reads=0;const manager=createServicePlaylistSync({userData:directory,protection,plansStore:{list:async()=>{reads++;return[];},change:async()=>[]},readLibrary:async()=>[]});
+ await manager.list(user,{plans:[]});assert.equal(reads,0);
+ await manager.list(user);assert.equal(reads,1);
+});
