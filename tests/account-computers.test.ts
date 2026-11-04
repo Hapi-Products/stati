@@ -26,7 +26,7 @@ async function computer(owner?:Person){
 }
 type Computer=Awaited<ReturnType<typeof computer>>;
 async function membership(pc:Computer,actor:Person,status='approved'){
- await env.DB.prepare('INSERT INTO station_memberships VALUES(?,?,?,?) ON CONFLICT(device_id,user_id) DO UPDATE SET status=excluded.status').bind(pc.id,actor.id,status,now()).run();
+ await env.DB.prepare('INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,?,?) ON CONFLICT(device_id,user_id) DO UPDATE SET status=excluded.status').bind(pc.id,actor.id,status,now()).run();
 }
 async function connection(pc:Computer,actor:Person,status='approved'){
  const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO computer_connections VALUES(?,?,?,?,?,?,?)').bind(id,pc.receiverId,pc.id,actor.id,status,now(),now()).run();return id;

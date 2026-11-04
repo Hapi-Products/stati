@@ -70,7 +70,7 @@ it('does not approve a verified passkey response after a role change at the fina
  expect((await f.call('/operator-unlock/'+pending.token+'/verify',{data:{response}},{...env,DB})).status).toBe(410);expect(injected).toBe(1);expect(await env.DB.prepare('SELECT * FROM operator_unlocks WHERE device_id=?').bind(f.deviceId).first()).toBeNull();
 });
 it('preserves ordinary member file sending for an approved pastor account',async()=>{
- const f=await fixture('pastor'),session=token();await env.DB.batch([env.DB.prepare('INSERT INTO sessions VALUES(?,?,?)').bind(await hash(session),f.member,now()+300),env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(f.deviceId,f.member,now())]);
+ const f=await fixture('pastor'),session=token();await env.DB.batch([env.DB.prepare('INSERT INTO sessions VALUES(?,?,?)').bind(await hash(session),f.member,now()+300),env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(f.deviceId,f.member,now())]);
  const response=await worker.fetch(new Request('http://localhost:8787/api/receive/device:'+f.deviceId,{method:'POST',headers:{Origin:'http://localhost:8787',Cookie:'stati_session='+session,'X-Filename':'pastor-notes.txt','Content-Length':'5'},body:'Notes'}),env,createExecutionContext());expect(response.status).toBe(201);expect(await response.json()).toMatchObject({status:'queued',filename:'pastor-notes.txt'});
 });
 
@@ -96,7 +96,7 @@ it('ordinary-member native creation is revoked when a ministry role is assigned 
 it('native creation context still requires an approved computer membership and exposes a passkey unlock in station profiles',async()=>{
  const f=await fixture(null),selected=await activated(f),options={method:'GET',lease:selected.lease,proof:selected.proof};
  expect((await f.call('/station/workspace',options)).status).toBe(403);
- await env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(f.deviceId,f.member,now()).run();
+ await env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(f.deviceId,f.member,now()).run();
  const context=await f.call('/station/workspace',options);expect(context.status).toBe(200);expect(await context.json()).toMatchObject({userId:f.member,deviceId:f.deviceId,capabilities:{readSongs:true,createSlides:true,editLyrics:false,planServices:false}});
  const state=await(await f.call('/station/state',options)).json() as {members:{id:string;requiresUnlock:boolean;capabilities:{createSlides:boolean}}[]};expect(state.members.find(row=>row.id===f.member)).toMatchObject({requiresUnlock:true,capabilities:{createSlides:true}});
  await env.DB.prepare("UPDATE station_memberships SET status='denied' WHERE device_id=? AND user_id=?").bind(f.deviceId,f.member).run();expect((await f.call('/station/workspace',options)).status).toBe(403);

@@ -17,7 +17,7 @@ async function fixture(role='admin'){
   env.DB.prepare('INSERT INTO sessions VALUES(?,?,?)').bind(await hash(session),senderId,now()+14*86400),
   env.DB.prepare('INSERT INTO devices(id,token_hash,name,owner_id,created_at,pair_expires,last_seen) VALUES(?,?,?,?,?,?,?)').bind(deviceId,await hash(credential),'Isolated intent fixture',ownerId,now(),now()+1000,now()),
   env.DB.prepare('INSERT INTO receivers(id,device_id,token_hash,expires_at,created_at) VALUES(?,?,?,?,?)').bind(receiverId,deviceId,await hash(receiver),now()+1000,now()),
-  env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(deviceId,senderId,now()),
+  env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(deviceId,senderId,now()),
  ]);
  const puts:string[]=[];
  const files=proxied(env.FILES,{put:async(...args:Parameters<R2Bucket['put']>)=>{puts.push(String(args[0]));objects.push(String(args[0]));return env.FILES.put(...args);}});

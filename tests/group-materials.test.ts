@@ -191,7 +191,7 @@ it('revocation after the deletion claim leaves a pending entry for an administra
 async function linkedSongFixture(){
  const owner=await person(null,'admin'),author=await person(),deviceId=crypto.randomUUID(),credential=token(),songId='c'.repeat(64);
  await env.DB.prepare("INSERT INTO devices(id,name,token_hash,owner_id,created_at,pair_expires,last_seen) VALUES(?,'Linked notes PC',?,?,?,?,?)").bind(deviceId,await hash(credential),owner.id,now(),now()+300,now()).run();
- await env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(deviceId,author.id,now()).run();
+ await env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(deviceId,author.id,now()).run();
  const generation=crypto.randomUUID(),entry={id:songId,contentHash:'d'.repeat(64),title:'Linked song',filename:'linked.pro',category:'Worship',language:'eng',fontSize:96,text:'Real isolated lyrics',firstSlide:'Real isolated lyrics',addedAt:1000,modifiedAt:2000};
  for(const data of [{action:'begin',generation,count:1,unreadable:0},{action:'chunk',generation,songs:[entry]},{action:'finish',generation}])expect((await call('/station/catalog',{actor:owner,method:'POST',body:JSON.stringify(data),headers:{Authorization:'Bearer '+credential,'Content-Type':'application/json'}})).status).toBe(200);
  const material=await save(author);
@@ -220,7 +220,7 @@ it('unlinks idempotently while keeping the shared original and its exact bytes',
 
 it('uses current computer/ministry access for linked reads and keeps file management with its uploader or an admin',async()=>{
  const f=await linkedSongFixture(),pastor=await person('pastor'),other=await person();
- for(const actor of [pastor,other])await env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(f.deviceId,actor.id,now()).run();
+ for(const actor of [pastor,other])await env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(f.deviceId,actor.id,now()).run();
  expect((await changeSongLink(f,'link',pastor)).status).toBe(403);
  expect((await changeSongLink(f,'link',other)).status).toBe(409);
  expect((await changeSongLink(f,'link',f.owner)).status).toBe(200);
@@ -253,7 +253,7 @@ it('validates link identifiers and keeps links when a complete catalog is republ
 
 it('private song links and linked notes recheck selected-group membership independently of PC access',async()=>{
  const f=await linkedSongFixture(),selected=await person(),outsider=await person();
- for(const actor of [selected,outsider])await env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(f.deviceId,actor.id,now()).run();
+ for(const actor of [selected,outsider])await env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(f.deviceId,actor.id,now()).run();
  const groupId=crypto.randomUUID();expect((await call('/worship-groups',{actor:f.owner,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:groupId,name:'Private service group',memberIds:[f.author.id,selected.id]})})).status).toBe(201);
  expect((await call('/group-materials/'+f.material.id+'/group',{actor:f.owner,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({groupId,expectedGroupId:null})})).status).toBe(200);
  expect((await changeSongLink(f)).status).toBe(200);

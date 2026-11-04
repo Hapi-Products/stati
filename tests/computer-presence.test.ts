@@ -43,7 +43,7 @@ it('receiver listings require both a heartbeat newer than exactly 45 seconds and
  const lease=await opened.json() as {id:string};
  // Membership visibility itself is covered by security.test.ts; this checks the
  // additional live-presence boundary for an already approved member.
- await env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(device.id,owner.id,now()).run();
+ await env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at) VALUES(?,?,'approved',?)").bind(device.id,owner.id,now()).run();
  await env.DB.prepare('UPDATE devices SET last_seen=? WHERE id=?').bind(now()-44,device.id).run();
  expect(await list('/receivers',owner.cookie)).toContainEqual(expect.objectContaining({id:device.id,online:1}));
  await env.DB.prepare('UPDATE devices SET last_seen=? WHERE id=?').bind(now()-45,device.id).run();
