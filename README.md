@@ -14,7 +14,7 @@ This repository contains the application sources under the [Apache License 2.0](
 | `android/` | Android Trusted Web Activity | Uses the web app through Android Browser Helper. |
 | `tests/`, `migrations/`, `vendor/` | Tests, database migrations and licensed supporting resources | Test fixtures use synthetic data. |
 
-Mac application development is paused. Existing downloadable builds and update URLs remain in [stati-releases](https://github.com/markusciani/stati-releases/releases); publishing this source does not replace them or create a new signed release.
+MacBook companion development has resumed using the shared Electron interface. Local Apple Silicon previews are ad-hoc signed, not notarized distribution builds. Windows-only Microsoft PowerPoint automation remains unavailable on Mac. Existing downloadable builds and update URLs remain in [stati-releases](https://github.com/markusciani/stati-releases/releases); publishing this source does not replace them or create a new signed release.
 
 ## Website and backend development
 
