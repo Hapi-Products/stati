@@ -8,7 +8,7 @@ if(window.stati.platform==='darwin'){
  $('identity-mode-help').textContent='Ask who is using this computer when Stați opens or this Mac unlocks. The Mac identity screen uses an app window.';
 }
 let privacyAllowed=false,identityGeneration=0,identityPresentation='window',identityCanSkip=false,refreshAgain=false,identityChoicePending=false,identitySettingsMode='before-service',identitySettingsRevision=0;
-let joinAdmin=false;function showJoin(visible){joinAdmin=visible;$('join-admin').hidden=!visible;if(!visible){enrollmentExpires=0;$('enrollment-code').textContent='••• •••';$('enrollment-countdown').textContent='';$('join-qr').removeAttribute('src');}}let operatorsSignature='';let paired=false,operatorChosen=false,receiver=null,pollBusy=false,pairTimer=null;
+let joinAdmin=false;function showJoin(visible){joinAdmin=visible;$('join-admin').hidden=!visible;if(!visible){enrollmentExpires=0;$('enrollment-status').textContent='';$('enrollment-countdown').textContent='';$('join-qr').removeAttribute('src');}}let operatorsSignature='';let paired=false,operatorChosen=false,receiver=null,pollBusy=false,pairTimer=null;
 function error(e){const message=e.message||String(e);$('error').textContent=message;$('error').hidden=false;const identityError=$('identity-error');if(identityError&&document.body.classList.contains('identifying')){identityError.textContent=message;identityError.hidden=false;}}
 async function run(fn){try{$('error').hidden=true;if($('identity-error'))$('identity-error').hidden=true;return await fn();}catch(e){error(e);}}
 function bind(id,fn){$(id).addEventListener('click',()=>void run(fn));}
@@ -241,7 +241,7 @@ bind('access-retry',initializePrivacy);
 
 
 let enrollmentExpires=0,enrollmentOffset=0,enrollmentBusy=false;
-async function updateEnrollmentCode(){if(!privacyAllowed||!paired||!joinAdmin||enrollmentBusy)return;enrollmentBusy=true;try{const value=await window.stati.enrollmentCode();if(!joinAdmin)return;$('join-qr').src=value.qr;$('enrollment-code').textContent=value.code.slice(0,3)+' '+value.code.slice(3);enrollmentExpires=value.expiresAt;enrollmentOffset=value.serverTime-Math.floor(Date.now()/1000);}catch{$('enrollment-code').textContent='Unavailable';enrollmentExpires=0;}finally{enrollmentBusy=false;}}
+async function updateEnrollmentCode(){if(!privacyAllowed||!paired||!joinAdmin||enrollmentBusy)return;enrollmentBusy=true;try{const value=await window.stati.enrollmentCode();if(!joinAdmin)return;$('join-qr').src=value.qr;$('join-qr').hidden=false;$('enrollment-status').textContent='';enrollmentExpires=value.expiresAt;enrollmentOffset=value.serverTime-Math.floor(Date.now()/1000);}catch{$('enrollment-status').textContent='Invitation unavailable';$('join-qr').hidden=true;$('join-qr').removeAttribute('src');enrollmentExpires=0;}finally{enrollmentBusy=false;}}
 setInterval(()=>{if(!paired||!joinAdmin)return;const remaining=enrollmentExpires-(Math.floor(Date.now()/1000)+enrollmentOffset);$('enrollment-countdown').textContent=remaining>0?'Changes in '+remaining+'s':'';if(remaining<=0)void updateEnrollmentCode();},1000);
 
 let identityUpdateAvailable=false;

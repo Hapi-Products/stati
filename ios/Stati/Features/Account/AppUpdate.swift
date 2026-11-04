@@ -11,10 +11,13 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 26, title: "Connect new computers", highlights: [
-        Highlight(title: "Pair from your phone", detail: "Scan a new computer’s pairing QR in Stați, then confirm to register it with your account.", icon: "qrcode.viewfinder")
-    ], details: ["New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."])
+    static let current = AppUpdate(id: 27, title: "QR invitations", highlights: [
+        Highlight(title: "Invite with a scan", detail: "Show a joining QR on your computer or iPhone. New members scan it to create an account, then wait for approval.", icon: "qrcode")
+    ], details: ["Administrator invitations show a QR and expiry, without a separate six-digit code.", "New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 26, title: "Connect new computers", highlights: [
+        Highlight(title: "Pair from your phone", detail: "Scan a new computer’s pairing QR in Stați, then confirm to register it with your account.", icon: "qrcode.viewfinder")
+    ], details: ["New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."]),
         AppUpdate(id: 24, title: "Corrections and Service", highlights: [
         Highlight(title: "Point out each correction", detail: "Select separate passages on iPhone, then tap any selected lyrics to change that correction.", icon: "text.bubble"),
         Highlight(title: "A place for your service", detail: "Open Service on iPad for the running order. Move between its songs from the reader’s Running order menu.", icon: "list.number")

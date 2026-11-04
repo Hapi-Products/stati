@@ -301,7 +301,7 @@ async function activateOperator(ticket,result,startedAt=ticket.startedAt,token){
 
 handle('pair',name=>pairingSession().pair(name));
 handle('pair-status',async()=>{const captured=credential,status=await pairingSession().status();if(captured!==credential)throw new Error('The computer connection changed. Try again.');if(status.paired){const newlyPaired=identityPairedCredential!==captured;identityPairedCredential=captured;stationPoll=null;if(newlyPaired&&privacyUnlocked&&!activeOperator)identityWindow(main);}return status;});
-handle('enrollment-code',async()=>{const value=await request('/station/enrollment-code');return {...value,qr:await QRCode.toDataURL(ORIGIN+'/join',{margin:2,width:180})};});
+handle('enrollment-code',async()=>{const value=await request('/station/enrollment-code');if(!/^[0-9]{6}$/.test(value.code))throw Error('The invitation could not be verified. Try again.');return {...value,qr:await QRCode.toDataURL(ORIGIN+'/#join='+value.code,{margin:2,width:230})};});
 handle('operator',async({id,pin})=>{
  if(identitySkipped)throw Error('Open Stați again before choosing your profile.');assertOperatorChangeAllowed(id);clearOperator();
  prepareOpened=false;stationPoll=null;

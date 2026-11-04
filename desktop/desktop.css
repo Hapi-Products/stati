@@ -32,3 +32,6 @@ body.identifying .operator-modal{--ui-surface:#fff;--ui-text:#1a1a1a;--ui-second
 @media(forced-colors:active){body.identifying .operator-modal{--ui-surface:Canvas;--ui-text:CanvasText;--ui-secondary:CanvasText;--ui-border:ButtonBorder;background:Canvas;color:CanvasText}}
 
 #offline-entry{position:fixed;right:18px;bottom:18px;z-index:31;max-width:calc(100vw - 36px)}#offline-entry p{max-width:300px;font-size:12px;color:var(--ui-danger);background:var(--ui-surface)}#offline-entry p:empty{display:none}
+
+/* Administrator invitations are QR-only. */
+.sidebar-join{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;gap:12px;padding:16px 8px}.sidebar-join img{width:144px;height:144px}.sidebar-join h2{margin-bottom:0}#enrollment-countdown{font-size:11px}#enrollment-status:empty{display:none}.sidebar-join .invite-instructions{font-size:12px}
