@@ -22,7 +22,7 @@ struct RootView: View {
     init() {
         #if DEBUG && targetEnvironment(simulator)
         let route = NativeReview.route ?? ""
-        _tab = State(initialValue: (["service", "songs", "groups", "group-share", "group-delete"].contains(route) || route.hasPrefix("song-")) ? "songs" : (["tasks", "task", "tasks-empty", "tasks-move"].contains(route) || route.hasPrefix("task-")) ? "tasks" : ["team", "team-member", "team-leader", "account", "account-member", "computers", "computers-invite", "computers-scan", "computers-member", "computers-empty", "privacy", "whats-new", "profile", "profile-requests", "requests"].contains(route) ? "more" : "send")
+        _tab = State(initialValue: (["service", "songs", "groups", "group-share", "group-delete"].contains(route) || route.hasPrefix("song-")) ? "songs" : (["tasks", "task", "tasks-empty", "tasks-move"].contains(route) || route.hasPrefix("task-")) ? "tasks" : ["team", "team-member", "team-leader", "account", "account-member", "computers", "computers-invite", "computers-scan", "computers-pair-confirm", "computers-member", "computers-empty", "privacy", "whats-new", "profile", "profile-requests", "requests"].contains(route) ? "more" : "send")
         if route.hasPrefix("whats-new") { _tab = State(initialValue: "more"); _morePath = State(initialValue: [.whatsNew]) }
         if route == "phone-search-ranking" { _tab = State(initialValue: "songs"); _libraryQuery = State(initialValue: "Holy") }
         if route == "phone-folders" { _tab = State(initialValue: "songs") }

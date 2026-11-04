@@ -9,7 +9,7 @@ struct ComputersView: View {
     #endif
     init() {
         #if DEBUG && targetEnvironment(simulator)
-        _scanning = State(initialValue: NativeReview.route == "computers-scan")
+        _scanning = State(initialValue: ["computers-scan", "computers-pair-confirm"].contains(NativeReview.route ?? ""))
         #endif
     }
     var body: some View {
