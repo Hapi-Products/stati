@@ -1,6 +1,6 @@
 # Separate teams for each computer
 
-Status: staged foundation on `feature/computer-scoped-teams`; not enabled in routes or deployed.
+Status: staged foundation on `feature/computer-scoped-teams`; not deployed. The account computer-rename route is the first staged integration; other routes still use the legacy policy.
 
 One passkey account may belong to several computers. Team membership, administrator status and ministry responsibility belong to a computer, rather than following the account into every computer. Being an administrator elsewhere, scanning a QR code or joining during a service window cannot implicitly enroll a whole team.
 
@@ -11,6 +11,10 @@ Migration 0034 adds `role` and nullable `ministry_role` to `station_memberships`
 `readStationTeamScope` reads one explicit computer/user grant. It denies inactive accounts, inactive owners, revoked computers, disconnections and denied memberships. It never consults account-wide ministry roles or uses a global administrator override. A live approved connection alone does not substitute for lasting membership.
 
 `stationTeamScopeGuard` repeats these conditions, including the captured owner and local role, inside a mutation statement. It protects against stale authorization after a role changes. It is not authentication or a capability check: callers must authenticate the session/operator, check the required local capability, bind the mutation's resource to the captured computer and combine the session/operator lease guard with this predicate in the same statement.
+
+## First route integration
+
+Account computer renaming now requires the captured computer scope to have local administrator authority. The mutation also checks the exact unexpired session and the scope predicate in the same SQL statement. Tests cover unrelated global administrators, different roles on two computers, ownership, and access/session changes immediately before the write. This route change remains on the staged branch with the migration. Client capability wiring and the broader rollout below are still required.
 
 ## Rollout work still required
 

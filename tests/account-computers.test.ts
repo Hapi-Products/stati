@@ -53,11 +53,22 @@ function beforeBatch(change:()=>Promise<unknown>){
  return{bindings:{...env,DB},injected:()=>injected};
 }
 
-it('allows only an active administrator to rename, including when a member owns the computer',async()=>{
+it('requires administrator authority for this computer rather than a global role',async()=>{
  const owner=await person(),pc=await computer(owner),other=await person(),administrator=await person('admin');
- for(const actor of [owner,other]){expect((await call('/devices/'+pc.id,actor,{method:'PATCH',data:{name:'Forbidden rename'}})).status).toBe(403);expect((await device(pc))?.name).toBe('Isolated account PC');}
- const renamed=await call('/devices/'+pc.id,administrator,{method:'PATCH',data:{name:'Renamed account PC'}});expect(renamed.status).toBe(200);expect(await renamed.json()).toEqual({ok:true,name:'Renamed account PC'});expect((await device(pc))?.name).toBe('Renamed account PC');
- expect((await call('/devices/'+pc.id,owner,{method:'DELETE'})).status).toBe(403);expect((await device(pc))?.revoked_at).toBeNull();
+ for(const actor of [other,administrator]){
+  expect((await call('/devices/'+pc.id,actor,{method:'PATCH',data:{name:'Forbidden rename'}})).status).toBe(403);
+  expect((await device(pc))?.name).toBe('Isolated account PC');
+ }
+ const renamed=await call('/devices/'+pc.id,owner,{method:'PATCH',data:{name:'Renamed account PC'}});
+ expect(renamed.status).toBe(200);expect(await renamed.json()).toEqual({ok:true,name:'Renamed account PC'});
+ expect((await device(pc))?.name).toBe('Renamed account PC');
+ await membership(pc,other);
+ expect((await call('/devices/'+pc.id,other,{method:'PATCH',data:{name:'Member rename'}})).status).toBe(403);
+ await env.DB.prepare("UPDATE station_memberships SET role='admin' WHERE device_id=? AND user_id=?").bind(pc.id,other.id).run();
+ expect((await call('/devices/'+pc.id,other,{method:'PATCH',data:{name:'Local administrator rename'}})).status).toBe(200);
+ expect((await device(pc))?.name).toBe('Local administrator rename');
+ expect((await call('/devices/'+pc.id,owner,{method:'DELETE'})).status).toBe(403);
+ expect((await device(pc))?.revoked_at).toBeNull();
 });
 
 it.each(['member','admin'] as const)('disconnects only the %s account and preserves the device, receiver and other member',async role=>{
@@ -102,7 +113,7 @@ it('allows an administrator to reconnect explicitly to an offline computer witho
 });
 
 it('refuses rename using an administrator snapshot after that exact session is revoked',async()=>{
- const administrator=await person('admin'),pc=await computer(),before=await device(pc);await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(administrator.sessionHash).run();
+ const administrator=await person('admin'),pc=await computer(administrator),before=await device(pc);await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(administrator.sessionHash).run();
  await expect(renameAccountComputer(env,administrator,pc.id,'Stale rename',administrator.sessionHash)).rejects.toMatchObject({status:403});expect(await device(pc)).toEqual(before);
 });
 
@@ -127,4 +138,59 @@ it.each(['session revoked','administrator demoted'] as const)('does not reconnec
  const f=await fixture('admin');await disconnectAccountComputer(env,f.actor,f.pc.id,f.actor.sessionHash);await env.DB.prepare('UPDATE receivers SET closed_at=? WHERE id=?').bind(now(),f.pc.receiverId).run();const before=await removed(f.pc,f.actor);let injected=false;
  const DB=new Proxy(env.DB,{get(target,key){if(key==='prepare')return(sql:string)=>{const statement=target.prepare(sql);if(!sql.startsWith('DELETE FROM station_disconnections'))return statement;return new Proxy(statement,{get(query,property){if(property==='bind')return(...values:unknown[])=>{const bound=query.bind(...values);return new Proxy(bound,{get(current,operation){if(operation==='run')return async()=>{injected=true;if(change==='session revoked')await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(f.actor.sessionHash).run();else await env.DB.prepare("UPDATE users SET role='member' WHERE id=?").bind(f.actor.id).run();return current.run();};const value=Reflect.get(current,operation);return typeof value==='function'?value.bind(current):value;}});};const value=Reflect.get(query,property);return typeof value==='function'?value.bind(query):value;}});};const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;}});
  const response=await call('/connections/device:'+f.pc.id,f.actor,{method:'POST',bindings:{...env,DB}});expect(injected).toBe(true);expect([401,403,409]).toContain(response.status);expect(await removed(f.pc,f.actor)).toEqual(before);
+});
+
+function beforeRename(change:()=>Promise<unknown>){
+ let injected=false;
+ const DB=new Proxy(env.DB,{get(target,key){
+  if(key==='prepare')return(sql:string)=>{
+   const statement=target.prepare(sql);
+   if(!sql.startsWith('UPDATE devices SET name='))return statement;
+   return new Proxy(statement,{get(query,property){
+    if(property==='bind')return(...values:unknown[])=>{
+     const bound=query.bind(...values);
+     return new Proxy(bound,{get(current,operation){
+      if(operation==='run')return async()=>{injected=true;await change();return current.run();};
+      const value=Reflect.get(current,operation);return typeof value==='function'?value.bind(current):value;
+     }});
+    };
+    const value=Reflect.get(query,property);return typeof value==='function'?value.bind(query):value;
+   }});
+  };
+  const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;
+ }});
+ return{bindings:{...env,DB},injected:()=>injected};
+}
+
+it.each(['local demotion','local denial','disconnect','owner transfer','session expiry'] as const)('refuses rename when %s happens after the scoped check',async change=>{
+ const actor=await person(),pc=await computer();await membership(pc,actor);
+ await env.DB.prepare("UPDATE station_memberships SET role='admin' WHERE device_id=? AND user_id=?").bind(pc.id,actor.id).run();
+ const before=await device(pc);
+ const race=beforeRename(async()=>{
+  if(change==='local demotion')await env.DB.prepare("UPDATE station_memberships SET role='member' WHERE device_id=? AND user_id=?").bind(pc.id,actor.id).run();
+  if(change==='local denial')await membership(pc,actor,'denied');
+  if(change==='disconnect')await env.DB.prepare('INSERT INTO station_disconnections VALUES(?,?,?,?)').bind(pc.id,actor.id,now(),crypto.randomUUID()).run();
+  if(change==='owner transfer')await env.DB.prepare('UPDATE devices SET owner_id=? WHERE id=?').bind((await person()).id,pc.id).run();
+  if(change==='session expiry')await env.DB.prepare('UPDATE sessions SET expires_at=? WHERE token_hash=?').bind(now(),actor.sessionHash).run();
+ });
+ await expect(renameAccountComputer(race.bindings,actor,pc.id,'Stale local rename',actor.sessionHash)).rejects.toMatchObject({status:403});
+ expect(race.injected()).toBe(true);
+ expect((await device(pc))?.name).toBe(before?.name);
+});
+
+it('does not borrow an administrator membership from a different computer',async()=>{
+ const actor=await person('admin'),a=await computer(),b=await computer();
+ await membership(a,actor);await membership(b,actor);
+ await env.DB.prepare("UPDATE station_memberships SET role='admin' WHERE device_id=? AND user_id=?").bind(a.id,actor.id).run();
+ expect((await call('/devices/'+a.id,actor,{method:'PATCH',data:{name:'My administered PC'}})).status).toBe(200);
+ expect((await call('/devices/'+b.id,actor,{method:'PATCH',data:{name:'Other PC'}})).status).toBe(403);
+ expect((await device(b))?.name).toBe('Isolated account PC');
+});
+
+it('keeps a local administrator grant independent of account-wide legacy demotion',async()=>{
+ const actor=await person('admin'),pc=await computer();await membership(pc,actor);
+ await env.DB.prepare("UPDATE station_memberships SET role='admin' WHERE device_id=? AND user_id=?").bind(pc.id,actor.id).run();
+ const race=beforeRename(()=>env.DB.prepare("UPDATE users SET role='member' WHERE id=?").bind(actor.id).run());
+ expect(await renameAccountComputer(race.bindings,actor,pc.id,'Locally authorized',actor.sessionHash)).toEqual({ok:true,name:'Locally authorized'});
+ expect(race.injected()).toBe(true);
 });

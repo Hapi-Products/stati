@@ -1,8 +1,13 @@
 import {HttpError,now,type User} from './core';
+import {readStationTeamScope,stationTeamScopeGuard} from './station-team-scope';
 
 export async function renameAccountComputer(env:Env,actor:User,deviceId:string,name:string,sessionHash:string){
- if(actor.role!=='admin'||actor.status!=='active')throw new HttpError(403,'Only an administrator can rename a computer.');
- const result=await env.DB.prepare("UPDATE devices SET name=? WHERE id=? AND revoked_at IS NULL AND EXISTS(SELECT 1 FROM users actor WHERE actor.id=? AND actor.role='admin' AND actor.status='active' AND EXISTS(SELECT 1 FROM sessions session WHERE session.user_id=actor.id AND session.token_hash=? AND session.expires_at>?))").bind(name,deviceId,actor.id,sessionHash,now()).run();
+ const scope=await readStationTeamScope(env,deviceId,actor.id);
+ if(scope.role!=='admin')throw new HttpError(403,'Only an administrator for this computer can rename it.');
+ const guard=stationTeamScopeGuard(scope);
+ const result=await env.DB.prepare(`UPDATE devices SET name=? WHERE id=? AND ${guard.sql}
+  AND EXISTS(SELECT 1 FROM sessions session WHERE session.user_id=? AND session.token_hash=? AND session.expires_at>?)`)
+  .bind(name,deviceId,...guard.params,actor.id,sessionHash,now()).run();
  if(!result.meta.changes)throw new HttpError(403,'The computer or administrator access changed. Refresh and try again.');
  return{ok:true,name};
 }

@@ -126,11 +126,13 @@ describe('Scheduled cleanup recovery',()=>{
 });
 
 describe('Computer management',()=>{
- it('requires an administrator to rename and revoke registered computers',async()=>{
+ it('requires a local administrator to rename and retains legacy administrator revocation until scoped rollout',async()=>{
   const pc=await station(),outsider=await fixture(),administrator=await fixture('active','admin');
   expect((await call('/devices/'+pc.d.id,'PATCH',{name:'Other'},outsider.cookie)).status).toBe(403);
   expect((await call('/devices/'+pc.d.id,'DELETE',undefined,outsider.cookie)).status).toBe(403);
-  expect((await call('/devices/'+pc.d.id,'PATCH',{name:'  Choir PC  '},pc.u.cookie)).status).toBe(403);
+  expect((await call('/devices/'+pc.d.id,'PATCH',{name:'  Choir PC  '},pc.u.cookie)).status).toBe(200);
+  expect((await call('/devices/'+pc.d.id,'PATCH',{name:'Other PC'},administrator.cookie)).status).toBe(403);
+  await env.DB.prepare("INSERT INTO station_memberships(device_id,user_id,status,updated_at,role) VALUES(?,?,'approved',?,'admin')").bind(pc.d.id,administrator.id,now()).run();
   expect((await call('/devices/'+pc.d.id,'PATCH',{name:'  Choir PC  '},administrator.cookie)).status).toBe(200);
   expect((await env.DB.prepare('SELECT name FROM devices WHERE id=?').bind(pc.d.id).first())?.name).toBe('Choir PC');
   expect((await call('/devices/'+pc.d.id,'PATCH',{name:' '},administrator.cookie)).status).toBe(400);
