@@ -55,7 +55,7 @@ import UIKit
             return .object(["id": .string(b), "title": .string("Second song")])
         })
         let old = Task { await racing.load() }; while suspended == nil { await Task.yield() }
-        racing.move(by: 1); await racing.load()
+        racing.selectSong(b); await racing.load()
         suspended?.resume(returning: .object(["id": .string(a), "title": .string("Old song")])); await old.value
         checks["latePriorSongCannotReplaceSelectedSong"] = racing.position.selectedID == b && racing.song?.id == b
         var receiptMatches = false

@@ -28,10 +28,14 @@ import SwiftUI
         guard active, position.move(by: step) else { return }
         generation = UUID(); song = nil; files = []; fileRequest = nil; choosingNotes = false; message = ""; loading = false
     }
-    func selectServiceSong(_ id: String) {
-        guard active, request.isService, let next = ReaderPosition(ids: request.items.map(\.id), selectedID: id), next.index != position.index else { return }
+    func selectSong(_ id: String) {
+        guard active, let next = ReaderPosition(ids: request.items.map(\.id), selectedID: id), next.index != position.index else { return }
         position = next
         generation = UUID(); song = nil; files = []; fileRequest = nil; choosingNotes = false; message = ""; loading = false
+    }
+    func selectServiceSong(_ id: String) {
+        guard request.isService else { return }
+        selectSong(id)
     }
     func showLyrics() { guard active else { return }; fileRequest = nil; choosingNotes = false }
     func choose(_ file: APIRecord) {

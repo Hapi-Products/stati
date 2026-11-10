@@ -1,6 +1,6 @@
 # Stați
 
-Church presentation and worship tools by Hapi Products. Stați connects a Windows presentation computer with a website and native iPhone/iPad readers: send materials, manage songs and services, share group files, and coordinate tasks and song corrections.
+Church presentation and worship tools by Hapi Products. Stați connects the presentation computer, website, Stați for iPhone, and Stați Worship for iPad. Use them to send materials, manage songs and services, share group files, and coordinate tasks and song corrections.
 
 This repository contains the application sources under the [Apache License 2.0](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The license does not grant rights to church song lyrics, uploaded documents, or third-party media. No church library, account database, private signing key, or production secret is included.
 
@@ -10,7 +10,7 @@ This repository contains the application sources under the [Apache License 2.0](
 | --- | --- | --- |
 | `desktop/`, `src/desktop/` | Electron Windows companion | Preview 39 source; ProPresenter 7.11 integration and physical Windows acceptance remain under active review. |
 | `src/web/`, `src/server/`, `src/shared/` | Responsive website and Cloudflare backend | React, Workers, D1, R2 and Durable Objects. |
-| `ios/` | Native SwiftUI iPhone/iPad app | Development build 27; requires iOS/iPadOS 27 and a matching Xcode toolchain. |
+| `ios/` | Stați for iPhone and Stați Worship for iPad | Development build 28. Requires iOS/iPadOS 27 and a matching Xcode toolchain. |
 | `android/` | Android Trusted Web Activity | Uses the web app through Android Browser Helper. |
 | `tests/`, `migrations/`, `vendor/` | Tests, database migrations and licensed supporting resources | Test fixtures use synthetic data. |
 
@@ -58,7 +58,7 @@ xcodebuild -project ios/Stati.xcodeproj -scheme Stati \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-The native source matches build 27. Experimental nearby following, Share extensions and Live Activities are not represented as shipped features. The app uses the existing passkey authorization flow; credentials remain in device Keychain storage. This is development distribution, not an App Store/TestFlight release.
+Build 28 opens the iPad song library in Stați Worship. The Stați Cloud catalog comes from the connected computer, and the reader keeps scoped offline copies of recently fetched songs. The iPhone keeps the Stați name and its existing layout. Experimental nearby following, Share extensions and Live Activities are not represented as shipped features. The app uses the existing passkey authorization flow; credentials remain in device Keychain storage. This is development distribution, not an App Store/TestFlight release.
 
 ## Android
 

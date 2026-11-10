@@ -8,6 +8,7 @@ struct SongReaderContent: View {
     let clickerEnabled: Bool
     var pdfColumns: PDFColumnCount = .one
     var slideSize: SlideTextSize = .large
+    var showsPagingControls = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var index = 0
     @State private var document: PDFDocument?
@@ -24,7 +25,11 @@ struct SongReaderContent: View {
             } else if count > 0 {
                 SongPageHost(pages: pages, document: mode == .document ? document : nil, index: $index, effect: transition.effective(for: mode, reduceMotion: reduceMotion), clickerEnabled: clickerEnabled, slideSize: slideSize)
                     .id(mode.rawValue + transition.effective(for: mode, reduceMotion: reduceMotion).rawValue + slideSize.rawValue)
-                    .safeAreaInset(edge: .bottom) { ReaderPagingBar(index: index, count: count, previous: { move(-1) }, next: { move(1) }, pageLabels: true) }
+                    .safeAreaInset(edge: .bottom) {
+                        if showsPagingControls {
+                            ReaderPagingBar(index: index, count: count, previous: { move(-1) }, next: { move(1) }, pageLabels: true)
+                        }
+                    }
             } else if !failure.isEmpty { ContentUnavailableView("Document unavailable", systemImage: "doc", description: Text(failure)) }
             else if pages.isEmpty { ContentUnavailableView("No lyrics available", systemImage: "music.note") }
             else { ProgressView("Preparing document…") }

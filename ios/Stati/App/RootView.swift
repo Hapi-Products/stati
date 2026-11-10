@@ -117,7 +117,7 @@ struct RootView: View {
     private var taskEventScope: String { store.accountEpoch.uuidString + (store.me?.id ?? "") + (scenePhase == .active ? "active" : "inactive") }
     private var normalContent: some View {
         Group {
-            if store.loading && store.me == nil { ProgressView("Opening Stați…") }
+            if store.loading && store.me == nil { ProgressView(UIDevice.current.userInterfaceIdiom == .pad ? "Opening Stați Worship…" : "Opening Stați…") }
             else if let person = store.me {
                 if person["status"].text != "active" {
                     NavigationStack { ContentUnavailableView("Waiting for approval", systemImage: "person.badge.clock", description: Text("Your church administrator needs to approve your account.")).toolbar { Button("Sign out") { Task { await store.signOut() } } } }

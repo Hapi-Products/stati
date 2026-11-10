@@ -11,28 +11,42 @@ struct IPadSongsView: View {
     @State private var preview: SongGalleryRequest?
     @State private var query = ""
     @State private var searching = false
-    @State private var listMode = false
+    @AppStorage("stati.worship.songList") private var listMode = false
     private var songs: [APIRecord] { library?.items ?? [] }
     private var loading: Bool { library?.loading == true }
     private var message: String { library?.message ?? "" }
     private var sections: [SongAlphabet] { SongAlphabet.sections(songs) }
+    private var showsGrid: Bool { searchTerm.isEmpty && !listMode && !dynamicTypeSize.isAccessibilitySize && !songs.isEmpty }
     private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var searchGroups: [SongSearchGroup] { SongSearchGroup.sections(songs, query: searchTerm) }
     private var orderedSongs: [APIRecord] { searchTerm.isEmpty ? sections.flatMap(\.songs) : searchGroups.flatMap(\.songs) }
     private var largePreviews: Bool { reader?.settings.largePreviews == true }
     private var requestKey: String { store.accountEpoch.uuidString + store.selectedComputer + group + query + String(store.catalogChangeRevision) }
     var body: some View {
-        Group {
-            if searchTerm.isEmpty && !listMode && !dynamicTypeSize.isAccessibilitySize && !songs.isEmpty {
-                VStack(spacing: 0) {
-                    IPadSongGrid(songs: orderedSongs, large: largePreviews, open: openSong)
-                    if loading { ProgressView("Loading songs…").padding(8) }
-                    if !message.isEmpty { NoticeView(text: message).padding(12); Button("Try again", systemImage: "arrow.clockwise") { Task { await load() } }.padding(8) }
-                }
-            } else { songList }
+        VStack(spacing: 0) {
+            libraryHeader
+            if showsGrid {
+                IPadSongGrid(songs: orderedSongs, large: largePreviews, open: openSong)
+                if loading { ProgressView("Loading songs…").padding(8) }
+                if !message.isEmpty { NoticeView(text: message).padding(12); Button("Try again", systemImage: "arrow.clockwise") { Task { await load() } }.padding(8) }
+            } else {
+                songList
+            }
         }
-        .navigationTitle(title).navigationBarTitleDisplayMode(.large)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Icons", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) } }
+        .background(Color(.secondarySystemGroupedBackground))
+        .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") {
+                    Picker("Layout", selection: $listMode) {
+                        Label("Grid", systemImage: "square.grid.2x2").tag(false)
+                        Label("List", systemImage: "list.bullet").tag(true)
+                    }
+                    Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 }))
+                }
+                .labelStyle(ActionIconLabelStyle())
+            }
+        }
         .searchable(text: $query, isPresented: $searching, placement: .toolbar, prompt: "Search songs and lyrics").searchToolbarBehavior(.minimize)
         .task(id: requestKey) { do { try await Task.sleep(for: .milliseconds(200)); await load()
             #if DEBUG && targetEnvironment(simulator)
@@ -53,6 +67,22 @@ struct IPadSongsView: View {
             #endif
         }
     }
+    private var libraryHeader: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label("Stați Cloud", systemImage: "icloud")
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
+            if !songs.isEmpty {
+                Text("\(library?.total ?? songs.count) songs")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+    }
     private var songList: some View {
         List {
             if store.selectedComputer.isEmpty {
@@ -71,9 +101,9 @@ struct IPadSongsView: View {
                 }
                 if loading { ProgressView("Loading songs…") }
                 if !message.isEmpty { NoticeView(text: message); Button("Try again", systemImage: "arrow.clockwise") { Task { await load() } } }
-                if !loading && songs.isEmpty && message.isEmpty { ContentUnavailableView(query.isEmpty ? "No songs in this folder" : "No matching songs", systemImage: "music.note", description: Text(query.isEmpty ? "Choose another folder from the sidebar or Account." : "Try another title or lyric.")) }
+                if !loading && songs.isEmpty && message.isEmpty { ContentUnavailableView(query.isEmpty ? "No songs in this folder" : "No matching songs", systemImage: "music.note", description: Text(query.isEmpty ? "Choose another folder or check the connected library." : "Try another title or lyric.")) }
             }
-        }.listStyle(.plain).listSectionSpacing(.compact).listSectionIndexVisibility(.visible)
+        }.listStyle(.insetGrouped).listSectionSpacing(.compact).listSectionIndexVisibility(.visible)
     }
     private func openSong(_ song: APIRecord) { preview = SongGalleryRequest(computerID: store.selectedComputer, songs: orderedSongs, selectedID: song.id) }
     private func songButton<Content: View>(_ song: APIRecord, @ViewBuilder content: () -> Content) -> some View {

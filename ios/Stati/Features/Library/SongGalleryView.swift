@@ -12,6 +12,8 @@ struct SongGalleryView: View {
     @State private var unlinkBusy = false
     @State private var commenting = false
     @State private var exportError = ""
+    @State private var focused = false
+    @State private var choosingSong = false
     @ScaledMetric(relativeTo: .body) private var actionSize = 20.0
     private var actionSymbolSize: CGFloat { iPad ? 20 : actionSize }
     private var actionTarget: CGFloat { iPad ? 44 : max(44, actionSize * 1.2 + 20) }
@@ -28,23 +30,45 @@ struct SongGalleryView: View {
                 if NativeReaderReview.active { Text("Sample data · Simulator review").font(.caption).dynamicTypeSize(.large).foregroundStyle(Color.statiSecondary).padding(8) }
                 #endif
                 if let song = model.song {
-                    SongReaderContent(song: song, mode: iPad ? preferences.settings.mode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize).id(song.id + song["contentHash"].text)
+                    SongReaderContent(song: song, mode: iPad ? preferences.settings.mode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize, showsPagingControls: !focused).id(song.id + song["contentHash"].text)
                 } else if model.loading { ProgressView("Opening song…").frame(maxWidth: .infinity, maxHeight: .infinity) }
                 else { ContentUnavailableView("Song unavailable", systemImage: "music.note", description: Text(model.message)) }
                 if !model.message.isEmpty, model.song != nil { NoticeView(text: model.message).padding(.horizontal, 16) }
                 if model.song == nil && !model.loading { Button("Try again", systemImage: "arrow.clockwise") { Task { await model.load() } }.padding() }
             }.background(iPad && preferences.settings.mode == .document ? Color.white.ignoresSafeArea() : iPad && preferences.settings.mode == .slides ? Color.black.ignoresSafeArea() : Color(.systemBackground).ignoresSafeArea()).safeAreaInset(edge: .bottom) { if !iPad, let song = model.song { phoneActions(song) } }
-                .navigationTitle(model.song?.title ?? model.selected.title).navigationBarTitleDisplayMode(.inline)
+                .navigationTitle(model.song?.title ?? model.selected.title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarVisibility(focused ? .hidden : .visible, for: .navigationBar)
+                .safeAreaInset(edge: .bottom) {
+                    if focused {
+                        HStack {
+                            Spacer()
+                            Button("Show reader controls", systemImage: "arrow.down.right.and.arrow.up.left") { focused = false }
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(.glass)
+                                .controlSize(.large)
+                        }
+                        .padding([.horizontal, .bottom], 12)
+                    }
+                }
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) }
+                    if iPad, model.request.items.count > 1 {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button(model.request.isService ? "Running order" : "Songs", systemImage: model.request.isService ? "list.number" : "music.note.list") {
+                                choosingSong = true
+                            }
+                            .labelStyle(ActionIconLabelStyle())
+                        }
+                    }
                     if iPad, let song = model.song {
                         ToolbarItemGroup(placement: .topBarTrailing) {
-                            if model.request.isService { runningOrder }
                             notesMenu
                             Menu {
                                 if store.canCommentSongs { Button("Comment", systemImage: "text.bubble") { commenting = true } }
                                 Picker("Song view", selection: $preferences.settings.mode) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
-                            } label: { actionIcon("ellipsis") }.accessibilityLabel("Song view")
+                                Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
+                            } label: { actionIcon("ellipsis") }.accessibilityLabel("Reader options")
                             share(song)
                         }
                     }
@@ -67,30 +91,23 @@ struct SongGalleryView: View {
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
         .fullScreenCover(item: $preview) { StatiFileViewer(request: $0) }
+        .sheet(isPresented: $choosingSong) {
+            WorshipReaderSongsView(
+                items: model.request.items,
+                selectedID: model.selected.id,
+                isService: model.request.isService
+            ) { id in
+                model.selectSong(id)
+                choosingSong = false
+                Task { await model.load() }
+            }
+        }
         .sheet(isPresented: $commenting) { if let song = model.song { SongCorrectionComposer(store: store, computerID: model.request.computerID, song: song) } }
         .sheet(isPresented: $linking) { LinkSongFileView(computerID: model.request.computerID, songID: model.selected.songID, linkedIDs: Set(model.files.map(\.id))) { linking = false; Task { await model.load() } } }
         .confirmationDialog("Unlink this file from the song?", isPresented: Binding(get: { unlinking != nil }, set: { if !$0 { unlinking = nil } }), titleVisibility: .visible) {
             if let file = unlinking { Button("Unlink file", role: .destructive) { unlinking = nil; Task { await unlink(file) } } }
         } message: { Text("The shared group file stays available. Only this song’s link is removed.") }
         .alert("Song action unavailable", isPresented: Binding(get: { !exportError.isEmpty }, set: { if !$0 { exportError = "" } })) { Button("OK", role: .cancel) { exportError = "" } } message: { Text(exportError) }
-    }
-    private var runningOrder: some View {
-        Menu("Running order", systemImage: "list.number") {
-            Button("Previous song", systemImage: "backward.end") { selectSong(at: model.position.index - 1) }.disabled(model.position.index == 0)
-            Button("Next song", systemImage: "forward.end") { selectSong(at: model.position.index + 1) }.disabled(model.position.index + 1 >= model.request.items.count)
-            Divider()
-            ForEach(Array(model.request.items.enumerated()), id: \.element.id) { index, item in
-                Button { selectSong(at: index) } label: {
-                    if index == model.position.index { Label(item.title, systemImage: "checkmark") }
-                    else { Text(item.title) }
-                }
-            }
-        }
-    }
-    private func selectSong(at index: Int) {
-        guard model.request.items.indices.contains(index), index != model.position.index else { return }
-        model.selectServiceSong(model.request.items[index].id)
-        Task { await model.load() }
     }
     private var notesMenu: some View {
         Menu {

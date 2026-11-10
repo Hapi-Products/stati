@@ -11,7 +11,7 @@ struct IPadSongGrid: UIViewRepresentable {
         let layout = UICollectionViewFlowLayout(); layout.minimumInteritemSpacing = 20; layout.minimumLineSpacing = 20; layout.sectionInset = UIEdgeInsets(top: 16, left: 20, bottom: 24, right: 36)
         let view = UICollectionView(frame: .zero, collectionViewLayout: layout)
         view.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "song")
-        view.backgroundColor = .systemBackground; view.alwaysBounceVertical = true
+        view.backgroundColor = .clear; view.alwaysBounceVertical = true
         view.dataSource = context.coordinator; view.delegate = context.coordinator
         return view
     }
@@ -34,7 +34,7 @@ struct IPadSongGrid: UIViewRepresentable {
         func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
             let available = max(1, collectionView.bounds.width - collectionView.adjustedContentInset.left - collectionView.adjustedContentInset.right - 56), minimum: CGFloat = parent.large ? 206 : 152
             let columns = max(1, floor((available + 20) / (minimum + 20)))
-            return CGSize(width: floor((available - (columns - 1) * 20) / columns), height: parent.large ? 148 : 116)
+            return CGSize(width: max(1, floor((available - (columns - 1) * 20) / columns)), height: parent.large ? 232 : 192)
         }
         func indexTitles(for collectionView: UICollectionView) -> [String]? { SongAlphabet.sections(parent.songs).map(\.id) }
         func collectionView(_ collectionView: UICollectionView, indexPathForIndexTitle title: String, at index: Int) -> IndexPath {
