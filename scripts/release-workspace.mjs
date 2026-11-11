@@ -3,9 +3,9 @@ import {lstat,mkdir,open,readFile,readdir,realpath,rename,rm,writeFile} from 'no
 import {homedir} from 'node:os';
 import path from 'node:path';
 
-const directories=['desktop','src','public','scripts','tests','vendor','migrations'];
+const directories=['desktop','src','public','scripts','tests','vendor','migrations','macos'];
 const topFiles=['AGENTS.md','package.json','package-lock.json','index.html','tsconfig.json','vite.config.ts','vite.desktop.config.ts','vitest.config.ts','wrangler.jsonc','worker-configuration.d.ts'];
-const generated=/^desktop\/(?:build|public)(?:\/|$)/;
+const generated=/^desktop\/(?:build|public|native-support)(?:\/|$)/;
 const privateName=/(^|\/)(?:\.[^/]+|node_modules|release|dist)(\/|$)|\.(?:jks|keystore|p12|statibackup)$/i;
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 function relativeName(name){

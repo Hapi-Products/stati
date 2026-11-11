@@ -15,6 +15,7 @@ export function assertPackageMetadata(packaged,source){
 }
 const ocrVariants=['','-lstm','-simd','-simd-lstm','-relaxedsimd','-relaxedsimd-lstm'];
 export const requiredWindowsRuntimeFiles=Object.freeze([
+ 'desktop/native-host.cjs','desktop/native-preview-cache.cjs','desktop/team-api.cjs','desktop/native-support/slides.cjs',
  'desktop/index.html','desktop/renderer.js','desktop/preload.cjs','desktop/station.css','desktop/build/station-workspace.js','desktop/build/style.css',
  'desktop/build/offline.html','desktop/offline-preload.cjs','desktop/offline-service.cjs','desktop/offline-window.cjs','desktop/service-desk-ipc.cjs','desktop/approved-service-store.cjs','desktop/service-output.cjs','desktop/service-compatibility.cjs','desktop/audio-preparation.cjs',
  'src/shared/output-layout.js','desktop/output-layouts.cjs','desktop/output-layout-drafts.cjs','desktop/presentation-text-sync.cjs','desktop/presentation-monitor.cjs','desktop/disk-reserve.cjs','desktop/song-variants.cjs',

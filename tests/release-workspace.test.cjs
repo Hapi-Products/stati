@@ -4,7 +4,7 @@ async function fixture(fn){const root=await fs.realpath(await fs.mkdtemp(path.jo
 async function put(root,name,value='source'){await fs.mkdir(path.dirname(path.join(root,name)),{recursive:true});await fs.writeFile(path.join(root,name),value);}
 async function source(root){
  for(const name of ['AGENTS.md','index.html','tsconfig.json','vite.config.ts','vite.desktop.config.ts','vitest.config.ts','wrangler.jsonc','worker-configuration.d.ts'])await put(root,name);
- for(const dir of ['desktop','src','public','scripts','tests','vendor','migrations'])await fs.mkdir(path.join(root,dir),{recursive:true});
+ for(const dir of ['desktop','src','public','scripts','tests','vendor','migrations','macos'])await fs.mkdir(path.join(root,dir),{recursive:true});
  await put(root,'package.json',JSON.stringify({version:'0.1.0',dependencies:{a:'1.0.0'}}));await put(root,'package-lock.json','locked dependencies');await put(root,'desktop/preview-build.json','{"number":22}');
 }
 test('release snapshot omits private/generated inputs, retains exact sources, and overrides only staged preview',()=>fixture(async root=>{

@@ -64,8 +64,9 @@ try{
  });
  if(dependenciesReused)console.log('Dependencies: reusing the exact-lock local installation.');
  // Generated files cannot carry over from an earlier preview.
- for(const name of ['desktop/build','desktop/public','dist',...(!checksOnly?['release']:[])])await rm(path.join(workspace,name),{recursive:true,force:true});
+ for(const name of ['desktop/build','desktop/public','desktop/native-support','dist',...(!checksOnly?['release']:[])])await rm(path.join(workspace,name),{recursive:true,force:true});
  await node('desktop-assets','scripts/prepare-desktop-assets.mjs');
+ await node('native-engine-support','scripts/build-native-support.mjs');
  // Miniflare reads the asset manifest at startup. Finish writing dist before
  // the Worker pool starts so a concurrent Vite cleanup cannot remove files.
  await node('website-ui','node_modules/vite/bin/vite.js','build');

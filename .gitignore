@@ -46,3 +46,7 @@ __pycache__/
 .impeccable/review/
 .taste-skill/
 .stati-build/
+
+# Generated desktop engine support and shared local dependencies
+/desktop/native-support/
+/node_modules

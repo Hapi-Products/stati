@@ -10,6 +10,7 @@ This repository contains the application sources under the [Apache License 2.0](
 | --- | --- | --- |
 | `desktop/`, `src/desktop/` | Electron Windows companion | Preview 39 source; ProPresenter 7.11 integration and physical Windows acceptance remain under active review. |
 | `src/web/`, `src/server/`, `src/shared/` | Responsive website and Cloudflare backend | React, Workers, D1, R2 and Durable Objects. |
+| `macos/` | Native Stați preview for Apple Silicon Macs | SwiftUI app with a bundled desktop engine. [Build instructions](macos/README.md). |
 | `ios/` | Native SwiftUI iPhone/iPad app | Development build 27; requires iOS/iPadOS 27 and a matching Xcode toolchain. |
 | `android/` | Android Trusted Web Activity | Uses the web app through Android Browser Helper. |
 | `tests/`, `migrations/`, `vendor/` | Tests, database migrations and licensed supporting resources | Test fixtures use synthetic data. |
