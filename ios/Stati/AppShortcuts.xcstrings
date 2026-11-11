@@ -1,0 +1,46 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Find a song in ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find a song in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Open a song in ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open a song in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Browse songs in ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse songs in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Show all songs in ${applicationName}": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all songs in ${applicationName}"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
