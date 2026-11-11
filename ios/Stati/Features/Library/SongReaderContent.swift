@@ -11,6 +11,7 @@ struct SongReaderContent: View {
     var showsPagingControls = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var index = 0
+    @State private var showsPagePreviews = false
     @State private var document: PDFDocument?
     @State private var failure = ""
     private var pages: [String] {
@@ -27,7 +28,26 @@ struct SongReaderContent: View {
                     .id(mode.rawValue + transition.effective(for: mode, reduceMotion: reduceMotion).rawValue + slideSize.rawValue)
                     .safeAreaInset(edge: .bottom) {
                         if showsPagingControls {
-                            ReaderPagingBar(index: index, count: count, previous: { move(-1) }, next: { move(1) }, pageLabels: true)
+                            ReaderPagingBar(
+                                index: index, count: count,
+                                previous: { move(-1) }, next: { move(1) },
+                                pageLabels: true,
+                                showPagePreviews: count > 1 ? { showsPagePreviews = true } : nil
+                            )
+                            .popover(isPresented: $showsPagePreviews, arrowEdge: .bottom) {
+                                SongPageThumbnails(
+                                    pages: pages,
+                                    document: mode == .document ? document : nil,
+                                    slideSize: slideSize,
+                                    selectedIndex: index
+                                ) { target in
+                                    guard (0..<count).contains(target) else { return }
+                                    index = target
+                                    showsPagePreviews = false
+                                } close: {
+                                    showsPagePreviews = false
+                                }
+                            }
                         }
                     }
             } else if !failure.isEmpty { ContentUnavailableView("Document unavailable", systemImage: "doc", description: Text(failure)) }
@@ -35,9 +55,16 @@ struct SongReaderContent: View {
             else { ProgressView("Preparing document…") }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(mode == .document ? Color.white : mode == .slides ? Color.black : Color(.systemBackground))
             .task(id: song.id + song["contentHash"].text + String(pdfColumns.rawValue) + mode.rawValue) { if mode == .document { prepareDocument() } }
-            .onChange(of: mode) { index = 0 }
+            .onChange(of: mode) { index = 0; showsPagePreviews = false }
             #if DEBUG && targetEnvironment(simulator)
-            .onAppear { if NativeReview.route == "reader-slides-last" { index = max(0, count - 1) } }
+            .onAppear {
+                if NativeReview.route == "reader-slides-last" { index = max(0, count - 1) }
+            }
+            .task(id: count) {
+                guard NativeReview.route == "reader-page-thumbnails", count > 1 else { return }
+                do { try await Task.sleep(for: .milliseconds(700)) } catch { return }
+                showsPagePreviews = true
+            }
             #endif
     }
     private func move(_ by: Int) { guard (0..<count).contains(index + by) else { return }; index += by }

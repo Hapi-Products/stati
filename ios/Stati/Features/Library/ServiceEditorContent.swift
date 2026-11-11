@@ -53,7 +53,7 @@ struct ServiceEditorContent: View {
             if !iPad, editor.plan["leadership"]["isLeader"].flag { Button("Leave service", systemImage: "person.badge.minus") { Task { await editor.leadership("release-leadership") } } }
             else if !iPad && (editor.plan["leadership"]["canClaim"].flag || editor.plan["leadership"]["canTakeOver"].flag) { Button(editor.plan["leadership"]["canTakeOver"].flag ? "Take over" : "Lead service") { Task { await editor.leadership("claim-leadership") } } }
         }
-        .fullScreenCover(item: $preview) { SongGalleryView(store: store, request: $0) { readingID = $0 } }
+        .fullScreenCover(item: $preview) { SongGalleryView(store: store, request: $0, selectionChanged: { readingID = $0 }) }
         .sheet(isPresented: $adding) { NavigationStack { SongPicker(computerID: editor.computerID) { editor.add($0); adding = false } } }
         .sheet(isPresented: $history) { NavigationStack { ServiceHistoryView(computerID: editor.computerID, serviceID: editor.plan.id) } }
         #if DEBUG && targetEnvironment(simulator)

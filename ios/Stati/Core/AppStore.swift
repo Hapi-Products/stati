@@ -63,7 +63,7 @@ final class AppStore {
             accountRefresh?.cancel(); let epoch = accountEpoch
             accountRefresh = Task { do { try await Task.sleep(for: .milliseconds(150)); guard epoch == accountEpoch else { return }; await refresh() } catch { } }
         }
-        if ["tasks-ready", "tasks-changed"].contains(type) { tasksInvalidated() }
+        if UIDevice.current.userInterfaceIdiom != .pad, ["tasks-ready", "tasks-changed"].contains(type) { tasksInvalidated() }
         if ["tasks-ready", "catalog-changed"].contains(type) { catalogChangeRevision += 1 }
         if ["tasks-ready", "services-changed"].contains(type) { servicesChanged(computerID: selectedComputer) }
         if ["tasks-ready", "groups-changed"].contains(type) { groupChangeRevision += 1 }

@@ -8,6 +8,7 @@ struct ReaderPagingBar: View {
     let next: () -> Void
     var actions: [ReaderAction] = []
     var pageLabels = false
+    var showPagePreviews: (() -> Void)?
     var body: some View {
         HStack(spacing: 12) {
             if !actions.isEmpty {
@@ -17,8 +18,18 @@ struct ReaderPagingBar: View {
             }
             Button(pageLabels ? "Previous page" : "Previous item", systemImage: "chevron.left", action: previous)
                 .disabled(index == 0 || disabled).labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44)
-            Text("\(index + 1) of \(count)").font(.callout).monospacedDigit()
-                .frame(minWidth: 70).accessibilityLabel("\(pageLabels ? "Page" : "Item") \(index + 1) of \(count)")
+            if let showPagePreviews {
+                Button(action: showPagePreviews) {
+                    pageCount.frame(minHeight: 44)
+                        .contentShape(.rect)
+                }
+                .disabled(disabled)
+                .onLongPressGesture(perform: showPagePreviews)
+                .accessibilityHint("Opens page previews.")
+                .hoverEffect(.highlight)
+            } else {
+                pageCount
+            }
             Button(pageLabels ? "Next page" : "Next item", systemImage: "chevron.right", action: next)
                 .disabled(index + 1 >= count || disabled).labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44)
         }.buttonStyle(.plain).fontWeight(.medium).padding(.horizontal, 12).padding(.vertical, 4)
@@ -29,5 +40,13 @@ struct ReaderPagingBar: View {
                 else if value.translation.width > 70, index > 0 { previous() }
             })
             .accessibilityHint(pageLabels ? "Swipe across the control to change pages in this song." : "Swipe across the control to change items.").padding(.horizontal, 16).padding(.bottom, 8)
+    }
+
+    private var pageCount: some View {
+        Text("\(index + 1) of \(count)")
+            .font(.callout)
+            .monospacedDigit()
+            .frame(minWidth: 70)
+            .accessibilityLabel("\(pageLabels ? "Page" : "Item") \(index + 1) of \(count)")
     }
 }

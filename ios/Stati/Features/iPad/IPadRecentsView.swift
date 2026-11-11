@@ -34,7 +34,7 @@ struct IPadRecentsView: View {
                 if NativeReview.route == "ipad-search" { query = "Choir" }
                 #endif
             }
-            .task(id: store.accountEpoch.uuidString + String(store.fileChangeRevision) + String(store.taskChangeRevision) + String(store.catalogChangeRevision) + String(scenePhase == .active) + String(active)) {
+            .task(id: store.accountEpoch.uuidString + String(store.fileChangeRevision) + String(store.catalogChangeRevision) + String(scenePhase == .active) + String(active)) {
                 guard active && scenePhase == .active else { return }
                 if preferences == nil { preferences = ReaderPreferences(ownerID: store.me?.id ?? "") }
                 await reconcile()

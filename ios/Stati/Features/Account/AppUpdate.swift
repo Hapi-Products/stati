@@ -11,10 +11,14 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 27, title: "QR invitations", highlights: [
-        Highlight(title: "Invite with a scan", detail: "Show a joining QR on your computer or iPhone. New members scan it to create an account, then wait for approval.", icon: "qrcode")
-    ], details: ["Administrator invitations show a QR and expiry, without a separate six-digit code.", "New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."])
+    static let current = AppUpdate(id: 30, title: "Stați Worship on iPad", highlights: [
+        Highlight(title: "Keep the song in view", detail: "Open the Stați Cloud library from the reader and pick a song without leaving the reading workspace.", icon: "music.note.list"),
+        Highlight(title: "Jump to any page", detail: "Hold the page count to see previews. Tap a page to go straight to it.", icon: "square.grid.2x2")
+    ], details: ["Tasks and song comments are available in the iPhone app."])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 27, title: "QR invitations", highlights: [
+            Highlight(title: "Invite with a scan", detail: "Show a joining QR on your computer or iPhone. New members scan it to create an account, then wait for approval.", icon: "qrcode")
+        ], details: ["Administrator invitations show a QR and expiry, without a separate six-digit code.", "New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."]),
         AppUpdate(id: 26, title: "Connect new computers", highlights: [
         Highlight(title: "Pair from your phone", detail: "Scan a new computer’s pairing QR in Stați, then confirm to register it with your account.", icon: "qrcode.viewfinder")
     ], details: ["New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."]),
