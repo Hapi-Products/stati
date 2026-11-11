@@ -11,10 +11,6 @@ struct IPadSongsView: View {
     @State private var preview: SongGalleryRequest?
     @State private var query = ""
     @State private var searching = false
-    @State private var findingHymns = false
-    @State private var sending = false
-    @State private var showQueueAfterDraft = false
-    @AppStorage("stati.hymnSearch.enabled") private var onlineEnabled = true
     @AppStorage("stati.reader.libraryLayout") private var libraryLayout = "saved"
     @AppStorage("stati.worship.songListAfterGridRestore") private var listMode = false
     private var songs: [APIRecord] { library?.items ?? [] }
@@ -42,23 +38,6 @@ struct IPadSongsView: View {
         }
         .background(Color(.systemBackground))
         .navigationTitle(title).navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if onlineEnabled {
-                    Button("Find hymns online", systemImage: "globe") { findingHymns = true }
-                        .labelStyle(.iconOnly)
-                }
-                Button("Send", systemImage: "paperplane") { sending = true }.labelStyle(.iconOnly)
-            }
-        }
-        .sheet(isPresented: $findingHymns, onDismiss: {
-            if showQueueAfterDraft { showQueueAfterDraft = false; sending = true }
-        }) {
-            SongSubmissionEditor(onlineQuery: searchTerm, opensOnlineSearch: true) { showQueueAfterDraft = true }
-        }
-        .sheet(isPresented: $sending) {
-            NavigationStack { SendView(active: true) }
-        }
         .searchable(text: $query, isPresented: $searching, placement: .toolbar, prompt: "Search songs and lyrics").searchToolbarBehavior(.minimize)
         .task(id: requestKey) { do { try await Task.sleep(for: .milliseconds(200)); await load()
             #if DEBUG && targetEnvironment(simulator)

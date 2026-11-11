@@ -60,26 +60,6 @@
           }
         }
       }
-    },
-    "Draft a song in ${applicationName}": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Draft a song in ${applicationName}"
-          }
-        }
-      }
-    },
-    "Find hymns online in ${applicationName}": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Find hymns online in ${applicationName}"
-          }
-        }
-      }
     }
   },
   "version": "1.0"

@@ -6,7 +6,7 @@ struct SongShortcutRequest: Identifiable {
     let query: String
     var destination: Destination = .songs
 
-    enum Destination { case songs, services, recents, online, draft }
+    enum Destination { case songs, services, recents }
 }
 
 @MainActor @Observable
@@ -16,19 +16,12 @@ final class SongShortcutNavigation {
 }
 
 enum StatiShortcutError: LocalizedError {
-    case disabled, onlineDisabled
+    case disabled
 
-    var errorDescription: String? {
-        switch self {
-        case .disabled: "Turn on Siri Shortcuts in Settings to use this Stați action."
-        case .onlineDisabled: "Turn on Online Hymn Search in Settings to use this Stați action."
-        }
-    }
+    var errorDescription: String? { "Turn on Siri Shortcuts in Settings to use this Stați action." }
 
     @MainActor static func open(_ request: SongShortcutRequest) throws {
         guard UserDefaults.standard.object(forKey: "stati.shortcuts.enabled") as? Bool ?? true else { throw Self.disabled }
-        if request.destination == .online,
-           !(UserDefaults.standard.object(forKey: "stati.hymnSearch.enabled") as? Bool ?? true) { throw Self.onlineDisabled }
         SongShortcutNavigation.shared.request = request
     }
 }
@@ -59,28 +52,6 @@ struct BrowseStatiSongs: AppIntent {
 
     @MainActor func perform() async throws -> some IntentResult {
         try StatiShortcutError.open(SongShortcutRequest(query: ""))
-        return .result()
-    }
-}
-
-struct FindStatiHymns: AppIntent {
-    static let title: LocalizedStringResource = "Find Hymns Online"
-    static let openAppWhenRun = true
-    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
-
-    @MainActor func perform() async throws -> some IntentResult {
-        try StatiShortcutError.open(SongShortcutRequest(query: "", destination: .online))
-        return .result()
-    }
-}
-
-struct DraftStatiSong: AppIntent {
-    static let title: LocalizedStringResource = "New Song Draft"
-    static let openAppWhenRun = true
-    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
-
-    @MainActor func perform() async throws -> some IntentResult {
-        try StatiShortcutError.open(SongShortcutRequest(query: "", destination: .draft))
         return .result()
     }
 }
@@ -123,8 +94,6 @@ struct StatiShortcuts: AppShortcutsProvider {
         )
         AppShortcut(intent: OpenStatiServices(), phrases: ["Show services in \(.applicationName)"], shortTitle: "Services", systemImageName: "calendar")
         AppShortcut(intent: OpenStatiRecents(), phrases: ["Show recent songs in \(.applicationName)"], shortTitle: "Recent Songs", systemImageName: "clock")
-        AppShortcut(intent: DraftStatiSong(), phrases: ["Draft a song in \(.applicationName)"], shortTitle: "Song Draft", systemImageName: "square.and.pencil")
-        AppShortcut(intent: FindStatiHymns(), phrases: ["Find hymns online in \(.applicationName)"], shortTitle: "Find Hymns Online", systemImageName: "globe")
     }
 }
 
@@ -136,8 +105,6 @@ struct SongShortcutView: View {
     @State private var selection: SongGalleryRequest?
     @State private var query: String
     @State private var didSearch = false
-    @State private var composing = false
-    @AppStorage("stati.hymnSearch.enabled") private var onlineEnabled = true
 
     init(store: AppStore, request: SongShortcutRequest) {
         self.store = store
@@ -160,9 +127,6 @@ struct SongShortcutView: View {
                 else if results.isEmpty {
                     ContentUnavailableView("No matching songs", systemImage: "music.note", description: Text(library?.message ?? "Try a title or part of the lyrics."))
                 }
-                if onlineEnabled {
-                    Button("Find hymns online", systemImage: "globe") { composing = true }
-                }
                 ForEach(results) { song in
                     Button { open(song) } label: { SongRow(song: song).foregroundStyle(.primary) }
                         .buttonStyle(.plain)
@@ -183,10 +147,6 @@ struct SongShortcutView: View {
                 try await Task.sleep(for: .milliseconds(250))
                 await search()
             } catch { }
-        }
-        .sheet(isPresented: $composing) {
-            SongSubmissionEditor(onlineQuery: query, opensOnlineSearch: true, showsQueueAfterAdding: true)
-                .environment(store)
         }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.canReadSongs) { _, allowed in if !allowed { dismiss() } }
@@ -219,8 +179,6 @@ struct SongShortcutDestination: View {
             switch request.destination {
             case .songs:
                 SongShortcutView(store: store, request: request)
-            case .online, .draft:
-                SongSubmissionEditor(onlineQuery: request.query, opensOnlineSearch: request.destination == .online, showsQueueAfterAdding: true)
             case .services, .recents:
                 NavigationStack {
                     Group {

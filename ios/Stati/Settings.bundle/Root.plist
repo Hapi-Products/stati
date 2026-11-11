@@ -8,7 +8,7 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Song discovery</string>
+			<string>Shortcuts</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -17,16 +17,6 @@
 			<string>Siri Shortcuts</string>
 			<key>Key</key>
 			<string>stati.shortcuts.enabled</string>
-			<key>DefaultValue</key>
-			<true/>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
-			<key>Title</key>
-			<string>Online hymn search</string>
-			<key>Key</key>
-			<string>stati.hymnSearch.enabled</string>
 			<key>DefaultValue</key>
 			<true/>
 		</dict>
