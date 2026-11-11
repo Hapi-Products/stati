@@ -167,7 +167,7 @@ struct RootView: View {
                 else { ActionTabSymbol(name: tab == "more" ? "person.crop.circle.fill" : "person.crop.circle") }
             }.accessibilityLabel("Profile")
             if store.canReadSongs {
-                Tab(value: "songs", role: .prominent) { NavigationStack(path: $libraryPath) { LibraryView(query: $libraryQuery, area: $libraryArea) }.searchable(text: $libraryQuery, isPresented: $searchPresented, prompt: Text(searchPrompt).foregroundStyle(Color.statiSecondary)) } label: { ActionTabSymbol(name: "magnifyingglass", weight: tab == "songs" ? .semibold : .regular) }.accessibilityLabel("Songs and search")
+                Tab(value: "songs", role: .statiSongSearch) { NavigationStack(path: $libraryPath) { LibraryView(query: $libraryQuery, area: $libraryArea) }.searchable(text: $libraryQuery, isPresented: $searchPresented, prompt: Text(searchPrompt).foregroundStyle(Color.statiSecondary)) } label: { ActionTabSymbol(name: "magnifyingglass", weight: tab == "songs" ? .semibold : .regular) }.accessibilityLabel("Songs and search")
             }
         }
         .tabViewSearchActivation(.automatic)

@@ -1,30 +1,10 @@
 import SwiftUI
 
 private enum Hymnary {
-    struct Hymn: Identifiable, Hashable {
-        let id: String
-        let title: String
-        let firstLine: String
-        var source: URL { base.appending(path: "text/" + id) }
-    }
+    typealias Hymn = HymnaryResults.Hymn
+    typealias Version = HymnaryResults.Version
 
-    struct Version: Decodable, Hashable, Identifiable {
-        let title: String
-        let hymnalID: String
-        let number: String
-        let text: String?
-        let displayPermissions: String?
-
-        var id: String { hymnalID + ":" + number }
-        var lyrics: String {
-            (text ?? "").replacingOccurrences(of: "\n\r\n", with: "\n")
-                .replacingOccurrences(of: "\r\n", with: "\n")
-                .replacingOccurrences(of: "\r", with: "\n")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-    }
-
-    private static let base = URL(string: "https://hymnary.org")!
+    private static let base = HymnaryResults.base
 
     static func search(_ input: String, lyrics: Bool) async throws -> [Hymn] {
         let words = input.prefix(160).components(separatedBy: CharacterSet.alphanumerics.union(.nonBaseCharacters).inverted)
@@ -37,28 +17,12 @@ private enum Hymnary {
         ])
         let bytes = try await data(url)
         guard let csv = String(data: bytes, encoding: .utf8) else { throw unavailable }
-        let rows = parseCSV(csv)
-        guard let header = rows.first,
-              let id = header.firstIndex(of: "textAuthNumber"),
-              let title = header.firstIndex(of: "displayTitle"),
-              let firstLine = header.firstIndex(of: "firstLine") else { throw unavailable }
-        var seen: Set<String> = []
-        return Array(rows.dropFirst().lazy.compactMap { row -> Hymn? in
-            guard row.count > max(id, title, firstLine), !row[title].isEmpty,
-                  row[id].range(of: #"^[a-zA-Z0-9_-]{1,150}$"#, options: .regularExpression) != nil,
-                  seen.insert(row[id]).inserted else { return nil }
-            return Hymn(id: row[id], title: row[title], firstLine: row[firstLine])
-        }.prefix(15))
+        guard let hymns = HymnaryResults.search(csv) else { throw unavailable }
+        return hymns
     }
 
     static func versions(_ hymn: Hymn) async throws -> [Version] {
-        let result = try await data(base.appending(path: "api/fulltext/" + hymn.id))
-        let versions = try JSONDecoder().decode([Version].self, from: result)
-        var seen: Set<String> = []
-        return Array(versions.lazy.filter {
-            $0.displayPermissions == "all" && !$0.lyrics.isEmpty && $0.lyrics.utf8.count <= 24_000
-                && seen.insert($0.lyrics).inserted
-        }.prefix(12))
+        try HymnaryResults.versions(await data(base.appending(path: "api/fulltext/" + hymn.id)))
     }
 
     private static var unavailable: APIError { APIError(status: 502, message: "Hymnary couldn’t return results. Try again.") }
@@ -76,28 +40,6 @@ private enum Hymnary {
             result.append(byte)
         }
         return result
-    }
-
-    private static func parseCSV(_ text: String) -> [[String]] {
-        var rows: [[String]] = [], row: [String] = []
-        var field = "", quoted = false, closedQuote = false
-        for character in text {
-            if character == "\"" {
-                if closedQuote { field.append(character); quoted = true; closedQuote = false }
-                else if quoted { quoted = false; closedQuote = true }
-                else if field.isEmpty { quoted = true }
-                else { field.append(character) }
-            } else if !quoted && (character == "," || character.isNewline) {
-                row.append(field)
-                field = ""; closedQuote = false
-                if character.isNewline { rows.append(row); row = [] }
-            } else {
-                field.append(character)
-                closedQuote = false
-            }
-        }
-        if !field.isEmpty || !row.isEmpty { rows.append(row + [field]) }
-        return rows
     }
 }
 

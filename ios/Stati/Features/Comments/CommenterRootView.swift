@@ -22,7 +22,7 @@ struct CommenterRootView: View {
             } else {
                 Tab(value: "comments") { NavigationStack { CommenterHomeView(store: store) } } label: { ActionTabSymbol(name: tab == "comments" ? "text.bubble.fill" : "text.bubble") }.accessibilityLabel("Comments")
                 Tab(value: "account") { NavigationStack { CommenterAccountView() } } label: { if let profile { Image(uiImage: profile).renderingMode(.original) } else { ActionTabSymbol(name: tab == "account" ? "person.crop.circle.fill" : "person.crop.circle") } }.accessibilityLabel("Profile")
-                Tab(value: "search", role: .prominent) { NavigationStack { CommenterSongSearch(store: store) } } label: { ActionTabSymbol(name: "magnifyingglass", weight: tab == "search" ? .semibold : .regular) }.accessibilityLabel("Search songs")
+                Tab(value: "search", role: .statiSongSearch) { NavigationStack { CommenterSongSearch(store: store) } } label: { ActionTabSymbol(name: "magnifyingglass", weight: tab == "search" ? .semibold : .regular) }.accessibilityLabel("Search songs")
             }
         }.tabViewStyle(.sidebarAdaptable).defaultAdaptableTabBarPlacement(.tabBar).environment(store)
             .tabViewSidebarHeader { if isPad { HStack { IPadAccountButton(store: store) { account = true }; Spacer() }.padding(.vertical, 4).environment(store) } }

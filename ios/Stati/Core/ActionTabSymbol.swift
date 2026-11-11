@@ -11,3 +11,10 @@ struct ActionTabSymbol: View {
             .environment(\.symbolVariants, .none)
     }
 }
+
+extension TabRole {
+    static var statiSongSearch: Self {
+        if #available(iOS 27.0, *) { return .prominent }
+        return .search
+    }
+}
