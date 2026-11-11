@@ -42,3 +42,21 @@ it('archives and restores the exact saved song references after the catalog chan
  expect(restored.plans[0]).toMatchObject({archived: false, notes: 'Keep', revision: 4, songs: saved.songs});
  await rejected(f.change({type: 'save', id: saved.id, plan: {...restored.plans[0], notes: 'Still validates song references'}}), 409);
 });
+
+it('deletes only the expected archived service for an admin and prevents reimport of its original file', async () => {
+ const f = await fixture(null, true);
+ const plan = await f.create();
+ await rejected(f.change({type:'delete',id:plan.id,expectedRevision:1}), 409);
+ const archived = (await f.change({type:'archive',id:plan.id,archived:true})).plans[0];
+ expect(archived.canDelete).toBe(true);
+ await rejected(f.change({type:'delete',id:plan.id,expectedRevision:1}), 409);
+ const deleted = await f.change({type:'delete',id:plan.id,expectedRevision:archived.revision});
+ expect(deleted.plans).toEqual([]);
+ expect(deleted.activeServiceId).toBeNull();
+ expect(await f.change({type:'import',plan})).toMatchObject({plans:[], imported:false});
+ const member = await fixture();
+ const memberPlan = await member.create();
+ const memberArchived = (await member.change({type:'archive',id:memberPlan.id,archived:true})).plans[0];
+ expect(memberArchived.canDelete).toBe(false);
+ await rejected(member.change({type:'delete',id:memberPlan.id,expectedRevision:memberArchived.revision}), 403);
+});

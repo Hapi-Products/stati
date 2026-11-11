@@ -10,7 +10,7 @@ const arrangement=z.object({name:z.string().trim().min(1).max(80),slides:z.array
 const song=z.object({id:identifier,songId:hash,contentHash:hash,title:z.string().min(1).max(300),filename:z.string().max(255),reviewed:z.boolean(),arrangement:arrangement.optional()}).strict();
 const task=z.object({id:identifier,text:z.string().trim().min(1).max(120),done:z.boolean()}).strict();
 const content=z.object({title:z.string().trim().min(1).max(80),date,time,notes:z.string().max(5000),reviewed:z.boolean(),archived:z.boolean(),tasks:z.array(task).max(50),songs:z.array(song).max(1000),templateId:identifier.optional()}).strict();
-const plan=content.extend({id:z.string().uuid(),revision:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER-1),active:z.boolean().optional(),approvedVersionId:z.string().uuid().optional(),approvedRevision:z.number().int().min(1).optional(),status:z.string().max(120).optional(),leadership:z.unknown().optional(),templateId:identifier.optional(),playlist:z.object({phase:z.enum(['waiting','error','synced','disabled','review']),message:z.string().max(600),playlistName:z.string().max(180).optional()}).optional()}).strict();
+const plan=content.extend({id:z.string().uuid(),revision:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER-1),active:z.boolean().optional(),canDelete:z.boolean().optional(),approvedVersionId:z.string().uuid().optional(),approvedRevision:z.number().int().min(1).optional(),status:z.string().max(120).optional(),leadership:z.unknown().optional(),templateId:identifier.optional(),playlist:z.object({phase:z.enum(['waiting','error','synced','disabled','review']),message:z.string().max(600),playlistName:z.string().max(180).optional()}).optional()}).strict();
 const reference=z.object({songId:hash,contentHash:hash,title:z.string().max(300).optional(),filename:z.string().max(255).optional()}).strict();
 export const stationServiceAction=z.discriminatedUnion('type',[
  ...serviceLeadershipAction.options,
@@ -18,6 +18,7 @@ export const stationServiceAction=z.discriminatedUnion('type',[
  z.object({type:z.literal('save'),id:z.string().uuid(),plan}).strict(),
  z.object({type:z.literal('duplicate'),id:z.string().uuid(),date:date.optional()}).strict(),
  z.object({type:z.literal('archive'),id:z.string().uuid(),archived:z.boolean()}).strict(),
+ z.object({type:z.literal('delete'),id:z.string().uuid(),expectedRevision:z.number().int().positive()}).strict(),
  z.object({type:z.literal('select'),id:z.string().uuid().nullable()}).strict(),
  z.object({type:z.literal('import'),plan}).strict(),
  z.object({type:z.literal('attach-songs'),expectedActiveServiceId:z.string().uuid(),songs:z.array(reference).max(1000)}).strict(),
@@ -33,7 +34,7 @@ async function list(env:Env,deviceId:string,authority:MinistryAuthority){
  const guard=stationMinistryGuard(authority,deviceId,'readSongs');
  const rows=(await env.DB.prepare(`SELECT id,title,date,time,archived,revision,content_json FROM station_services WHERE device_id=? AND ${guard.sql} ORDER BY date,time,id LIMIT 100`).bind(deviceId,...guard.params).all<Stored>()).results;
  const selected=await env.DB.prepare(`SELECT selection.service_id FROM station_service_selections selection JOIN station_services service ON service.device_id=selection.device_id AND service.id=selection.service_id AND service.archived=0 WHERE selection.device_id=? AND ${guard.sql}`).bind(deviceId,...guard.params).first<{service_id:string}>();
- const activeServiceId=selected?.service_id||null,plans=rows.map(row=>decode(row,activeServiceId)),leadership=await serviceLeadershipMap(env,deviceId,authority,plans);return{plans:plans.map(plan=>({...plan,leadership:leadership.get(plan.id)})),activeServiceId};
+ const activeServiceId=selected?.service_id||null,plans=rows.map(row=>decode(row,activeServiceId)),leadership=await serviceLeadershipMap(env,deviceId,authority,plans);return{plans:plans.map(plan=>({...plan,leadership:leadership.get(plan.id),canDelete:plan.archived&&authority.capabilities.manageTeam})),activeServiceId};
 }
 export async function readStationServices(request:Request,env:Env,deviceId:string,native=false){const authority=await requireStationMinistry(request,env,deviceId,'readSongs',native);return json(await list(env,deviceId,authority));}
 async function canonicalSongs(env:Env,deviceId:string,songs:Content['songs']){
@@ -51,6 +52,21 @@ export async function changeStationService(request:Request,env:Env,deviceId:stri
  const timestamp=now(),guard=stationMinistryGuard(authority,deviceId,assignedPastor?'readSongs':'planServices',timestamp),auditId=crypto.randomUUID();
  const audited={sql:'EXISTS(SELECT 1 FROM audit WHERE id=? AND actor_id=? AND subject_id=?)',params:[auditId,authority.user.id,deviceId]};
  const mutationAudit=()=>env.DB.prepare('INSERT INTO audit(id,actor_id,action,subject_id,created_at) SELECT ?,?,?,?,? WHERE changes()>0').bind(auditId,authority.user.id,'station-service-'+data.type,deviceId,timestamp);
+ if(data.type==='delete'){
+  if(!authority.capabilities.manageTeam)throw new HttpError(403,'An administrator is required to delete a service.');
+  const permission=stationMinistryGuard(authority,deviceId,'manageTeam',timestamp);
+  const subject=deviceId+':'+data.id;
+  const deleted=await env.DB.batch([
+   env.DB.prepare(`DELETE FROM station_services WHERE device_id=? AND id=? AND archived=1 AND revision=? AND ${permission.sql}`)
+    .bind(deviceId,data.id,data.expectedRevision,...permission.params),
+   env.DB.prepare(`INSERT INTO audit(id,actor_id,action,subject_id,created_at)
+    SELECT ?,?,'station-service-delete',?,? WHERE changes()>0`).bind(auditId,authority.user.id,subject,timestamp),
+   env.DB.prepare('UPDATE station_service_selections SET service_id=NULL WHERE device_id=? AND service_id=? AND '+audited.sql)
+    .bind(deviceId,data.id,auditId,authority.user.id,subject),
+  ]);
+  if(!deleted[0].meta.changes)throw new HttpError(409,'Archive the service and reload its latest version before deleting it.');
+  return json(await list(env,deviceId,authority));
+ }
  if(data.type==='select'){
   const selected=await env.DB.batch([
    env.DB.prepare(`INSERT INTO station_service_selections(device_id,service_id,updated_by,updated_at) SELECT ?,?,?,? WHERE ${guard.sql} AND (? IS NULL OR EXISTS(SELECT 1 FROM station_services WHERE device_id=? AND id=? AND archived=0)) ON CONFLICT(device_id) DO UPDATE SET service_id=excluded.service_id,updated_by=excluded.updated_by,updated_at=excluded.updated_at`).bind(deviceId,data.id,authority.user.id,timestamp,...guard.params,data.id,deviceId,data.id),mutationAudit(),
@@ -59,7 +75,7 @@ export async function changeStationService(request:Request,env:Env,deviceId:stri
  }
  const sourceId=data.type==='attach-songs'?data.expectedActiveServiceId:data.type==='create'?null:data.type==='import'?data.plan.id:data.id;
  const existing=sourceId?await env.DB.prepare(`SELECT id,title,date,time,archived,revision,content_json FROM station_services WHERE device_id=? AND id=? AND ${guard.sql}`).bind(deviceId,sourceId,...guard.params).first<Stored>():null;
- if(data.type==='import'&&existing){
+ if(data.type==='import'&&(existing||await env.DB.prepare("SELECT 1 FROM audit WHERE action='station-service-delete' AND subject_id=?").bind(deviceId+':'+data.plan.id).first())){
   // A second PC/profile can import the same stable identifier without replacing
   // the station's newer shared plan. The original local copy remains its backup.
   return json({...await list(env,deviceId,authority),imported:false});
@@ -85,7 +101,8 @@ export async function changeStationService(request:Request,env:Env,deviceId:stri
  const insert=['create','import','duplicate'].includes(data.type),source=data.type==='duplicate'?{sql:'EXISTS(SELECT 1 FROM station_services WHERE device_id=? AND id=? AND revision=?)',params:[deviceId,sourceId,previousRevision]}:{sql:'1=1',params:[] as (string|number|null)[]};
  const order=['save','archive','attach-songs'].includes(data.type)?serviceOrderGuard(authority,deviceId,id):{sql:'1=1',params:[] as (string|number|null)[]};
  if(['save','archive','attach-songs'].includes(data.type)&&!await env.DB.prepare('SELECT 1 WHERE '+order.sql).bind(...order.params).first())throw new HttpError(403,'Only the selected service leader can edit this running order. An authorized backup can take over first.');
- const condition=`${guard.sql} AND ${catalogue.sql} AND ${selection.sql} AND ${capacity.sql} AND ${source.sql} AND ${order.sql}`,params=[...guard.params,...catalogue.params,...selection.params,...capacity.params,...source.params,...order.params];
+ const imported=data.type==='import'?{sql:"NOT EXISTS(SELECT 1 FROM audit WHERE action='station-service-delete' AND subject_id=?)",params:[deviceId+':'+id]}:{sql:'1=1',params:[]};
+ const condition=`${guard.sql} AND ${catalogue.sql} AND ${selection.sql} AND ${capacity.sql} AND ${source.sql} AND ${order.sql} AND ${imported.sql}`,params=[...guard.params,...catalogue.params,...selection.params,...capacity.params,...source.params,...order.params,...imported.params];
  const mutation=insert?env.DB.prepare(`INSERT INTO station_services(device_id,id,title,date,time,archived,revision,content_json,created_by,updated_by,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${condition} AND (SELECT COUNT(*) FROM station_services WHERE device_id=?)<100 ON CONFLICT(device_id,id) DO NOTHING`).bind(deviceId,id,next.title,next.date,next.time,next.archived?1:0,revision,serialized,authority.user.id,authority.user.id,timestamp,timestamp,...params,deviceId):env.DB.prepare(`UPDATE station_services SET title=?,date=?,time=?,archived=?,revision=?,content_json=?,updated_by=?,updated_at=? WHERE device_id=? AND id=? AND revision=? AND ${condition}`).bind(next.title,next.date,next.time,next.archived?1:0,revision,serialized,authority.user.id,timestamp,deviceId,id,previousRevision,...params);
  const statements=[mutation,mutationAudit()];
  if(data.type==='create'||data.type==='duplicate')statements.push(env.DB.prepare(`INSERT INTO station_service_selections(device_id,service_id,updated_by,updated_at) SELECT ?,?,?,? WHERE ${audited.sql} ON CONFLICT(device_id) DO UPDATE SET service_id=excluded.service_id,updated_by=excluded.updated_by,updated_at=excluded.updated_at`).bind(deviceId,id,authority.user.id,timestamp,...audited.params));

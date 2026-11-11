@@ -59,3 +59,17 @@ test('simultaneous service readers share one cloud request and a read after a wr
  assert.deepEqual(await after, [{revision: 2}]);
  assert.deepEqual(calls, ['GET', 'POST', 'GET']);
 });
+
+test('a cache write failure does not turn a confirmed service creation into a retry', async () => {
+ const context = {credential: 'fixture', deviceId: 'station', userId: 'admin', generation: 1};
+ const snapshot = {plans: [{id: 'created', revision: 1}], activeServiceId: 'created'};
+ const failures = [];
+ const store = createSharedServiceStore({
+  current: () => context,
+  local: {replaceSharedSnapshot: async () => { throw Error('Cache unavailable'); }},
+  send: async () => snapshot,
+  onCacheError: error => failures.push(error.message),
+ });
+ assert.deepEqual(await store.change('station', {type: 'create'}), snapshot.plans);
+ assert.deepEqual(failures, ['Cache unavailable']);
+});

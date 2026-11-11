@@ -1,6 +1,6 @@
 // Authoritative plans live per station. The encrypted local snapshot is only a
 // cache for the local ProPresenter adapter; it never wins over a server revision.
-function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},migrate=async()=>{}}){
+function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},migrate=async()=>{},onCacheError=()=>{}}){
  const queues=new Map();
  const sameScope=(a,b)=>!!a&&a.credential===b.credential&&a.deviceId===b.deviceId&&a.userId===b.userId&&a.generation===b.generation&&a.lease===b.lease&&a.proof===b.proof;
  const assert=context=>{if(!sameScope(current(),context))throw Error('The selected user or computer changed.');};
@@ -9,7 +9,10 @@ function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},m
   const tail=queues.get(stationId);
   if(!action&&tail?.read&&sameScope(tail.context,context))return tail.task;
   const pending=(tail?.task||Promise.resolve()).catch(()=>{}).then(async()=>{
-   assert(context);await migrate(context);assert(context);
+   assert(context);
+   try{await migrate(context);}
+   catch(error){if([401,403].includes(error.status))throw error;onCacheError(error);}
+   assert(context);
    // Publish newly referenced songs, but avoid rescanning the library for each notes autosave.
    let publish=action?.type==='attach-songs';
    if(action?.type==='save'&&action.plan?.songs?.length){
@@ -20,7 +23,11 @@ function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},m
    if(publish){await beforeAttach(context);assert(context);}
    const remoteAction=action?.type==='attach-songs'?{type:'attach-songs',expectedActiveServiceId:action.expectedActiveServiceId,songs:action.songs}:action;
    const snapshot=await send(context,action?'POST':'GET',remoteAction);assert(context);
-   await local.replaceSharedSnapshot(stationId,snapshot);assert(context);
+   // A confirmed server write stays successful even if the local cache cannot
+   // be refreshed. Reporting it as failed could lead to a duplicate creation.
+   try{await local.replaceSharedSnapshot(stationId,snapshot);}
+   catch(error){onCacheError(error);}
+   assert(context);
    return snapshot;
   });
   const entry={context,read:!action,task:pending.finally(()=>{if(queues.get(stationId)===entry)queues.delete(stationId);})};

@@ -551,13 +551,18 @@ let remoteServicePlans;const serviceMigrations=new Map();
 async function migrateServicePlans(context){
  if(!activeOperator?.capabilities?.planServices)return;
  const key=context.deviceId+':'+context.userId;if(serviceMigrations.has(key))return serviceMigrations.get(key);
- const pending=(async()=>{const source=await legacyServicePlans().state(context.userId),done=await readJson('service-imports.json',{});if(!source.plans.some(plan=>!done[key+':'+plan.id]))return;await catalogPublisher().flush();let changed=false;
-  for(const plan of source.plans){const marker=key+':'+plan.id;if(done[marker])continue;const current=sharedServiceOperator();if(!current||current.generation!==context.generation||current.userId!==context.userId)throw Error('The selected user changed.');
+ const pending=(async()=>{const source=await legacyServicePlans().state(context.userId),done=await readJson('service-imports.json',{});const unimported=source.plans.filter(plan=>!done[key+':'+plan.id]);if(!unimported.length)return;
+  if(unimported.some(plan=>plan.songs.length)){
+   try{await catalogPublisher().flush();}
+   catch(error){if([401,403].includes(error.status))throw error;console.warn('Preserved local service import:',error.name);return;}
+  }
+  let changed=false;
+  for(const plan of unimported){const marker=key+':'+plan.id;const current=sharedServiceOperator();if(!current||current.generation!==context.generation||current.userId!==context.userId)throw Error('The selected user changed.');
    try{await request('/station/services',{method:'POST',data:{type:'import',plan},deviceCredential:context.credential,proof:context.proof,selectionLease:context.lease});done[marker]=true;changed=true;}catch(error){if([401,403].includes(error.status))throw error;console.warn('Preserved local service import:',error.name);}
   }if(changed)await writeJson('service-imports.json',done);
  })();serviceMigrations.set(key,pending);try{await pending;}finally{serviceMigrations.delete(key);}
 }
-function servicePlans(){return remoteServicePlans||(remoteServicePlans=require('./shared-services.cjs').createSharedServiceStore({current:sharedServiceOperator,local:legacyServicePlans(),migrate:migrateServicePlans,beforeAttach:async()=>{catalogChanged();await catalogPublisher().flush();},send:(context,method,data)=>request('/station/services',{method,data,deviceCredential:context.credential,proof:context.proof,selectionLease:context.lease})}));}
+function servicePlans(){return remoteServicePlans||(remoteServicePlans=require('./shared-services.cjs').createSharedServiceStore({current:sharedServiceOperator,local:legacyServicePlans(),migrate:migrateServicePlans,onCacheError:error=>console.warn('Service cache refresh:',error.name),beforeAttach:async()=>{catalogChanged();await catalogPublisher().flush();},send:(context,method,data)=>request('/station/services',{method,data,deviceCredential:context.credential,proof:context.proof,selectionLease:context.lease})}));}
 let localPlaylistManager,localPlaylistJobs,approvedOutputPlans;
 function playlistPlans(){return approvedOutputPlans||(approvedOutputPlans=require('./approved-service-store.cjs').createApprovedServiceStore({base:servicePlans(),current:sharedServiceOperator,loadVersion:(scope,id,versionId)=>request('/station/services/'+id+'/versions?versionId='+encodeURIComponent(versionId),{deviceCredential:scope.credential,proof:scope.proof,selectionLease:scope.lease})}));}
 async function savedLyricsDirectory(){const saved=await readJson('lyrics-folder.json',{});if(typeof saved.path!=='string'||path.basename(saved.path)!=='Lyrics')return null;try{if((await fs.stat(saved.path)).isDirectory())return saved.path;}catch{}return null;}
@@ -585,8 +590,13 @@ handle('playlist-settings-save',async patch=>{const operator=await playlistAdmin
 });
 handle('playlist-connection-check',async()=>{const operator=await playlistAdministrator(),settings=await playlistManager().settings();assertIdentity(operator.generation);const result=await require('./propresenter-playlists.cjs').createProPresenterPlaylists({baseUrl:'http://127.0.0.1:'+settings.port+'/'}).probe({playlists:true});assertIdentity(operator.generation);return{...result,message:'Connected to ProPresenter’s local v1 API and readable playlists. Verify playlist creation and songs on this PC before service.'};});
 handle('service-templates-list',async()=>{const operator=await workspaceOperator();const templates=await legacyServicePlans().templates(operator.id);assertIdentity(operator.generation);return templates;});
-handle('service-plans-list',async()=>{const operator=await workspaceOperator();return viewServicePlans(operator);});
-handle('service-plans-change',async action=>{const operator=await workspaceOperator('readSongs');if(!action||!['create','save','duplicate','archive','select','template-save','template-create','template-archive','claim-leadership','release-leadership','finalize-order','acknowledge-order'].includes(action.type))throw Error('Choose a valid service action.');
+handle('service-plans-list',async()=>{
+ const operator=draftOperator(),scope=sharedServiceOperator();
+ if(!scope||scope.userId!==operator.id||scope.generation!==operator.generation)throw Error('Choose your profile on this computer first.');
+ // The station service route checks the current role and station membership.
+ return viewServicePlans({...operator,deviceId:scope.deviceId});
+});
+handle('service-plans-change',async action=>{const operator=await workspaceOperator('readSongs');if(!action||!['create','save','duplicate','archive','delete','select','template-save','template-create','template-archive','claim-leadership','release-leadership','finalize-order','acknowledge-order'].includes(action.type))throw Error('Choose a valid service action.');
  if(!operator.capabilities.planServices&&!['claim-leadership','release-leadership','finalize-order','acknowledge-order','save'].includes(action.type))throw Error('Your role does not allow this action.');
  let plans;
  if(action.type.startsWith('template-')){
