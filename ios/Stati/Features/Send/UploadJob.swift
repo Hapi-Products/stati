@@ -10,9 +10,31 @@ nonisolated struct UploadJob: Identifiable, Codable, Sendable, Equatable {
     var sha256: String
     var receipt: [String: JSONValue]?
     var message: String?
+    var isSongSubmission: Bool? = nil
+    var keepSongUntil: Date? = nil
+    var skippedSongCopy: Bool? = nil
+
+    var verifiedStatus: String? {
+        guard let receipt, ReceiptValidator.matches(.object(receipt), job: self) else { return nil }
+        return receipt["status"]?.text
+    }
+
+    var offersSongCopy: Bool {
+        isSongSubmission == true && keepSongUntil == nil && skippedSongCopy != true
+            && ["queued", "delivered"].contains(verifiedStatus ?? "")
+    }
+
+    func hasSavedSong(at date: Date) -> Bool {
+        guard let keepSongUntil, verifiedStatus != nil else { return false }
+        return verifiedStatus == "delivered" || date < keepSongUntil
+    }
+
+    func shouldRemoveExpiredSong(at date: Date) -> Bool {
+        guard let keepSongUntil else { return false }
+        return date >= keepSongUntil && ["rejected", "expired"].contains(verifiedStatus ?? "")
+    }
     var isFinished: Bool {
-        guard let receipt, ReceiptValidator.matches(.object(receipt), job: self) else { return false }
-        return ["delivered", "rejected", "expired"].contains(receipt["status"]?.text ?? "")
+        ["delivered", "rejected", "expired"].contains(verifiedStatus ?? "")
     }
     var status: String {
         guard let receipt else { return message ?? "Ready to send" }

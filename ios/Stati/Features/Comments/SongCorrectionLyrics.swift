@@ -10,7 +10,7 @@ struct SongCorrectionLyrics: UIViewRepresentable {
         let view = SongCorrectionTextView(); view.isEditable = false; view.isSelectable = true; view.isScrollEnabled = false; view.backgroundColor = .clear
         view.font = .preferredFont(forTextStyle: .body); view.adjustsFontForContentSizeCategory = true
         view.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8); view.text = text
-        view.accessibilityLabel = "Song lyrics. Select a passage to include it in your comment."
+        view.accessibilityLabel = "Song lyrics. Double-tap a word to select it."
         return view
     }
     func makeUIView(context: Context) -> UITextView { let view = Self.makeTextView(text: text); view.delegate = context.coordinator; return view }

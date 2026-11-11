@@ -18,7 +18,7 @@ struct IPadWorkspaceView: View {
         let route = NativeReview.route ?? ""
         if ["ipad-browse", "ipad-worship-library", "ipad-browse-list", "ipad-browse-list-large", "ipad-sidebar", "ipad-service-sidebar", "ipad-groups-none", "ipad-original", "ipad-search", "ipad-search-ranking", "ipad-reader-dismiss"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "browse")) }
         if route == "ipad-recents" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "groups")) }
-        if ["ipad-shared", "ipad-scan-review", "ipad-shared-member", "ipad-file-preview", "ipad-scan-pdf", "ipad-scan-form", "ipad-markup", "ipad-group-delete"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared")) }
+        if ["ipad-shared", "ipad-group-switcher", "ipad-scan-review", "ipad-shared-member", "ipad-file-preview", "ipad-scan-pdf", "ipad-scan-form", "ipad-markup", "ipad-group-delete"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared")) }
         if route == "ipad-group-selected" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "browse", path: [.group(NativeReview15.groupID)])) }
 
         if ["ipad-service", "ipad-service-reader", "ipad-service-selector", "ipad-service-requests", "ipad-service-share"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "service", servicePath: [.service(NativeReview.plan["id"].text)])) }
@@ -35,7 +35,7 @@ struct IPadWorkspaceView: View {
     private var showsGroups: Bool { store.canReadSongs && !preferences.selection.hidesGroups && (store.isAdmin || !groups.groups.isEmpty) }
     private var selectedGroupID: String? {
         if case .named(let id) = preferences.selection { return groups.groups.contains(where: { $0.id == id }) ? id : nil }
-        if preferences.selection == .automatic && !store.isAdmin && groups.groups.count == 1 { return groups.groups.first?.id }
+        if preferences.selection == .automatic && !store.isAdmin { return groups.groups.first?.id }
         return nil
     }
     private var legacyFileGroup: String { if case .legacy(let name) = preferences.selection { return name }; return "__generic__" }
@@ -43,7 +43,18 @@ struct IPadWorkspaceView: View {
         TabView(selection: Binding(get: { navigation.tab }, set: { navigation.select($0) })) {
             if store.canReadSongs {
                 Tab("Recents", systemImage: "clock", value: "groups") { IPadNavigation(store: store) { IPadRecentsView(active: navigation.tab == "groups") } }
-                if showsGroups { Tab("Groups", systemImage: "person.2", value: "shared") { IPadNavigation(store: store) { IPadSharedFilesView(store: store, defaultGroup: legacyFileGroup, groupID: selectedGroupID, groupTitle: groups.groups.first(where: { $0.id == selectedGroupID })?.name, groups: groups).id(selectedGroupID ?? legacyFileGroup) } } }
+                if showsGroups {
+                    Tab("Groups", systemImage: "person.2", value: "shared") {
+                        IPadNavigation(store: store) {
+                            IPadSharedFilesView(store: store, defaultGroup: legacyFileGroup, groupID: selectedGroupID,
+                                               groupTitle: groups.groups.first(where: { $0.id == selectedGroupID })?.name,
+                                               groups: groups, switchGroup: { id in
+                                preferences.selection = id.isEmpty ? .allGroups : .named(id)
+                            })
+                            .id(selectedGroupID ?? legacyFileGroup)
+                        }
+                    }
+                }
                 Tab("Songs", systemImage: "music.note.list", value: "browse") {
                     IPadNavigation(store: store, path: $navigation.path) {
                         IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Songs", group: preferences.selection == .originalSongs ? "__generic__" : "")

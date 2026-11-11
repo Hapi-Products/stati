@@ -37,4 +37,34 @@ struct UploadLedgerTests {
         #expect(throws: (any Error).self) { try UploadLedger.decode(JSONEncoder().encode([fixture(), fixture()]), ownerID: owner, directory: directory) }
         #expect(throws: (any Error).self) { try UploadLedger.decode(Data("{\"version\":99,\"jobs\":[]}".utf8), ownerID: owner, directory: directory) }
     }
+
+    @Test func onlyVerifiedSongReceiptsPreserveTheLocalCopy() throws {
+        var job = fixture()
+        let cutoff = Date(timeIntervalSince1970: 2_000)
+        let later = cutoff.addingTimeInterval(1)
+        job.isSongSubmission = true
+        #expect(!job.offersSongCopy)
+        job.receipt = [
+            "protocol": .string("stati-upload-v1"), "accepted": .bool(true),
+            "intentId": .string(job.id), "deviceId": .string(job.deviceID), "id": .string(UUID().uuidString),
+            "filename": .string(job.filename), "bytes": .number(Double(job.bytes)), "sha256": .string(job.sha256),
+            "status": .string("queued")
+        ]
+        #expect(job.offersSongCopy)
+        job.keepSongUntil = cutoff
+        #expect(job.hasSavedSong(at: cutoff.addingTimeInterval(-1)))
+        #expect(!job.hasSavedSong(at: later))
+        #expect(!job.shouldRemoveExpiredSong(at: later))
+        job.receipt?["status"] = .string("rejected")
+        #expect(job.hasSavedSong(at: cutoff.addingTimeInterval(-1)))
+        #expect(job.shouldRemoveExpiredSong(at: later))
+        job.receipt?["status"] = .string("delivered")
+        let restored = try UploadLedger.decode(UploadLedger.encode([job]), ownerID: owner, directory: URL(fileURLWithPath: "/new/Uploads/\(owner)"))
+        #expect(restored[0].hasSavedSong(at: later))
+        #expect(!restored[0].shouldRemoveExpiredSong(at: later))
+        job.receipt?["deviceId"] = .string(owner)
+        #expect(!job.hasSavedSong(at: later))
+        #expect(!job.shouldRemoveExpiredSong(at: later))
+    }
+
 }

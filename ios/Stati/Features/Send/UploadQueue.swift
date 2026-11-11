@@ -57,25 +57,18 @@ final class UploadQueue {
                 guard scope == generation else { return }
                 do {
                     try Task.checkCancellation(); currentName = job.filename
-                    var receipt: JSONValue?
-                    do { receipt = try await api.request("/uploads/" + job.id + "?deviceId=" + job.deviceID) }
-                    catch let error as APIError where error.status == 404 { receipt = nil }
-                    if receipt == nil {
-                        _ = try await api.request("/connections/device:" + job.deviceID, method: "POST", body: .object([:]))
-                        let access = try await api.request("/receive/device:" + job.deviceID)
-                        guard access["connection"]["status"].text == "approved", access["uploadProtocol"].text == "stati-upload-v1", access["sendingAllowed"].flag else { throw APIError(status: 403, message: "Wait for computer access or the service sending window before sending.") }
-                        let bytes = try await api.upload("/receive/device:" + job.deviceID + "/uploads/" + job.id, file: job.localFile, headers: ["X-Filename": job.filename.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "file", "X-Checksum-SHA256": job.sha256, "Content-Type": "application/octet-stream", "Content-Length": String(job.bytes)])
-                        receipt = try JSONDecoder().decode(JSONValue.self, from: bytes)
-                    }
+                    let receipt = try await sendOrRecover(job)
                     try Task.checkCancellation()
                     guard scope == generation else { return }
-                    guard let receipt, ReceiptValidator.matches(receipt, job: job) else { throw APIError(status: 409, message: "The send receipt did not match. Check recent uploads before retrying.") }
+                    guard ReceiptValidator.matches(receipt, job: job) else { throw APIError(status: 409, message: "The send receipt did not match. Check recent uploads before retrying.") }
                     if let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].receipt = receipt.fields; jobs[index].message = nil; try save() }
                 } catch is CancellationError { guard scope == generation else { return }; message = "Sending stopped. Retry remaining uses the same send IDs."; return }
                 catch {
                     guard scope == generation else { return }
-                    if let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].message = error.localizedDescription; try? save() }
-                    message = error.localizedDescription; return
+                    let detail = OfflineReadPolicy.permits(error) ? "Connection interrupted. Retry to check the same send before uploading again." : error.localizedDescription
+                    if let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].message = detail; try? save() }
+                    message = detail
+                    return
                 }
             }
             message = "Sent. The computer still needs to save your files."
@@ -83,23 +76,97 @@ final class UploadQueue {
     }
     func clearFinished() {
         guard ledgerReadable, !busy else { return }
-        let finished = jobs.filter(\.isFinished), remaining = jobs.filter { !$0.isFinished }
+        let now = Date.now
+        let finished = jobs.filter { $0.isFinished && !$0.hasSavedSong(at: now) && !$0.offersSongCopy }
+        let cleared = Set(finished.map(\.id)), remaining = jobs.filter { !cleared.contains($0.id) }
         let previous = jobs; jobs = remaining
         do { try save(); for job in finished { try? FileManager.default.removeItem(at: job.localFile) } }
         catch { jobs = previous; message = error.localizedDescription }
     }
     func refreshReceipts(only jobID: String? = nil) async {
         let scope = generation
-        for job in jobs where job.receipt != nil && (jobID == nil || job.id == jobID) {
+        var receipts: [String: [String: JSONValue]] = [:]
+        for job in jobs where job.receipt != nil && !job.isFinished && (jobID == nil || job.id == jobID) {
             do {
                 let current = try await api.request("/uploads/" + job.id + "?deviceId=" + job.deviceID)
                 try Task.checkCancellation()
                 guard scope == generation else { return }
-                if ReceiptValidator.matches(current, job: job), let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].receipt = current.fields }
+                if ReceiptValidator.matches(current, job: job) { receipts[job.id] = current.fields }
             } catch is CancellationError { return }
             catch { }
         }
         guard scope == generation else { return }
-        try? save()
+        let previous = jobs
+        for index in jobs.indices where !jobs[index].isFinished {
+            if let receipt = receipts[jobs[index].id] { jobs[index].receipt = receipt }
+        }
+        if jobs != previous {
+            do { try save() }
+            catch { jobs = previous; message = error.localizedDescription }
+        }
+        pruneExpiredSongCopies()
+    }
+
+    func keepSongCopy(_ id: String, keep: Bool, now: Date = .now) {
+        guard let index = jobs.firstIndex(where: { $0.id == id && $0.offersSongCopy }) else { return }
+        let previous = jobs[index]
+        if keep {
+            guard let day = Calendar.current.dateInterval(of: .day, for: now) else { return }
+            jobs[index].keepSongUntil = day.end
+        } else {
+            jobs[index].skippedSongCopy = true
+        }
+        do { try save() }
+        catch { jobs[index] = previous; message = error.localizedDescription }
+    }
+
+    func pruneExpiredSongCopies(now: Date = .now) {
+        guard ledgerReadable, !busy, !userID.isEmpty else { return }
+        let expired = jobs.filter { $0.shouldRemoveExpiredSong(at: now) }
+        guard !expired.isEmpty else { return }
+        let ids = Set(expired.map(\.id))
+        let previous = jobs
+        for index in jobs.indices where ids.contains(jobs[index].id) {
+            do { try FileManager.default.removeItem(at: jobs[index].localFile) }
+            catch let error as CocoaError where error.code == .fileNoSuchFile || error.code == .fileReadNoSuchFile { }
+            catch { continue }
+            jobs[index].keepSongUntil = nil
+            jobs[index].skippedSongCopy = true
+        }
+        do { try save() }
+        catch { jobs = previous; message = error.localizedDescription }
+    }
+
+    func refreshSavedSongs() async {
+        let pending = jobs.filter { $0.keepSongUntil != nil && !$0.isFinished }
+        for job in pending {
+            guard !Task.isCancelled else { return }
+            await refreshReceipts(only: job.id)
+        }
+        pruneExpiredSongCopies()
+    }
+
+    private func sendOrRecover(_ job: UploadJob) async throws -> JSONValue {
+        do { return try await sendAttempt(job) }
+        catch where OfflineReadPolicy.permits(error) {
+            // Every attempt checks the same receipt and reuses the same idempotent upload ID.
+            try await Task.sleep(for: .milliseconds(650))
+            return try await sendAttempt(job)
+        }
+    }
+
+    private func sendAttempt(_ job: UploadJob) async throws -> JSONValue {
+        try Task.checkCancellation()
+        do { return try await api.request("/uploads/" + job.id + "?deviceId=" + job.deviceID) }
+        catch let error as APIError where error.status == 404 { }
+        _ = try await api.request("/connections/device:" + job.deviceID, method: "POST", body: .object([:]))
+        let access = try await api.request("/receive/device:" + job.deviceID)
+        guard access["connection"]["status"].text == "approved", access["uploadProtocol"].text == "stati-upload-v1", access["sendingAllowed"].flag else {
+            throw APIError(status: 403, message: "Wait for computer access or the service sending window before sending.")
+        }
+        let bytes = try await api.upload("/receive/device:" + job.deviceID + "/uploads/" + job.id, file: job.localFile,
+                                         headers: ["X-Filename": job.filename.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "file",
+                                                   "X-Checksum-SHA256": job.sha256, "Content-Type": "application/octet-stream", "Content-Length": String(job.bytes)])
+        return try JSONDecoder().decode(JSONValue.self, from: bytes)
     }
 }

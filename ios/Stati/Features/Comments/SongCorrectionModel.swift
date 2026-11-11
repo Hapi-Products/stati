@@ -24,7 +24,7 @@ import SwiftUI
         if readable { draft.migrateEditableSelection() }
     }
     var editable: Bool { active && readable && !busy && draft.phase == .editing }
-    var canSend: Bool { active && readable && !busy && draft.phase != .sent && draft.phase != .rejected && (draft.phase != .editing || !draft.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+    var canSend: Bool { active && readable && !busy && draft.phase != .sent && draft.phase != .rejected && (draft.phase != .editing || !draft.reviewMessage.isEmpty) }
     var comment: String { get { draft.message } set { guard editable else { return }; draft.message = newValue; persist() } }
     var quote: String { get { draft.quote } set { guard editable else { return }; draft.quote = String(newValue.prefix(1000)); persist() } }
     var replacement: String { get { draft.replacement } set { guard editable else { return }; draft.replacement = newValue; persist() } }
@@ -79,7 +79,7 @@ import SwiftUI
         var rejected = false
         do {
             if draft.phase == .editing {
-                guard !draft.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, draft.message.utf16.count <= 2000, draft.quote.utf16.count <= 1000, draft.replacement.utf16.count <= 1000, draft.replacement.isEmpty || !draft.quote.isEmpty else { throw APIError(status: 400, message: "Write a comment up to 2,000 characters. Select lyrics before suggesting a correction, using up to 1,000 characters in each field.") }
+                guard !draft.reviewMessage.isEmpty, draft.reviewMessage.utf16.count <= 2000, draft.quote.utf16.count <= 1000, draft.replacement.utf16.count <= 1000, draft.replacement.isEmpty || !draft.quote.isEmpty else { throw APIError(status: 400, message: "Select lyrics first. Use up to 1,000 characters in each correction.") }
                 guard !draft.exceedsReviewTextLimit else { throw APIError(status: 400, message: "Keep the comment, selected lyrics and suggestions together within 4,000 characters. Split longer corrections into another comment.") }
                 try draft.freeze()
             }

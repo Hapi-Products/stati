@@ -8,6 +8,11 @@ struct TeamMemberRow: View {
     let busy: Bool
     let change: (String, JSONValue?) -> Void
     let remove: () -> Void
+    private var isAdministrator: Bool { member["role"].text == "admin" }
+    private var availableRoles: [String] {
+        let roles = ["worship_leader", "worship_member"] + (store.isAdmin ? ["choir_director", "pastor", "commenter"] : [])
+        return roles.filter { $0 != member["ministryRole"].text }
+    }
     var body: some View {
         Group {
             if typeSize.isAccessibilitySize {
@@ -30,13 +35,13 @@ struct TeamMemberRow: View {
                 Button("Approve \(member.personName)", systemImage: "checkmark") { change("approve", nil) }.labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44)
             }
             Menu("Change role for \(member.personName)", systemImage: "person.badge.key") {
-                if store.isAdmin { Button("Member") { change("assign-role", .null) } }
-                ForEach(["worship_leader", "worship_member"] + (store.isAdmin ? ["choir_director", "pastor", "commenter"] : []), id: \.self) { role in
+                if store.isAdmin && !isAdministrator && !member["ministryRole"].text.isEmpty { Button("Member") { change("assign-role", .null) } }
+                ForEach(availableRoles, id: \.self) { role in
                     Button(role.replacingOccurrences(of: "_", with: " ").capitalized) { change("assign-role", .string(role)) }
                 }
                 if store.isAdmin {
                     Divider()
-                    Button(member["role"].text == "admin" ? "Make member" : "Make administrator") { change(member["role"].text == "admin" ? "demote" : "promote", nil) }
+                    Button(isAdministrator ? "Member" : "Administrator") { change(isAdministrator ? "demote" : "promote", nil) }
                 }
             }.labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44)
             if store.isAdmin {

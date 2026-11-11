@@ -39,17 +39,23 @@ nonisolated struct SongCorrectionDraft: Codable, Sendable {
         guard edit.valid(in: song["text"].text, requireReplacementLimit: false) else { return }
         edits = [edit]; quote = ""; replacement = ""
     }
+    var reviewMessage: String {
+        let written = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !written.isEmpty { return written }
+        if !edits.isEmpty || !quote.isEmpty { return "Review these selected lyrics." }
+        return ""
+    }
     var exceedsReviewTextLimit: Bool {
-        !edits.isEmpty && message.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count + edits.reduce(0) { $0 + $1.quote.utf16.count + $1.replacement.utf16.count } > 4000
+        !edits.isEmpty && reviewMessage.utf16.count + edits.reduce(0) { $0 + $1.quote.utf16.count + $1.replacement.utf16.count } > 4000
     }
     mutating func freeze() throws {
         guard phase == .editing else { return }
-        message = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !message.isEmpty, message.count <= 2000, quote.count <= 1000, replacement.count <= 1000, replacement.isEmpty || !quote.isEmpty,
+        let review = reviewMessage
+        guard !review.isEmpty, review.utf16.count <= 2000, quote.count <= 1000, replacement.count <= 1000, replacement.isEmpty || !quote.isEmpty,
               quote.isEmpty || song["text"].text.contains(quote), images.count <= 6,
               !exceedsReviewTextLimit, edits.count <= 10, Set(edits.map(\.id)).count == edits.count,
               edits.allSatisfy({ $0.valid(in: song["text"].text) }), edits.isEmpty || quote.isEmpty && replacement.isEmpty else { throw CocoaError(.validationMissingMandatoryProperty) }
-        frozen = payload; phase = .unconfirmed
+        message = review; frozen = payload; phase = .unconfirmed
     }
     func accepts(_ value: JSONValue) -> Bool {
         let row = value["correction"], sent = payload

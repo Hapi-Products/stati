@@ -8,6 +8,7 @@ struct IPadSharedFilesView: View {
     let groupID: String?
     let groupTitle: String?
     let groups: WorshipGroupsModel?
+    let switchGroup: ((String) -> Void)?
     @State private var actions: WorshipGroupActions?
     private let ownerID: String
     private let epoch: UUID
@@ -32,7 +33,7 @@ struct IPadSharedFilesView: View {
     @State private var preview: FilePreviewRequest?
     @State private var removing: APIRecord?
     @State private var discarding: GroupScanDraft?
-    init(store: AppStore, defaultGroup: String, groupID: String? = nil, groupTitle: String? = nil, groups: WorshipGroupsModel? = nil) { self.store = store; self.defaultGroup = defaultGroup; self.groupID = groupID; self.groupTitle = groupTitle; self.groups = groups; ownerID = store.me?.id ?? ""; epoch = store.accountEpoch }
+    init(store: AppStore, defaultGroup: String, groupID: String? = nil, groupTitle: String? = nil, groups: WorshipGroupsModel? = nil, switchGroup: ((String) -> Void)? = nil) { self.store = store; self.defaultGroup = defaultGroup; self.groupID = groupID; self.groupTitle = groupTitle; self.groups = groups; self.switchGroup = switchGroup; ownerID = store.me?.id ?? ""; epoch = store.accountEpoch }
     private var active: Bool { !ownerID.isEmpty && store.me?.id == ownerID && store.accountEpoch == epoch }
     private var canManageGroup: Bool { groupID.map { id in groups?.groups.first(where: { $0.id == id })?["canManage"].flag == true } ?? false }
     private var matching: [APIRecord] { files.filter { (groupID != nil || defaultGroup == "__generic__" || defaultGroup.isEmpty || $0["groupName"].text.localizedStandardCompare(defaultGroup) == .orderedSame) && (query.isEmpty || [$0.title, $0["filename"].text, $0["groupName"].text].contains(where: { $0.localizedStandardContains(query) })) } }
@@ -40,7 +41,7 @@ struct IPadSharedFilesView: View {
         VStack(spacing: 0) {
             ScrollView {
                 if listMode || dynamicTypeSize.isAccessibilitySize { fileList }
-                else { LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews), alignment: .leading, spacing: WorshipPreviewGrid.spacing) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: groupID == nil) } } }.padding(24) }
+                else { LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews), alignment: .leading, spacing: WorshipPreviewGrid.spacing) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: false) } } }.padding(24) }
                 if loading { ProgressView("Loading shared files…").padding() }
                 if !loading && matching.isEmpty && message.isEmpty { ContentUnavailableView(query.isEmpty ? "No shared group files" : "No matches in loaded files", systemImage: "doc.on.doc", description: Text(query.isEmpty ? "Shared song notes and scanned documents appear here." : "Load older files to include them in your search.")) }
                 NoticeView(text: scanMessage).padding(.horizontal, 24)
@@ -51,6 +52,23 @@ struct IPadSharedFilesView: View {
             if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.padding(.vertical, 8) }
         }.navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
             .toolbar {
+                if let switchGroup, let groups, groups.groups.count > 1 {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu("Switch worship group", systemImage: "person.2") {
+                            ForEach(groups.groups) { group in
+                                Button {
+                                    switchGroup(group.id)
+                                } label: {
+                                    if group.id == groupID { Label(group.name, systemImage: "checkmark") }
+                                    else { Text(group.name) }
+                                }
+                            }
+                            if store.isAdmin {
+                                Button("All groups") { switchGroup("") }
+                            }
+                        }.labelStyle(.iconOnly)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Grid", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
                 if canUpload || groups?.canCreate == true || canManageGroup {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -103,12 +121,22 @@ struct IPadSharedFilesView: View {
             }.refreshable { loadScans(); await load() }
     }
     private var fileList: some View {
-        LazyVStack(spacing: 0) {
+        LazyVStack(spacing: 10) {
             ForEach(matching) { file in
-                fileButton(file) { HStack(spacing: 16) { Image(systemName: file["contentType"].text == "application/pdf" ? "doc.text" : "photo").font(.title2).frame(width: largePreviews ? 90 : 60, height: largePreviews ? 90 : 60).foregroundStyle(Color.statiSecondary); VStack(alignment: .leading, spacing: 5) { Text(file.title).font(largePreviews ? .title3 : .body).foregroundStyle(.primary); Text((groupID == nil ? file["groupName"].text + " · " : "") + file["authorName"].text).font(.footnote).foregroundStyle(Color.statiSecondary) }; Spacer(); Image(systemName: "chevron.right").foregroundStyle(Color.statiSecondary) }.padding(.horizontal, 24).padding(.vertical, 10) }
-                Divider().padding(.leading, 100)
+                fileButton(file) {
+                    HStack(spacing: 16) {
+                        Image(systemName: file["contentType"].text == "application/pdf" ? "doc.text" : "photo")
+                            .font(.title2).frame(width: 44).foregroundStyle(.secondary)
+                        Text(file.title).font(largePreviews ? .title3 : .body).foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .contentShape(.rect)
+                }
             }
         }
+        .padding(.vertical, 12)
     }
     private func fileButton<Content: View>(_ file: APIRecord, @ViewBuilder content: () -> Content) -> some View {
         Button {

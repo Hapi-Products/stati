@@ -11,11 +11,11 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 31, title: "Songs and services on iPad", highlights: [
-        Highlight(title: "See your songs at a glance", detail: "Open Songs to see the first slide of every song. Recents and Groups use the same preview spacing.", icon: "square.grid.2x2"),
-        Highlight(title: "Choose the Song Selector source", detail: "In Features, choose Recents or the current service’s running order.", icon: "list.bullet"),
-        Highlight(title: "Work on the service from iPad", detail: "See who’s leading, add songs from the library with permission, and submit song files for review.", icon: "calendar")
-    ], details: ["Tap the service name for its actions.", "Reader options contains Notes and Share.", "Hold the page count to jump to a page preview."])
+    static let current = AppUpdate(id: 34, title: "Quicker song and computer controls", highlights: [
+        Highlight(title: "Switch worship groups", detail: "When you have more than one group, use the people icon on the left of Groups.", icon: "person.2"),
+        Highlight(title: "Select and send lyrics", detail: "On iPhone, double-tap lyrics to select a passage. The correction keyboard has Romanian accent keys.", icon: "text.cursor"),
+        Highlight(title: "See which computer is online", detail: "Tap the computer name under Send to switch or add a computer.", icon: "desktopcomputer")
+    ], details: ["The music-list icon opens Song Selector on iPad.", "After sending a song, you can keep a copy for today. The computer’s saved-file receipt keeps the copy available long-term."])
     static let previous: [AppUpdate] = [
         AppUpdate(id: 27, title: "QR invitations", highlights: [
             Highlight(title: "Invite with a scan", detail: "Show a joining QR on your computer or iPhone. New members scan it to create an account, then wait for approval.", icon: "qrcode")

@@ -70,6 +70,7 @@ struct RootView: View {
                 else if NativeReview.route == "scan-check" { await NativeScanChecks.run(store: store) }
                 else if NativeReview.route == "file-check" { await NativeFilePreviewChecks.run() }
                 else if NativeReview.route == "task-editor-check" { await NativeTaskEditorChecks.run() }
+                else if NativeReview.route == NativeSendNetworkCheck.route { await NativeSendNetworkCheck.run(api: store.api) }
                 else if NativeReview.route == "recovery-check" { await NativeRecoveryChecks.run(api: store.api) }
                 else if NativeReview.route == "song-check" { await NativeSongCommandChecks.run() }
                 else if NativeReview.route != nil { NativeReview.prepareQueue(store: store); await NativeReviewIPad.prepareRecents(store: store); if NativeReaderReview.active { reviewReader = NativeReaderReview.request }; if NativeReview.route?.hasPrefix("app-icons") == true { reviewIcon = true } }
@@ -105,6 +106,13 @@ struct RootView: View {
                 if previous != nil && previous != current { profileImage = nil; libraryQuery = ""; libraryPath = []; taskPath = []; morePath = []; libraryArea = "songs"; tab = "send" }
             }
             .onChange(of: store.canReadSongs) { _, allowed in if !allowed && tab == "songs" { tab = "send"; libraryQuery = ""; libraryPath = [] } }
+            .task(id: taskEventScope + tab) {
+                guard tab != "send", scenePhase == .active, store.me != nil else { return }
+                while !Task.isCancelled {
+                    await store.uploads.refreshSavedSongs()
+                    do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                }
+            }
             .onChange(of: scenePhase) { _, phase in if phase == .active && !store.authenticating { Task { await store.refresh() } } }
     }
     private func checkReleaseNotes() {

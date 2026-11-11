@@ -21,6 +21,12 @@ import SwiftUI
     }
     static func response(_ request: URLRequest) -> JSONValue? {
         guard NativeReview.route != nil, request.httpMethod == "GET", let path = request.url?.path else { return nil }
+        if path == "/api/worship-groups", NativeReview.route == "ipad-group-switcher" {
+            var second = group.fields
+            second["id"] = .string("a3333333-3333-4333-8333-333333333333")
+            second["name"] = .string("Choir")
+            return .object(["groups": .array([group, .object(second)]), "canCreate": .bool(true), "nextCursor": .null])
+        }
         if path == "/api/worship-groups" { return .object(["groups": .array(emptyGroups ? [] : [group]), "canCreate": .bool(!emptyGroups), "nextCursor": .null]) }
         if path == "/api/worship-groups/candidates" { return .object(["members": .array(members), "nextCursor": .null]) }
         if path == "/api/worship-groups/" + groupID { return .object(["group": group]) }

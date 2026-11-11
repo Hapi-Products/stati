@@ -112,10 +112,10 @@ struct SongGalleryView: View {
             }
             if iPad {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Song Selector") {
+                    Button("Song Selector", systemImage: "music.note.list") {
                         preferences.reload()
                         choosingSong = true
-                    }
+                    }.labelStyle(.iconOnly)
                 }
             }
             if iPad, let song = model.song {

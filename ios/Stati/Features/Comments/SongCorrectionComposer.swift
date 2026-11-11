@@ -27,10 +27,7 @@ struct SongCorrectionComposer: View {
             Form {
                 Section {
                     SongCorrectionLyrics(text: model.draft.song["text"].text) { model.selectPassage($0) }
-                } footer: { Text("Select lyrics to point out a change.") }
-                Section {
-                    TextField("Comment", text: $model.comment, axis: .vertical).lineLimit(3...8).disabled(!model.editable)
-                }
+                } footer: { Text("Double-tap a word, then drag the handles to select a passage.") }
                 ForEach(model.draft.edits) { edit in
                     SongCorrectionPassageCard(edit: edit, editable: model.editable, changeSelection: { selecting = edit }, remove: { model.removePassage(edit.id) }, replacement: Binding(get: { model.draft.edits.first(where: { $0.id == edit.id })?.replacement ?? "" }, set: { model.replacePassage(edit.id, with: $0) })).id(edit.id)
                 }
@@ -41,20 +38,26 @@ struct SongCorrectionComposer: View {
                             Spacer(minLength: 8)
                             if model.editable { Button("Clear selection", systemImage: "xmark") { model.quote = "" }.labelStyle(ActionIconLabelStyle()).buttonStyle(.borderless).frame(minWidth: 44, minHeight: 44) }
                         }
-                        TextField("Suggested correction", text: $model.replacement, axis: .vertical).lineLimit(2...6).disabled(!model.editable)
+                        RomanianCorrectionField(text: $model.replacement, editable: model.editable)
                     }
                 }
                 if !model.draft.images.isEmpty { images }
                 if !model.message.isEmpty { Section { NoticeView(text: model.message) } }
                 if model.busy { Section { ProgressView("Sending comment…") } }
-            }.navigationTitle(model.draft.song.title).navigationBarTitleDisplayMode(.inline)
+            }
+            .onChange(of: model.draft.edits.map(\.id)) { previous, current in
+                if let new = current.first(where: { !previous.contains($0) }) {
+                    proxy.scrollTo(new, anchor: .center)
+                }
+            }
+            .navigationTitle(model.draft.song.title).navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Close comment", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()).disabled(model.busy) }
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         if [.sent,.rejected].contains(model.draft.phase) { Button("New comment", systemImage: "square.and.pencil") { model.startNew() }.labelStyle(ActionIconLabelStyle()).disabled(model.busy) }
                         else {
                             Button("Add images", systemImage: "photo.badge.plus") { pickingPhotos = true }.labelStyle(ActionIconLabelStyle()).disabled(!model.editable || model.draft.images.count >= 6)
-                            Button(model.draft.phase == .editing ? "Send comment" : "Retry saved comment", systemImage: "paperplane.fill") { Task { await model.send() } }.labelStyle(ActionIconLabelStyle()).buttonStyle(.borderedProminent).disabled(!model.canSend)
+                            Button(model.draft.phase == .editing ? "Send selected lyrics" : "Retry saved correction", systemImage: "arrow.up") { Task { await model.send() } }.labelStyle(ActionIconLabelStyle()).buttonStyle(.borderedProminent).disabled(!model.canSend)
                         }
                     }
                 }

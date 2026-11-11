@@ -13,6 +13,13 @@ import Testing
   #expect(value.accepts(.object(["correction": .object(receipt)])))
   receipt["edits"] = .array([value.edits[0].payload]); #expect(!value.accepts(.object(["correction": .object(receipt)])))
  }
+ @Test func selectedLyricsCanBeSentWithoutASeparateComment() throws {
+  var value = draft()
+  value.edits = [edit(3, "Cântă și îți mulțumesc")]
+  try value.freeze()
+  #expect(value.payload["message"].text == "Review these selected lyrics.")
+  #expect(value.payload["edits"].items.first?["replacement"].text == "Cântă și îți mulțumesc")
+ }
  @Test func editableLegacyPassageMigratesWithoutChangingItsCorrection() {
   var value = draft(); value.quote = "Har"; value.replacement = "Harul"; value.migrateEditableSelection()
   #expect(value.edits.count == 1); #expect(value.edits.first?.location == 3); #expect(value.edits.first?.replacement == "Harul"); #expect(value.quote.isEmpty); #expect(value.replacement.isEmpty)

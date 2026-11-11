@@ -27,7 +27,7 @@ struct ComputerAccountRow: View {
     }
     private var actions: some View {
         HStack {
-            if store.isAdmin { Button("Invite new members", systemImage: "qrcode") { inviting = true }.labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44).buttonStyle(.glass).buttonBorderShape(.circle) }
+            if store.isAdmin { Button("Invite new members", systemImage: "qrcode") { inviting = true }.labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44) }
             if store.isAdmin { Button("Rename computer", systemImage: "pencil") { name = computer.name; renaming = true }.labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44) }
             Button("Disconnect your access", systemImage: "xmark.circle", role: .destructive) { disconnecting = true }.labelStyle(ActionIconLabelStyle(destructive: true)).frame(minWidth: 44, minHeight: 44)
         }.buttonStyle(.borderless)

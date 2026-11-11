@@ -10,14 +10,15 @@ struct IPadSharedFileTile: View {
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
-                RoundedRectangle(cornerRadius: 5).fill(Color(.tertiarySystemFill))
                 if let thumbnail {
                     Image(uiImage: thumbnail).resizable().scaledToFit()
+                } else {
+                    Image(systemName: file["contentType"].text == "application/pdf" ? "doc" : "photo")
+                        .font(.title2).foregroundStyle(.tertiary)
                 }
             }
             .frame(maxWidth: .infinity)
             .frame(height: WorshipPreviewGrid.height(large: large))
-            .clipShape(.rect(cornerRadius: 5))
             .accessibilityHidden(true)
             Text(file.title).font(.subheadline).foregroundStyle(.primary).lineLimit(2).multilineTextAlignment(.center)
             if showsGroupName && !file["groupName"].text.isEmpty { Text(file["groupName"].text).font(.caption).foregroundStyle(Color.statiSecondary).lineLimit(2) }

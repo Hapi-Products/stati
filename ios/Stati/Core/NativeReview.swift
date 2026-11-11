@@ -92,6 +92,12 @@ import SwiftUI
             return .object(["code": .string("123456"), "url": .string("https://stati.ciani01.org/#join=123456"), "expiresAt": .number(Date.now.timeIntervalSince1970 + 30), "serverTime": .number(Date.now.timeIntervalSince1970)])
         }
         if p == "/api/me" { return .object(["user": viewer]) }
+        if p == "/api/devices", route == "send-computer-menu" {
+            return .array([
+                .object(["id": .string(computerID), "name": .string("Sanctuary PC")]),
+                .object(["id": .string("a3333333-3333-4333-8333-333333333333"), "name": .string("Choir Room PC")])
+            ])
+        }
         if p == "/api/devices" && route == "computers-empty" { return .array([]) }
         if p == "/api/devices" { return .array([.object(["id": .string(computerID), "name": .string("Sanctuary PC")])]) }
         if p == "/api/receivers" { return .array([.object(["id": .string(computerID), "name": .string("Sanctuary PC"), "online": .bool(true)])]) }
@@ -140,6 +146,17 @@ nonisolated final class NativeReviewProtocol: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         Task { @MainActor in
+            if NativeSendNetworkCheck.losesUploadResponse(request) {
+                client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost))
+                return
+            }
+            if let result = NativeSendNetworkCheck.response(request) {
+                let response = HTTPURLResponse(url: request.url!, statusCode: result.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                if let data = try? JSONEncoder().encode(result.body) { client?.urlProtocol(self, didLoad: data) }
+                client?.urlProtocolDidFinishLoading(self)
+                return
+            }
             if NativeReview.route == "file-check" { try? await Task.sleep(for: .milliseconds(100)) }
             if NativeReview.route == "markup-check", request.url?.path.hasPrefix("/api/file-edits/") == true {
                 let result = NativeMarkupServer.respond(request)
