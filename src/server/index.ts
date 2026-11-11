@@ -1,3 +1,4 @@
+import {publishStationLiveSong,readStationLiveSong} from './station-live-song';
 import {issuePhoneEnrollment} from './phone-enrollment';
 import {songComments,readSongComment} from './song-comments';
 export {TaskEvents} from './task-events';
@@ -78,6 +79,9 @@ async function routes(r:Request,env:Env,ctx:ExecutionContext):Promise<Response>{
  if(serviceTool){const native=serviceTool[1]==='station',id=native?(await device(r,env)).id:serviceTool[2],serviceId=serviceTool[3],tool=serviceTool[4];if(m==='GET')return(tool==='versions'?readStationServiceVersions:tool==='requests'?readServiceRequests:readServiceReadiness)(r,env,id,serviceId,native);if(m==='POST')return(tool==='versions'?saveStationServiceVersion:tool==='requests'?changeServiceRequest:changeServiceReadiness)(r,env,id,serviceId,native);}
  const serviceRoute=p.match(/^\/api\/(computers\/([0-9a-f-]{36})|station)\/services$/i);
  if(serviceRoute){const native=serviceRoute[1]==='station',id=native?(await device(r,env)).id:serviceRoute[2];if(m==='GET')return readStationServices(r,env,id,native);if(m==='POST')return changeStationService(r,env,id,native);}
+ const liveSongRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/live-song$/i);
+ if(liveSongRoute&&m==='GET')return readStationLiveSong(r,env,liveSongRoute[1]);
+ if(p==='/api/station/live-song'&&m==='PUT'){const d=await device(r,env);return publishStationLiveSong(r,env,d.id);}
  if(p==='/api/station/catalog'&&m==='POST')return publishStationCatalog(r,env,await device(r,env),()=>ctx.waitUntil(notifyWorkspaceChange(env,'catalog-changed')));
  if(p==='/api/station/workspace'&&m==='GET'){const d=await device(r,env),authority=await requireStationMinistry(r,env,d.id,'readSongs',true);return json({deviceId:d.id,userId:authority.user.id,capabilities:authority.capabilities});}
  const songExport=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/songs\/([a-f0-9]{64})\/export$/i);if(songExport&&m==='GET')return exportSongSlides(r,env,songExport[1],songExport[2]);

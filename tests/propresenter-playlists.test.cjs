@@ -250,3 +250,19 @@ test('connection check catches unsupported playlist shapes without writing or ad
  await assert.rejects(api.probe({playlists:true}),{code:'INVALID_RESPONSE',message:/songs were kept/});assert.ok(state.calls.every(call=>call.method==='GET'));
  state.tree=[{type:'playlist',id:{name:servicePlaylistName(service)}}];await assert.rejects(api.ensureServicePlaylist(service),{code:'INVALID_RESPONSE'});assert.equal(state.calls.some(call=>call.method!=='GET'),false);
 });
+
+test('reads the current playlist entry and active cue, ignoring the last entry after its cue is cleared',async t=>{
+ const playlistId=randomUUID(),itemId=randomUUID();
+ let cue={index:0,presentation_id:{uuid:songA.uuid}};
+ const {api,state}=await fixture(t,{override:(req,res,_state,{url})=>{
+  let payload;
+  if(url.pathname==='/v1/playlist/active')payload={presentation:{playlist:{uuid:playlistId},item:{uuid:itemId}},media:null};
+  else if(url.pathname==='/v1/presentation/slide_index')payload={presentation_index:cue};
+  else return false;
+  res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(payload));return true;
+ }});
+ assert.deepEqual(await api.activeSong(),{playlistId,itemId,presentationId:songA.uuid});
+ cue=null;
+ assert.equal(await api.activeSong(),null);
+ assert.ok(state.calls.every(call=>call.method==='GET'));
+});

@@ -138,6 +138,22 @@ function createServicePlaylistSync({userData,protection,plansStore,apiFactory=cr
  });}
  function importBindings(from,to,serviceIds){return queue(to,async()=>{if(from===to)return{imported:0};if(!Array.isArray(serviceIds)||serviceIds.length>100||serviceIds.some(id=>!UUID.test(id)))throw Error('Choose valid service bindings.');const [source,target]=await Promise.all([ledger(from),ledger(to)]);let imported=0;for(const id of serviceIds){if(source.services[id]&&!target.services[id]){target.services[id]=structuredClone(source.services[id]);imported++;}}if(Object.keys(target.services).length>1000)throw Error('Service playlist records are full. Existing records have been preserved.');if(imported)await write(profilePath(to),target);return{imported};});}
  async function flush(){await settingsPending;await Promise.all([...pending.values()]);}
- return{settings,saveSettings,list,sync,cleanup,remove,importBindings,flush};
+ async function activeSong(station){
+  const config=await settings();
+  if(!config.enabled)return null;
+  const data=await ledger(station);
+  const records=Object.entries(data.services).filter(([,record])=>record.playlistId&&!record.pendingWrite&&!record.removalRequested);
+  if(!records.length)return null;
+  const live=await apiFor(data,config).activeSong();
+  if(!live)return null;
+  const matches=records.filter(([,record])=>record.playlistId.toLowerCase()===live.playlistId);
+  if(matches.length!==1)return null;
+  const [serviceId,record]=matches[0];
+  const candidates=record.ownedItems.filter(item=>item.songId&&item.presentationUuid.toLowerCase()===live.presentationId);
+  const byItem=candidates.filter(item=>item.itemUuid.toLowerCase()===live.itemId);
+  const songIds=new Set((byItem.length?byItem:live.itemId===live.presentationId?candidates:[]).map(item=>item.songId));
+  return songIds.size===1?{serviceId,songId:[...songIds][0]}:null;
+ }
+ return{settings,saveSettings,list,sync,cleanup,remove,importBindings,activeSong,flush};
 }
 module.exports={createServicePlaylistSync,DEFAULT_SETTINGS};

@@ -16,6 +16,7 @@ async function fixture(t){
  const apiFactory=options=>{
   remote.factories.push(options);
   return{
+   activeSong:async()=>remote.active||null,
    probe:async()=>{remote.calls.push('probe');if(remote.offline)throw problem('CONNECTION_LOST','ProPresenter is offline.');return{apiVersion:'v1'};},
    ensureServicePlaylist:async(service,{beforeCreate,signal})=>{
     remote.calls.push('ensure:'+service.serviceId);if(signal?.aborted)throw problem('ABORTED');
@@ -188,4 +189,24 @@ test('summary rendering reuses the authoritative plans without another queued cl
  let reads=0;const manager=createServicePlaylistSync({userData:directory,protection,plansStore:{list:async()=>{reads++;return[];},change:async()=>[]},readLibrary:async()=>[]});
  await manager.list(user,{plans:[]});assert.equal(reads,0);
  await manager.list(user);assert.equal(reads,1);
+});
+
+
+test('only a confirmed on-screen presentation in an owned service playlist is reported live',async t=>{
+ const f=await fixture(t),plan=await f.create(),lyrics=song();
+ f.references.set(lyrics.songId,crypto.randomUUID());
+ await f.store.change(user,{type:'attach-songs',songs:[lyrics]});
+ await f.manager.sync(user);
+ assert.equal(await f.manager.activeSong(user),null);
+ const {playlistId,items:[item]}=f.remote.playlists.get(plan.id);
+ f.remote.active={playlistId,itemId:item.itemUuid,presentationId:item.presentationUuid};
+ assert.deepEqual(await f.manager.activeSong(user),{serviceId:plan.id,songId:lyrics.songId});
+ f.remote.active.itemId=crypto.randomUUID();
+ assert.equal(await f.manager.activeSong(user),null);
+ f.remote.active.itemId=item.itemUuid;
+ f.remote.active.presentationId=crypto.randomUUID();
+ assert.equal(await f.manager.activeSong(user),null);
+ f.remote.active.presentationId=item.presentationUuid;
+ f.remote.active.playlistId=crypto.randomUUID();
+ assert.equal(await f.manager.activeSong(user),null);
 });

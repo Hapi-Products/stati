@@ -274,7 +274,16 @@ function createProPresenterPlaylists(options={}){
    return{...ref,ownedItems:owned,changed:!same};
   });
  }
+ async function activeSong({signal}={}){
+  const [playlists,slide]=await Promise.all([
+   request('GET','/v1/playlist/active',undefined,signal),
+   request('GET','/v1/presentation/slide_index',undefined,signal),
+  ]);
+  const active=playlists?.presentation,cue=slide?.presentation_index;
+  if(!active?.playlist?.uuid||!active?.item?.uuid||!cue?.presentation_id?.uuid||!Number.isSafeInteger(cue.index)||cue.index<0)return null;
+  return{playlistId:uuid(active.playlist.uuid,'playlist UUID'),itemId:uuid(active.item.uuid,'playlist item UUID'),presentationId:uuid(cue.presentation_id.uuid,'presentation UUID')};
+ }
  async function deletePlaylist(){throw fail('UNSUPPORTED_OPERATION','ProPresenter does not document a playlist deletion API. Remove the empty service playlist in ProPresenter.');}
- return{probe,ensureServicePlaylist,getServicePlaylist,resolvePresentation,addPresentations,orderPresentations,cleanupPlaylist,deletePlaylist};
+ return{probe,ensureServicePlaylist,getServicePlaylist,resolvePresentation,addPresentations,orderPresentations,cleanupPlaylist,deletePlaylist,activeSong};
 }
 module.exports={createProPresenterPlaylists,servicePlaylistName,ProPresenterError};

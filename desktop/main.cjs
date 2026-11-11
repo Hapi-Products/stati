@@ -261,7 +261,7 @@ function monitorPresentationFiles(){
  if(!presentationMonitor)presentationMonitor=require('./presentation-monitor.cjs').createPresentationMonitor({now:()=>Date.now(),current:presentationMonitorScope,sync:()=>presentationIntegration.backgroundSync(),onAttention:(_result,scope)=>{notify('Stați · Linked song needs attention','A linked song is missing or has changes that need review. Open PowerPoint tools to see the file.',()=>{const current=presentationMonitorScope();showMain();if(current?.key===scope.key)openPrepare('powerpoint');});},onError:error=>console.warn('Linked song check:',error.name)});
  void presentationMonitor.tick().catch(()=>{});
 }
-function pollInBackground(){if(!quitting&&credential)void sharedStationPoll().then(()=>monitorPresentationFiles()).catch(()=>{});}
+function pollInBackground(){if(!quitting&&credential)void sharedStationPoll().then(()=>{monitorPresentationFiles();void publishLiveSong();}).catch(()=>{});}
 async function receiverRequest(options){
  if(quitting)throw new Error('Stați is closing.');
  const pending=request('/station/receiver',options);receiverMutations.add(pending);
@@ -564,6 +564,25 @@ async function savedLyricsDirectory(){const saved=await readJson('lyrics-folder.
 function playlistManager(){return localPlaylistManager||(localPlaylistManager=require('./service-playlist-sync.cjs').createServicePlaylistSync({userData:app.getPath('userData'),protection:safeStorage,plansStore:playlistPlans(),readLibrary:async(_user,plan,{signal}={})=>{const scope=sharedServiceOperator();if(!scope)throw Error('Choose your profile first.');const checkActive=()=>{signal?.throwIfAborted();const current=sharedServiceOperator();if(!current||current.generation!==scope.generation||current.credential!==scope.credential||current.deviceId!==scope.deviceId||current.userId!==scope.userId)throw Error('The selected user changed.');};checkActive();if(!plan.songs.length)return[];const directory=await savedLyricsDirectory();checkActive();if(!directory)throw Error('Choose the ProPresenter Lyrics folder in Prepare slides before syncing songs.');return require('./service-output.cjs').serviceOutputReferences(directory,plan,{allowUnavailable:true,checkActive,signal});}}));}
 function notifyServiceChange(){for(const win of [main])if(win&&!win.isDestroyed())win.webContents.send('service-plans-changed');}
 function playlistJobs(){return localPlaylistJobs||(localPlaylistJobs=require('./service-playlist-jobs.cjs').createServicePlaylistJobs({manager:playlistManager(),plansStore:servicePlans(),current:()=>{const context=sharedServiceOperator();return context?{id:context.deviceId,generation:context.generation}:null;},readDirectory:savedLyricsDirectory,work:require('./conversion-work.cjs'),beforeSync:async operator=>{const scope=sharedServiceOperator();if(!scope||scope.deviceId!==operator.id||scope.generation!==operator.generation)throw Error('The selected user changed.');const shared=await servicePlans().state(scope.deviceId),legacy=await legacyServicePlans().list(scope.userId);assertIdentity(scope.generation);await playlistManager().importBindings(scope.userId,scope.deviceId,legacy.filter(plan=>shared.plans.some(item=>item.id===plan.id)).map(plan=>plan.id));},onChanged:notifyServiceChange,onError:error=>console.warn('Service playlist sync:',error.name)}));}
+let liveSongPublication=null,liveSongSending=false;
+async function publishLiveSong(){
+ const scope=sharedServiceOperator();
+ if(liveSongSending||!scope||!activeOperator?.capabilities?.planServices)return;
+ const prior=liveSongPublication?.scope===scope.generation?liveSongPublication:null;
+ if(prior?.retryAfter>Date.now())return;
+ liveSongSending=true;
+ try{
+  const live=await playlistManager().activeSong(scope.deviceId);
+  const current=sharedServiceOperator();
+  if(!current||current.generation!==scope.generation||current.credential!==scope.credential||current.lease!==scope.lease)return;
+  const key=live?live.serviceId+':'+live.songId:null;
+  if(!key&&!prior?.key||key===prior?.key&&Date.now()-prior.sentAt<25000)return;
+  await request('/station/live-song',{method:'PUT',data:{live},timeout:5000,deviceCredential:scope.credential,proof:scope.proof,selectionLease:scope.lease});
+  liveSongPublication={scope:scope.generation,key,sentAt:Date.now()};
+ }catch(error){
+  if(error.status===404)liveSongPublication={scope:scope.generation,retryAfter:Date.now()+120000};
+ }finally{liveSongSending=false;}
+}
 async function viewServicePlans(operator){operator={...operator,id:operator.deviceId||operator.id};const {plans}=await servicePlans().state(operator.id);assertIdentity(operator.generation);const summaries=await playlistManager().list(operator.id,{plans});assertIdentity(operator.generation);const byId=new Map(summaries.map(summary=>[summary.serviceId,summary]));return plans.map(plan=>({...plan,status:require('./service-plans.cjs').serviceStatus(plan),playlist:byId.get(plan.id)}));}
 async function playlistAdministrator(){const operator=draftOperator(),state=require('./station-visibility.cjs').visibleState(await sharedStationPoll(),activeOperator,operatorGeneration);assertIdentity(operator.generation);if(!state.adminUnlocked)throw Error('Unlock an administrator before changing service playlist settings.');return operator;}
 handle('playlist-settings',async()=>{const operator=await playlistAdministrator(),settings=await playlistManager().settings();assertIdentity(operator.generation);return{...settings,sharedServices:true};});
