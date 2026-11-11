@@ -7,6 +7,9 @@ struct SongGalleryView: View {
     private let selectionChanged: (String) -> Void
     @State private var model: SongGalleryModel
     @State private var preferences: ReaderPreferences
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var modeOverride: SongReaderMode?
+    private var readerMode: SongReaderMode { modeOverride ?? preferences.settings.mode }
     @State private var preview: FilePreviewRequest?
     @State private var linking = false
     @State private var unlinking: APIRecord?
@@ -29,13 +32,13 @@ struct SongGalleryView: View {
     private var iPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     var body: some View {
         NavigationStack { reader }
-        .preferredColorScheme(iPad && preferences.settings.mode == .document ? .light : iPad && preferences.settings.mode == .slides ? .dark : nil)
+        .preferredColorScheme(iPad && readerMode == .document ? .light : iPad && readerMode == .slides ? .dark : nil)
         .task {
             if model.song == nil { await model.load() }
             #if DEBUG && targetEnvironment(simulator)
             if NativeReview.route == "reader-document-switch" {
                 try? await Task.sleep(for: .seconds(1))
-                preferences.settings.mode = .slides
+                modeOverride = .slides
             }
             if NativeReview.route == "ipad-service-selector" {
                 preferences.settings.selectorSource = .currentService
@@ -54,6 +57,7 @@ struct SongGalleryView: View {
                 selectionChanged(model.selected.id)
             }
         }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); modeOverride = nil } }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
         .fullScreenCover(item: $preview) { StatiFileViewer(request: $0) }
@@ -82,12 +86,12 @@ struct SongGalleryView: View {
         if NativeReaderReview.active { Text("Sample data · Simulator review").font(.caption).dynamicTypeSize(.large).foregroundStyle(Color.statiSecondary).padding(8) }
         #endif
         if let song = model.song {
-            SongReaderContent(song: song, mode: iPad ? preferences.settings.mode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize, showsPagingControls: !focused).id(song.id + song["contentHash"].text)
+            SongReaderContent(song: song, mode: iPad ? readerMode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize, showsPagingControls: !focused).id(song.id + song["contentHash"].text)
         } else if model.loading { ProgressView("Opening song…").frame(maxWidth: .infinity, maxHeight: .infinity) }
         else { ContentUnavailableView("Song unavailable", systemImage: "music.note", description: Text(model.message)) }
         if !model.message.isEmpty, model.song != nil { NoticeView(text: model.message).padding(.horizontal, 16) }
         if model.song == nil && !model.loading { Button("Try again", systemImage: "arrow.clockwise") { Task { await model.load() } }.padding() }
-    }.background(iPad && preferences.settings.mode == .document ? Color.white.ignoresSafeArea() : iPad && preferences.settings.mode == .slides ? Color.black.ignoresSafeArea() : Color(.systemBackground).ignoresSafeArea()).safeAreaInset(edge: .bottom) { if !iPad, let song = model.song { phoneActions(song) } }
+    }.background(iPad && readerMode == .document ? Color.white.ignoresSafeArea() : iPad && readerMode == .slides ? Color.black.ignoresSafeArea() : Color(.systemBackground).ignoresSafeArea()).safeAreaInset(edge: .bottom) { if !iPad, let song = model.song { phoneActions(song) } }
         .overlay(alignment: .topTrailing) {
             if iPad { SongReaderShareSource(anchor: shareAnchor).frame(width: 1, height: 1).padding(.trailing, 40).allowsHitTesting(false).accessibilityHidden(true) }
         }
@@ -121,7 +125,7 @@ struct SongGalleryView: View {
             if iPad, let song = model.song {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Picker("Song view", selection: $preferences.settings.mode) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
+                        Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
                         Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
                         Menu("Notes", systemImage: "note.text") { notesActions }
                         Menu("Share", systemImage: "square.and.arrow.up") {

@@ -10,6 +10,7 @@ import SwiftUI
     static func configure() {
         guard let route = NativeReview.route, route.hasPrefix("ipad-") || NativeReaderReview.active else { return }
         GroupPreference.save(route == "ipad-original" ? .originalSongs : .automatic, ownerID: NativeReview.userID)
+        if route == "ipad-live-activity" { UserDefaults.standard.set(true, forKey: "stati.liveSong.enabled") }
         var settings = SongReaderSettings()
         if route.hasPrefix("reader-document") || route == "ipad-pdf-columns-features" { settings.mode = .document }
         if route.contains("columns") { settings.pdfColumns = .two }
@@ -21,6 +22,13 @@ import SwiftUI
     }
     static func response(_ request: URLRequest) -> JSONValue? {
         guard NativeReview.route != nil, request.httpMethod == "GET", let path = request.url?.path else { return nil }
+        if NativeReview.route == "ipad-live-activity", path == "/api/computers/" + NativeReview.computerID + "/live-song" {
+            return .object(["live": .object([
+                "serviceId": NativeReview.plan["id"], "serviceTitle": NativeReview.plan["title"],
+                "songId": .string(NativeReview.songID), "songTitle": NativeReview.song["title"],
+                "expiresAt": .number(Date.now.timeIntervalSince1970 + 60),
+            ])])
+        }
         if path == "/api/worship-groups", NativeReview.route == "ipad-group-switcher" {
             var second = group.fields
             second["id"] = .string("a3333333-3333-4333-8333-333333333333")

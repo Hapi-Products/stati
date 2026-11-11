@@ -14,7 +14,7 @@ struct IPadRecentsView: View {
     private var largePreviews: Bool { preferences?.settings.largePreviews == true }
     var body: some View {
         ScrollView {
-            if matching.isEmpty { ContentUnavailableView("No recent items", systemImage: "clock", description: Text("Songs and files you open on this iPad appear here.")) }
+            if matching.isEmpty { ContentUnavailableView("No recent items", systemImage: "clock", description: Text("Songs and files you open on this device appear here.")) }
             else {
                 LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews, accessibility: dynamicTypeSize.isAccessibilitySize), spacing: WorshipPreviewGrid.spacing) {
                     ForEach(matching) { item in
@@ -49,6 +49,7 @@ struct IPadRecentsView: View {
             .fullScreenCover(item: $songs) { SongGalleryView(store: store, request: $0) }
     }
     private func reconcile() async {
+        preferences?.reload()
         store.recents.prune(before: preferences?.settings.retention.cutoff())
         do { try await RecentAvailability.reconcile(store: store); message = "" }
         catch is CancellationError { }

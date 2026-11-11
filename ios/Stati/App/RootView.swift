@@ -6,6 +6,8 @@ struct RootView: View {
     @Environment(\.displayScale) private var displayScale
     @State private var tab = "send"
     @State private var shortcuts = SongShortcutNavigation.shared
+    @State private var liveActivities = ServiceLiveActivities()
+    @AppStorage("stati.liveSong.enabled") private var liveSongEnabled = false
     @State private var shortcutRequest: SongShortcutRequest?
     #if DEBUG && targetEnvironment(simulator)
     @State private var reviewReader: SongGalleryRequest?
@@ -93,7 +95,7 @@ struct RootView: View {
                 shortcuts.request = nil
                 shortcutRequest = request
             }
-            .fullScreenCover(item: $shortcutRequest) { SongShortcutView(store: store, request: $0) }
+            .fullScreenCover(item: $shortcutRequest) { SongShortcutDestination(store: store, request: $0) }
             .task(id: store.me?.id) {
                 let owner = store.me?.id
                 store.taskCount = 0
@@ -108,6 +110,9 @@ struct RootView: View {
             .sheet(isPresented: $showingWhatsNew, onDismiss: { lastSeenBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "" }) {
                 NavigationStack { WhatsNewView() }
             }
+            .task(id: taskEventScope + store.selectedComputer + String(liveSongEnabled) + String(store.canReadSongs)) {
+                await liveActivities.follow(store: store, enabled: liveSongEnabled, foreground: scenePhase == .active)
+            }
             .task(id: taskEventScope) {
                 #if DEBUG && targetEnvironment(simulator)
                 if NativeReview.route != nil { return }
@@ -117,7 +122,7 @@ struct RootView: View {
                 await TaskEventFeed(api: store.api).run(isCurrent: { store.me?.id == owner && store.accountEpoch == epoch && store.api.signedIn && scenePhase == .active }, invalidate: { store.workspaceInvalidated($0) }, connected: { live in if store.me?.id == owner && store.accountEpoch == epoch { store.workspaceLive = live } })
             }
             .onChange(of: store.me?.id) { previous, current in
-                if previous != nil && previous != current { profileImage = nil; libraryQuery = ""; libraryPath = []; taskPath = []; morePath = []; libraryArea = "songs"; tab = "send" }
+                if previous != nil && previous != current { shortcuts.request = nil; shortcutRequest = nil; profileImage = nil; libraryQuery = ""; libraryPath = []; taskPath = []; morePath = []; libraryArea = "songs"; tab = "send" }
             }
             .onChange(of: store.canReadSongs) { _, allowed in if !allowed && tab == "songs" { tab = "send"; libraryQuery = ""; libraryPath = [] } }
             .task(id: taskEventScope + tab) {

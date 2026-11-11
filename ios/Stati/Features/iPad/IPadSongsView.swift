@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IPadSongsView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
     let group: String
@@ -10,12 +11,17 @@ struct IPadSongsView: View {
     @State private var preview: SongGalleryRequest?
     @State private var query = ""
     @State private var searching = false
+    @State private var findingHymns = false
+    @State private var sending = false
+    @State private var showQueueAfterDraft = false
+    @AppStorage("stati.hymnSearch.enabled") private var onlineEnabled = true
+    @AppStorage("stati.reader.libraryLayout") private var libraryLayout = "saved"
     @AppStorage("stati.worship.songListAfterGridRestore") private var listMode = false
     private var songs: [APIRecord] { library?.items ?? [] }
     private var loading: Bool { library?.loading == true }
     private var message: String { library?.message ?? "" }
     private var sections: [SongAlphabet] { SongAlphabet.sections(songs) }
-    private var showsGrid: Bool { searchTerm.isEmpty && !listMode && !dynamicTypeSize.isAccessibilitySize && !songs.isEmpty }
+    private var showsGrid: Bool { searchTerm.isEmpty && !(libraryLayout == "list" || libraryLayout == "saved" && listMode) && !dynamicTypeSize.isAccessibilitySize && !songs.isEmpty }
     private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var searchGroups: [SongSearchGroup] { SongSearchGroup.sections(songs, query: searchTerm) }
     private var orderedSongs: [APIRecord] { searchTerm.isEmpty ? sections.flatMap(\.songs) : searchGroups.flatMap(\.songs) }
@@ -37,16 +43,21 @@ struct IPadSongsView: View {
         .background(Color(.systemBackground))
         .navigationTitle(title).navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") {
-                    Picker("Layout", selection: $listMode) {
-                        Label("Grid", systemImage: "square.grid.2x2").tag(false)
-                        Label("List", systemImage: "list.bullet").tag(true)
-                    }
-                    Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 }))
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if onlineEnabled {
+                    Button("Find hymns online", systemImage: "globe") { findingHymns = true }
+                        .labelStyle(.iconOnly)
                 }
-                .labelStyle(ActionIconLabelStyle())
+                Button("Send", systemImage: "paperplane") { sending = true }.labelStyle(.iconOnly)
             }
+        }
+        .sheet(isPresented: $findingHymns, onDismiss: {
+            if showQueueAfterDraft { showQueueAfterDraft = false; sending = true }
+        }) {
+            SongSubmissionEditor(onlineQuery: searchTerm, opensOnlineSearch: true) { showQueueAfterDraft = true }
+        }
+        .sheet(isPresented: $sending) {
+            NavigationStack { SendView(active: true) }
         }
         .searchable(text: $query, isPresented: $searching, placement: .toolbar, prompt: "Search songs and lyrics").searchToolbarBehavior(.minimize)
         .task(id: requestKey) { do { try await Task.sleep(for: .milliseconds(200)); await load()
@@ -59,6 +70,7 @@ struct IPadSongsView: View {
         .refreshable { await load() }
         .fullScreenCover(item: $preview) { SongGalleryView(store: store, request: $0) }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in reader?.reload() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { reader?.reload() } }
         .onChange(of: store.accountEpoch) { library = nil; preview = nil; reader = ReaderPreferences(ownerID: store.me?.id ?? "") }
         .onChange(of: store.selectedComputer) { library = nil; preview = nil }
         .onAppear {

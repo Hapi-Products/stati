@@ -6,7 +6,6 @@ struct IPadAccountView: View {
     @Bindable var preferences: IPadPreferences
     let groups: [String]
     let namedGroups: WorshipGroupsModel
-    @State private var reader: ReaderPreferences?
     @State private var reviewFeatures = false
     @State private var reviewWorship = false
     @State private var signingOut = false
@@ -17,14 +16,13 @@ struct IPadAccountView: View {
                 if let person = store.me { Section { HStack(spacing: 16) { MemberAvatar(api: store.api, path: person["photoUrl"].text, initials: String(person["first_name"].text.prefix(1)), size: 54); Text(person.personName).font(.title3.weight(.semibold)) } } }
                 DefaultComputerPicker()
                 Section { NavigationLink("Worship") { worshipSettings }.navigationDestination(isPresented: $reviewWorship) { worshipSettings } }
-                if let reader { Section { NavigationLink("Reading & Features") { IPadFeaturesView(preferences: reader) }.navigationDestination(isPresented: $reviewFeatures) { IPadFeaturesView(preferences: reader) } } }
+                Section { NavigationLink("Features") { IPadFeaturesView() }.navigationDestination(isPresented: $reviewFeatures) { IPadFeaturesView() } }
                 Section { NavigationLink("What’s New", value: MoreRoute.whatsNew); NavigationLink("Privacy", value: MoreRoute.privacy) }
                 Section { Button("Sign out", role: .destructive) { signingOut = true; Task { await store.signOut(); dismiss() } }.disabled(signingOut) }
             }.navigationTitle("Account").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Close account", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()).disabled(signingOut) } }
                 .navigationDestination(for: MoreRoute.self) { route in switch route { case .team: IPadTeamView(); case .whatsNew: WhatsNewView(); case .privacy: PrivacyView(); default: EmptyView() } }
                 .onAppear {
-                    if reader == nil { reader = ReaderPreferences(ownerID: store.me?.id ?? "") }
                     #if DEBUG && targetEnvironment(simulator)
                     if ["ipad-features", "ipad-pdf-columns-features"].contains(NativeReview.route ?? "") { reviewFeatures = true }
                     if NativeReview.route == "ipad-worship" { reviewWorship = true }

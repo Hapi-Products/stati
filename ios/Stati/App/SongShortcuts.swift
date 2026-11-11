@@ -4,6 +4,9 @@ import SwiftUI
 struct SongShortcutRequest: Identifiable {
     let id = UUID()
     let query: String
+    var destination: Destination = .songs
+
+    enum Destination { case songs, services, recents, online, draft }
 }
 
 @MainActor @Observable
@@ -12,9 +15,27 @@ final class SongShortcutNavigation {
     var request: SongShortcutRequest?
 }
 
+enum StatiShortcutError: LocalizedError {
+    case disabled, onlineDisabled
+
+    var errorDescription: String? {
+        switch self {
+        case .disabled: "Turn on Siri Shortcuts in Settings to use this Stați action."
+        case .onlineDisabled: "Turn on Online Hymn Search in Settings to use this Stați action."
+        }
+    }
+
+    @MainActor static func open(_ request: SongShortcutRequest) throws {
+        guard UserDefaults.standard.object(forKey: "stati.shortcuts.enabled") as? Bool ?? true else { throw Self.disabled }
+        if request.destination == .online,
+           !(UserDefaults.standard.object(forKey: "stati.hymnSearch.enabled") as? Bool ?? true) { throw Self.onlineDisabled }
+        SongShortcutNavigation.shared.request = request
+    }
+}
+
 struct FindStatiSong: AppIntent {
-    static let title: LocalizedStringResource = "Open Song"
-    static let description = IntentDescription("Find a song by its title or part of the lyrics and open it in Stați.")
+    static let title: LocalizedStringResource = "Find a Song"
+    static let description = IntentDescription("Find a song by its title or part of the lyrics and show matching songs in the Stați library.")
     static let openAppWhenRun = true
     static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
 
@@ -22,12 +43,11 @@ struct FindStatiSong: AppIntent {
     var query: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Open \(\.$query)")
+        Summary("Find \(\.$query)")
     }
 
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        SongShortcutNavigation.shared.request = SongShortcutRequest(query: String(query.prefix(200)))
+    @MainActor func perform() async throws -> some IntentResult {
+        try StatiShortcutError.open(SongShortcutRequest(query: String(query.prefix(200))))
         return .result()
     }
 }
@@ -37,9 +57,52 @@ struct BrowseStatiSongs: AppIntent {
     static let openAppWhenRun = true
     static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
 
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        SongShortcutNavigation.shared.request = SongShortcutRequest(query: "")
+    @MainActor func perform() async throws -> some IntentResult {
+        try StatiShortcutError.open(SongShortcutRequest(query: ""))
+        return .result()
+    }
+}
+
+struct FindStatiHymns: AppIntent {
+    static let title: LocalizedStringResource = "Find Hymns Online"
+    static let openAppWhenRun = true
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult {
+        try StatiShortcutError.open(SongShortcutRequest(query: "", destination: .online))
+        return .result()
+    }
+}
+
+struct DraftStatiSong: AppIntent {
+    static let title: LocalizedStringResource = "New Song Draft"
+    static let openAppWhenRun = true
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult {
+        try StatiShortcutError.open(SongShortcutRequest(query: "", destination: .draft))
+        return .result()
+    }
+}
+
+struct OpenStatiRecents: AppIntent {
+    static let title: LocalizedStringResource = "Show Recent Songs"
+    static let openAppWhenRun = true
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult {
+        try StatiShortcutError.open(SongShortcutRequest(query: "", destination: .recents))
+        return .result()
+    }
+}
+
+struct OpenStatiServices: AppIntent {
+    static let title: LocalizedStringResource = "Show Services"
+    static let openAppWhenRun = true
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult {
+        try StatiShortcutError.open(SongShortcutRequest(query: "", destination: .services))
         return .result()
     }
 }
@@ -49,7 +112,7 @@ struct StatiShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: FindStatiSong(),
             phrases: ["Find a song in \(.applicationName)", "Open a song in \(.applicationName)"],
-            shortTitle: "Open Song",
+            shortTitle: "Find a Song",
             systemImageName: "music.note"
         )
         AppShortcut(
@@ -58,6 +121,10 @@ struct StatiShortcuts: AppShortcutsProvider {
             shortTitle: "Browse Songs",
             systemImageName: "music.note.list"
         )
+        AppShortcut(intent: OpenStatiServices(), phrases: ["Show services in \(.applicationName)"], shortTitle: "Services", systemImageName: "calendar")
+        AppShortcut(intent: OpenStatiRecents(), phrases: ["Show recent songs in \(.applicationName)"], shortTitle: "Recent Songs", systemImageName: "clock")
+        AppShortcut(intent: DraftStatiSong(), phrases: ["Draft a song in \(.applicationName)"], shortTitle: "Song Draft", systemImageName: "square.and.pencil")
+        AppShortcut(intent: FindStatiHymns(), phrases: ["Find hymns online in \(.applicationName)"], shortTitle: "Find Hymns Online", systemImageName: "globe")
     }
 }
 
@@ -69,9 +136,8 @@ struct SongShortcutView: View {
     @State private var selection: SongGalleryRequest?
     @State private var query: String
     @State private var didSearch = false
-    @State private var firstLookup = true
     @State private var composing = false
-    @State private var message = ""
+    @AppStorage("stati.hymnSearch.enabled") private var onlineEnabled = true
 
     init(store: AppStore, request: SongShortcutRequest) {
         self.store = store
@@ -94,7 +160,7 @@ struct SongShortcutView: View {
                 else if results.isEmpty {
                     ContentUnavailableView("No matching songs", systemImage: "music.note", description: Text(library?.message ?? "Try a title or part of the lyrics."))
                 }
-                if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if onlineEnabled {
                     Button("Find hymns online", systemImage: "globe") { composing = true }
                 }
                 ForEach(results) { song in
@@ -111,16 +177,15 @@ struct SongShortcutView: View {
             }
         }
         .task(id: query + "|" + store.selectedComputer) {
-            let autoOpen = firstLookup && query == request.query
             didSearch = false
             if library == nil { library = SongLibraryModel(store: store) }
             do {
-                if !autoOpen { try await Task.sleep(for: .milliseconds(250)) }
-                await search(autoOpen: autoOpen)
+                try await Task.sleep(for: .milliseconds(250))
+                await search()
             } catch { }
         }
         .sheet(isPresented: $composing) {
-            SongTextComposer(preparing: false, message: message, add: queueDraft, onlineQuery: query)
+            SongSubmissionEditor(onlineQuery: query, opensOnlineSearch: true, showsQueueAfterAdding: true)
                 .environment(store)
         }
         .onChange(of: store.accountEpoch) { dismiss() }
@@ -128,7 +193,7 @@ struct SongShortcutView: View {
         .fullScreenCover(item: $selection) { SongGalleryView(store: store, request: $0) }
     }
 
-    private func search(autoOpen: Bool) async {
+    private func search() async {
         guard store.canReadSongs, let library, !store.selectedComputer.isEmpty else {
             didSearch = true
             return
@@ -137,27 +202,47 @@ struct SongShortcutView: View {
         await library.load(computerID: computer, group: "", query: input, includeText: false)
         guard !Task.isCancelled, input == query, computer == store.selectedComputer, epoch == store.accountEpoch else { return }
         didSearch = true
-        firstLookup = false
-        if autoOpen, !input.isEmpty, let song = SongSearchGroup.directMatch(results, query: input) { open(song) }
-    }
-
-    private func queueDraft() async -> Bool {
-        guard let owner = store.me?.id, !store.selectedComputer.isEmpty else { return false }
-        let draft = store.sendDraft, computer = store.selectedComputer
-        do {
-            try await FileStager.stage(count: 1, queue: store.uploads) { _ in
-                try await UploadFiles.prepareSongText(draft, userID: owner, deviceID: computer)
-            }
-            if store.me?.id == owner, store.sendDraft == draft { store.sendDraft = SendDraft() }
-            message = ""
-            return true
-        } catch {
-            message = error.localizedDescription
-            return false
-        }
     }
 
     private func open(_ song: APIRecord) {
         selection = SongGalleryRequest(computerID: store.selectedComputer, songs: results, selectedID: song.id)
+    }
+}
+
+struct SongShortcutDestination: View {
+    let store: AppStore
+    let request: SongShortcutRequest
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        Group {
+            switch request.destination {
+            case .songs:
+                SongShortcutView(store: store, request: request)
+            case .online, .draft:
+                SongSubmissionEditor(onlineQuery: request.query, opensOnlineSearch: request.destination == .online, showsQueueAfterAdding: true)
+            case .services, .recents:
+                NavigationStack {
+                    Group {
+                        if request.destination == .services {
+                            IPadServicesView().navigationDestination(for: IPadSidebarRoute.self) { route in
+                                if case .service(let id) = route {
+                                    ServiceRouteView(computerID: store.selectedComputer, serviceID: id)
+                                }
+                            }
+                        } else {
+                            IPadRecentsView(active: true)
+                        }
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly)
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: store.accountEpoch) { dismiss() }
+        .onChange(of: store.canReadSongs) { _, allowed in if !allowed { dismiss() } }
     }
 }

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Song discovery</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Siri Shortcuts</string>
+			<key>Key</key>
+			<string>stati.shortcuts.enabled</string>
+			<key>DefaultValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Online hymn search</string>
+			<key>Key</key>
+			<string>stati.hymnSearch.enabled</string>
+			<key>DefaultValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Service</string>
+			<key>FooterText</key>
+			<string>Live Activities show the current song from your connected church computer. The song may be visible on your Lock Screen.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Live song on Lock Screen</string>
+			<key>Key</key>
+			<string>stati.liveSong.enabled</string>
+			<key>DefaultValue</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Reader</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Open songs as</string>
+			<key>Key</key>
+			<string>stati.reader.mode</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Slides</string>
+				<string>PDF</string>
+				<string>Text</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>slides</string>
+				<string>document</string>
+				<string>text</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Slide text size</string>
+			<key>Key</key>
+			<string>stati.reader.slideSize</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Small</string>
+				<string>Default</string>
+				<string>Large</string>
+				<string>Extra large</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>small</string>
+				<string>standard</string>
+				<string>large</string>
+				<string>extraLarge</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>PDF columns</string>
+			<key>Key</key>
+			<string>stati.reader.pdfColumns</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>One</string>
+				<string>Two</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>1</string>
+				<string>2</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>PDF page effect</string>
+			<key>Key</key>
+			<string>stati.reader.transition</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Slide</string>
+				<string>Page turn</string>
+				<string>Fade</string>
+				<string>Instant</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>slide</string>
+				<string>pageTurn</string>
+				<string>fade</string>
+				<string>instant</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Song selector</string>
+			<key>Key</key>
+			<string>stati.reader.selectorSource</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Recents</string>
+				<string>Current service</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>recents</string>
+				<string>currentService</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Clicker</string>
+			<key>Key</key>
+			<string>stati.reader.clicker</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>On</string>
+				<string>Off</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>on</string>
+				<string>off</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Song previews</string>
+			<key>Key</key>
+			<string>stati.reader.largePreviews</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Standard</string>
+				<string>Large</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>off</string>
+				<string>on</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Song library layout</string>
+			<key>Key</key>
+			<string>stati.reader.libraryLayout</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Grid</string>
+				<string>List</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>grid</string>
+				<string>list</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Recents</string>
+			<key>FooterText</key>
+			<string>Only viewing history expires.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Remove from Recents</string>
+			<key>Key</key>
+			<string>stati.reader.retention</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use saved preference</string>
+				<string>Never</string>
+				<string>After a day</string>
+				<string>After a week</string>
+				<string>After two weeks</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>0</string>
+				<string>1</string>
+				<string>7</string>
+				<string>14</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Updates</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Show What’s New on iPad</string>
+			<key>Key</key>
+			<string>nativeReleaseNotes.automaticOnIPad</string>
+			<key>DefaultValue</key>
+			<true/>
+		</dict>
+	</array>
+</dict>
+</plist>

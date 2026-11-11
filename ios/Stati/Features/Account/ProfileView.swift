@@ -32,6 +32,10 @@ struct ProfileView: View {
                     Divider().padding(.leading, 56)
                     AppIconPickerButton(profileRow: true).buttonStyle(.plain)
                     Divider().padding(.leading, 56)
+                    Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
+                        ProfileDestinationRow(title: "Settings", icon: "gearshape")
+                    }.buttonStyle(.plain)
+                    Divider().padding(.leading, 56)
                     NavigationLink(value: MoreRoute.computers) { ProfileDestinationRow(title: "Computers", icon: "desktopcomputer") }
                     if !store.songCommands.requests.isEmpty || store.songCommands.needsRecovery {
                         Divider().padding(.leading, 56)
