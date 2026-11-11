@@ -7,27 +7,27 @@ struct SongPageThumbnails: View {
     let slideSize: SlideTextSize
     let selectedIndex: Int
     let select: (Int) -> Void
-    let close: () -> Void
+    @AppStorage("reader.thumbnailWidth") private var thumbnailWidth = 220.0
+    private var accent: Color { AppIconAppearance.shared.accent }
 
     private var count: Int { document?.pageCount ?? pages.count }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(document == nil ? "Slides" : "Pages")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button("Close page previews", systemImage: "xmark", action: close)
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
-                    .frame(minWidth: 44, minHeight: 44)
+            HStack(spacing: 8) {
+                Image(systemName: "square.grid.3x3").accessibilityHidden(true)
+                Slider(value: $thumbnailWidth, in: 130...300, step: 10)
+                    .accessibilityLabel("Preview size")
+                Image(systemName: "square.grid.2x2").accessibilityHidden(true)
             }
+            .foregroundStyle(.secondary)
+            .tint(accent)
             .padding(.horizontal, 16)
+            .padding(.top, 10)
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 16)], spacing: 18) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: thumbnailWidth), spacing: 16)], spacing: 18) {
                         ForEach(0..<count, id: \.self) { index in
                             Button {
                                 select(index)
@@ -36,7 +36,7 @@ struct SongPageThumbnails: View {
                                     thumbnail(index)
                                     Text("\(index + 1)")
                                         .font(.subheadline.monospacedDigit())
-                                        .foregroundStyle(index == selectedIndex ? Color.accentColor : .secondary)
+                                        .foregroundStyle(index == selectedIndex ? accent : .secondary)
                                 }
                             }
                             .buttonStyle(.plain)
@@ -52,7 +52,7 @@ struct SongPageThumbnails: View {
             }
         }
         .frame(idealWidth: 600, idealHeight: 505)
-        .presentationCompactAdaptation(.sheet)
+        .presentationCompactAdaptation(.popover)
     }
 
     private func thumbnail(_ index: Int) -> some View {
@@ -61,7 +61,7 @@ struct SongPageThumbnails: View {
             .background(.quaternary.opacity(0.55), in: .rect(cornerRadius: 8))
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(index == selectedIndex ? Color.accentColor : Color.clear, lineWidth: 2)
+                    .strokeBorder(index == selectedIndex ? accent : Color.clear, lineWidth: 2)
             }
             .accessibilityHidden(true)
     }

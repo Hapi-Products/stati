@@ -14,10 +14,11 @@ struct ReaderPagingBar: View {
             if !actions.isEmpty {
                 Menu("Reader options", systemImage: "ellipsis") {
                     ForEach(actions) { action in Button(action.title, systemImage: action.symbol, action: action.perform) }
-                }.labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44).disabled(disabled)
+                }.labelStyle(.iconOnly).foregroundStyle(disabled ? .tertiary : .primary).frame(minWidth: 44, minHeight: 44).disabled(disabled)
             }
             Button(pageLabels ? "Previous page" : "Previous item", systemImage: "chevron.left", action: previous)
-                .disabled(index == 0 || disabled).labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44)
+                .disabled(index == 0 || disabled).labelStyle(.iconOnly)
+                .foregroundStyle(index == 0 || disabled ? .tertiary : .primary).frame(minWidth: 44, minHeight: 44)
             if let showPagePreviews {
                 Button(action: showPagePreviews) {
                     pageCount.frame(minHeight: 44)
@@ -31,8 +32,9 @@ struct ReaderPagingBar: View {
                 pageCount
             }
             Button(pageLabels ? "Next page" : "Next item", systemImage: "chevron.right", action: next)
-                .disabled(index + 1 >= count || disabled).labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44)
-        }.buttonStyle(.plain).fontWeight(.medium).padding(.horizontal, 12).padding(.vertical, 4)
+                .disabled(index + 1 >= count || disabled).labelStyle(.iconOnly)
+                .foregroundStyle(index + 1 >= count || disabled ? .tertiary : .primary).frame(minWidth: 44, minHeight: 44)
+        }.foregroundStyle(.primary).buttonStyle(.plain).fontWeight(.medium).padding(.horizontal, 12).padding(.vertical, 4)
             .glassEffect(.regular, in: .capsule)
             .simultaneousGesture(DragGesture(minimumDistance: 50).onEnded { value in
                 guard !disabled, abs(value.translation.width) > abs(value.translation.height) * 1.8 else { return }

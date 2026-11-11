@@ -23,6 +23,7 @@ struct SongPageHost: UIViewControllerRepresentable {
         weak var controller: SongPageController?
         private var children: [Int: UIViewController] = [:]
         private var transitioning = false
+        private lazy var edgeTap = UITapGestureRecognizer(target: self, action: #selector(tapped(_:)))
         init(parent: SongPageHost) { self.parent = parent }
         func configure() {
             guard let controller else { return }
@@ -31,6 +32,8 @@ struct SongPageHost: UIViewControllerRepresentable {
             controller.keysEnabled = parent.clickerEnabled && UIDevice.current.userInterfaceIdiom == .pad
             controller.navigate = { [weak self] in self?.step($0) }
             if controller.keysEnabled && controller.view.window != nil { controller.becomeFirstResponder() }
+            if edgeTap.view == nil { controller.view.addGestureRecognizer(edgeTap) }
+            edgeTap.isEnabled = parent.document == nil
             if controller.view.gestureRecognizers?.contains(where: { $0 is UISwipeGestureRecognizer }) != true {
                 let left = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:))); left.direction = .left
                 let right = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:))); right.direction = .right
@@ -67,6 +70,12 @@ struct SongPageHost: UIViewControllerRepresentable {
             } else { controller.setViewControllers([next], direction: direction, animated: parent.effect != .instant && current != nil, completion: finish) }
         }
         private func step(_ by: Int) { guard !transitioning, (0..<parent.count).contains(parent.index + by) else { return }; parent.index += by; showSelection() }
+        @objc private func tapped(_ gesture: UITapGestureRecognizer) {
+            guard let view = gesture.view, view.bounds.width > 0 else { return }
+            let fraction = gesture.location(in: view).x / view.bounds.width
+            if fraction < 1.0 / 3.0 { step(-1) }
+            else if fraction > 2.0 / 3.0 { step(1) }
+        }
         @objc private func swiped(_ gesture: UISwipeGestureRecognizer) { step(gesture.direction == .left ? 1 : -1) }
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? { page(viewController.view.tag - 1) }
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? { page(viewController.view.tag + 1) }

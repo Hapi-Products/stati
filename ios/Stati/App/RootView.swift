@@ -5,6 +5,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.displayScale) private var displayScale
     @State private var tab = "send"
+    @State private var shortcuts = SongShortcutNavigation.shared
+    @State private var shortcutRequest: SongShortcutRequest?
     #if DEBUG && targetEnvironment(simulator)
     @State private var reviewReader: SongGalleryRequest?
     @State private var reviewIcon = false
@@ -57,7 +59,12 @@ struct RootView: View {
                 #endif
                 await store.refresh()
                 #if DEBUG && targetEnvironment(simulator)
-                if NativeReview.route == "theme-check" { await NativeThemeChecks.run() }
+                if NativeReview.route == "shortcut-song" {
+                    let intent = FindStatiSong()
+                    intent.query = "Amazing Grace"
+                    _ = try? await intent.perform()
+                }
+                else if NativeReview.route == "theme-check" { await NativeThemeChecks.run() }
                 else if NativeReview.route == "library-performance-check" { await NativeLibraryPerformanceChecks.run(store: store) }
                 else if NativeReview.route == "correction-check" { await NativeSongCorrectionChecks.run(store: store) }
                 else if NativeReview.route == "owner-hosting-check" { NativeOwnerHostingChecks.run(store: store) }
@@ -80,6 +87,13 @@ struct RootView: View {
             .sheet(isPresented: $reviewIcon) { AppIconPickerSheet() }
             .fullScreenCover(item: $reviewReader) { SongGalleryView(store: store, request: $0) }
             #endif
+            .task(id: shortcuts.request?.id.uuidString.appending(store.canReadSongs ? "ready" : "waiting")) {
+                guard store.canReadSongs, let request = shortcuts.request,
+                      !IPadRoleAccess.isBlocked(ministryRole: store.me?["ministryRole"].text ?? "", isPad: UIDevice.current.userInterfaceIdiom == .pad) else { return }
+                shortcuts.request = nil
+                shortcutRequest = request
+            }
+            .fullScreenCover(item: $shortcutRequest) { SongShortcutView(store: store, request: $0) }
             .task(id: store.me?.id) {
                 let owner = store.me?.id
                 store.taskCount = 0

@@ -27,6 +27,13 @@ nonisolated struct SongSearchGroup: Identifiable {
             }
         }
     }
+    static func directMatch(_ songs: [APIRecord], query: String) -> APIRecord? {
+        let title = normalized(query)
+        guard !title.isEmpty else { return nil }
+        let exact = songs.filter { normalized($0.title) == title }
+        if exact.count == 1 { return exact.first }
+        return songs.count == 1 ? songs.first : nil
+    }
     private static func normalized(_ text: String) -> String {
         text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX")).components(separatedBy: .alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: " ")
     }

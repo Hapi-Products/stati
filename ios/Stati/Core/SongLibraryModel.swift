@@ -28,10 +28,10 @@ import SwiftUI
             return matchesGroup && words.allSatisfy { text.contains($0) }
         }.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
-    func load(computerID: String, group: String, query: String) async {
+    func load(computerID: String, group: String, query: String, includeText: Bool = true) async {
         let stamp = UUID(), epoch = store.accountEpoch, owner = store.me?.id
         generation = stamp; computer = computerID
-        let key = epoch.uuidString + "|" + computerID + "|" + group + "|" + query
+        let key = epoch.uuidString + "|" + computerID + "|" + group + "|" + query + "|" + String(includeText)
         if context != key { items = []; total = 0; groups = []; context = key }
         guard owner != nil, !computerID.isEmpty, computerID == store.selectedComputer else { return }
         fetching = true; message = ""
@@ -46,7 +46,7 @@ import SwiftUI
         var latestGroups: [String] = []
         do {
             repeat {
-                let result = try await fetch("/computers/" + computerID + "/songs?includeText=1&limit=250&groupName=" + group.queryEncoded + "&query=" + query.queryEncoded + "&offset=\(offset)")
+                let result = try await fetch("/computers/" + computerID + "/songs?includeText=\(includeText ? 1 : 0)&limit=250&groupName=" + group.queryEncoded + "&query=" + query.queryEncoded + "&offset=\(offset)")
                 try Task.checkCancellation()
                 guard generation == stamp, store.accountEpoch == epoch, owner == store.me?.id, store.selectedComputer == computerID else { return }
                 if let snapshot, snapshot != result["updatedAt"] { throw APIError(status: 409, message: "The library changed while loading. Try again to load its current songs.") }

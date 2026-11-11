@@ -130,7 +130,7 @@ struct SendView: View {
         }
         .photosPicker(isPresented: $pickingPhotos, selection: $photos, maxSelectionCount: max(1, store.uploads.availableSlots), matching: .images)
         .sheet(isPresented: $connectingComputer) { ConnectComputerView() }
-        .sheet(isPresented: $textMode) { SongTextComposer(preparing: preparing, message: error) { await addText() } }
+        .sheet(isPresented: $textMode) { SongTextComposer(preparing: preparing, message: error, add: { await addText() }) }
         .onChange(of: photos) { _, items in Task { await stagePhotos(items) } }
         .confirmationDialog("Save this song on this device for today?", isPresented: Binding(get: { songOffer != nil }, set: { if !$0 { songOffer = nil } }), titleVisibility: .visible, presenting: songOffer) { job in
             Button("Save for Today") { store.uploads.keepSongCopy(job.id, keep: true); now = .now }
@@ -258,16 +258,17 @@ struct SendView: View {
         } catch { self.error = error.localizedDescription }
     }
     private func addText() async -> Bool {
-        let draft = store.sendDraft, owner = store.me?.id
-        let name = draft.title.trimmingCharacters(in: .whitespacesAndNewlines).replacing("/", with: "_").replacing("\\", with: "_")
-        let directory = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        guard let owner = store.me?.id, !store.selectedComputer.isEmpty else { error = "Choose a computer first."; return false }
+        guard !preparing, !store.uploads.busy, store.uploads.availableSlots > 0 else { return false }
+        preparing = true
+        defer { preparing = false }
+        let draft = store.sendDraft, computer = store.selectedComputer
         do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            defer { try? FileManager.default.removeItem(at: directory) }
-            let url = directory.appending(path: String((name.isEmpty ? "Song request" : name).prefix(100)) + ".txt")
-            try Data(draft.text.utf8).write(to: url, options: .atomic)
-            guard await stage([url], song: true) else { return false }
+            try await FileStager.stage(count: 1, queue: store.uploads) { _ in
+                try await UploadFiles.prepareSongText(draft, userID: owner, deviceID: computer)
+            }
             if store.me?.id == owner, store.sendDraft == draft { store.sendDraft = SendDraft() }
+            error = ""
             return true
         } catch { self.error = error.localizedDescription; return false }
     }

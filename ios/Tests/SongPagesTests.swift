@@ -69,3 +69,12 @@ import Foundation
         #expect(song.slides[0] == lines.joined(separator: "\n") + "\nAmen")
     }
 }
+
+@Suite struct SourceSlideBoundariesTests {
+    @Test func aLongSourceSlideRemainsTogetherAtAnyReadingPageLimit() {
+        let verse = (1...14).map { "Line \($0)" }.joined(separator: "\n")
+        let song = SongPages(text: verse + "\n\nFinal line\nAmin", linesPerSlide: 3)
+        #expect(song.pages.count > 2)
+        #expect(song.slides == [verse, "Final line\nAmin"])
+    }
+}

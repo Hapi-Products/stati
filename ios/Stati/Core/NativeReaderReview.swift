@@ -14,8 +14,14 @@ import Foundation
         if url.path.contains("/songs/"), let song = NativeReviewIPad.songs.first(where: { url.path.hasSuffix("/songs/" + $0["id"].text) }) {
             var value = song.fields
             value["text"] = .string(song["text"].text + "\n\nSample second verse\nFor simulator review only\nWithin this song\nNo next-song navigation\n\nSample final verse\nFor simulator review only\nLast page of this song")
-            if ["reader-document-columns", "reader-page-thumbnails"].contains(NativeReview.route ?? "") {
+            if NativeReview.route == "reader-document-columns" {
                 value["text"] = .string((1...120).map { "Sample lyric line \($0)" }.joined(separator: "\n"))
+            }
+            if NativeReview.route == "reader-page-thumbnails" {
+                let verses = (1...12).map { page in
+                    (1...(page == 1 ? 14 : 4)).map { "Sample slide \(page), line \($0)" }.joined(separator: "\n")
+                }
+                value["text"] = .string(verses.joined(separator: "\n\n"))
             }
             return .object(value)
         }

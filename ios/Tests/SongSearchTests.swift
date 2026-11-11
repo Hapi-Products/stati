@@ -22,4 +22,11 @@ import Testing
         #expect(sections.flatMap(\.songs).map(\.id) == ["a", "b", "c"])
         #expect(Set(sections.map(\.id)).count == sections.count)
     }
+    @Test func spokenSearchFindsAccentedTitlesAndKeepsDuplicateVersionsForSelection() {
+        let exact = song("exact", "Sfânt, sfânt", "First verse")
+        let longer = song("long", "Sfânt, sfânt e Domnul", "Other verse")
+        #expect(SongSearchGroup.directMatch([longer, exact], query: "sfant sfant")?.id == "exact")
+        #expect(SongSearchGroup.directMatch([exact, song("second", "Sfânt sfânt", "Other version")], query: "sfant sfant") == nil)
+        #expect(SongSearchGroup.directMatch([exact], query: "first verse")?.id == "exact")
+    }
 }

@@ -44,8 +44,6 @@ struct SongReaderContent: View {
                                     guard (0..<count).contains(target) else { return }
                                     index = target
                                     showsPagePreviews = false
-                                } close: {
-                                    showsPagePreviews = false
                                 }
                             }
                         }

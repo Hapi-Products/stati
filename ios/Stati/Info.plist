@@ -27,6 +27,15 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleSpokenName</key>
+	<string>Stacy</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Stacy</string>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

@@ -33,6 +33,19 @@ nonisolated enum UploadFiles {
             return UploadJob(id: id, userID: userID, deviceID: deviceID, filename: TransferFilename.safe(url.lastPathComponent), localFile: destination, bytes: total, sha256: hash.finalize().map { String(format: "%02x", $0) }.joined())
         } catch { try? FileManager.default.removeItem(at: destination); throw error }
     }
+    @concurrent static func prepareSongText(_ draft: SendDraft, userID: String, deviceID: String) async throws -> UploadJob {
+        let name = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let directory = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let filename = TransferFilename.safe(String((name.isEmpty ? "Song request" : name).prefix(100)) + ".txt")
+        let url = directory.appending(path: filename)
+        try Data(draft.text.utf8).write(to: url, options: .atomic)
+        var job = try await prepare(url: url, userID: userID, deviceID: deviceID)
+        job.isSongSubmission = true
+        return job
+    }
+
     @concurrent static func photo(data: Data) async throws -> URL {
         guard data.count <= 50 * 1024 * 1024, let source = CGImageSourceCreateWithData(data as CFData, nil) else { throw APIError(status: 415, message: "Choose a photo up to 50 MB.") }
         let url = URL.temporaryDirectory.appending(path: "Photo-" + UUID().uuidString + ".jpg")
