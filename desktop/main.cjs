@@ -564,7 +564,20 @@ async function savedLyricsDirectory(){const saved=await readJson('lyrics-folder.
 function playlistManager(){return localPlaylistManager||(localPlaylistManager=require('./service-playlist-sync.cjs').createServicePlaylistSync({userData:app.getPath('userData'),protection:safeStorage,plansStore:playlistPlans(),readLibrary:async(_user,plan,{signal}={})=>{const scope=sharedServiceOperator();if(!scope)throw Error('Choose your profile first.');const checkActive=()=>{signal?.throwIfAborted();const current=sharedServiceOperator();if(!current||current.generation!==scope.generation||current.credential!==scope.credential||current.deviceId!==scope.deviceId||current.userId!==scope.userId)throw Error('The selected user changed.');};checkActive();if(!plan.songs.length)return[];const directory=await savedLyricsDirectory();checkActive();if(!directory)throw Error('Choose the ProPresenter Lyrics folder in Prepare slides before syncing songs.');return require('./service-output.cjs').serviceOutputReferences(directory,plan,{allowUnavailable:true,checkActive,signal});}}));}
 function notifyServiceChange(){for(const win of [main])if(win&&!win.isDestroyed())win.webContents.send('service-plans-changed');}
 function playlistJobs(){return localPlaylistJobs||(localPlaylistJobs=require('./service-playlist-jobs.cjs').createServicePlaylistJobs({manager:playlistManager(),plansStore:servicePlans(),current:()=>{const context=sharedServiceOperator();return context?{id:context.deviceId,generation:context.generation}:null;},readDirectory:savedLyricsDirectory,work:require('./conversion-work.cjs'),beforeSync:async operator=>{const scope=sharedServiceOperator();if(!scope||scope.deviceId!==operator.id||scope.generation!==operator.generation)throw Error('The selected user changed.');const shared=await servicePlans().state(scope.deviceId),legacy=await legacyServicePlans().list(scope.userId);assertIdentity(scope.generation);await playlistManager().importBindings(scope.userId,scope.deviceId,legacy.filter(plan=>shared.plans.some(item=>item.id===plan.id)).map(plan=>plan.id));},onChanged:notifyServiceChange,onError:error=>console.warn('Service playlist sync:',error.name)}));}
-async function viewServicePlans(operator){operator={...operator,id:operator.deviceId||operator.id};const {plans}=await servicePlans().state(operator.id);assertIdentity(operator.generation);const summaries=await playlistManager().list(operator.id,{plans});assertIdentity(operator.generation);const byId=new Map(summaries.map(summary=>[summary.serviceId,summary]));return plans.map(plan=>({...plan,status:require('./service-plans.cjs').serviceStatus(plan),playlist:byId.get(plan.id)}));}
+async function viewServicePlans(operator,knownPlans){
+ const stationId=operator.deviceId||operator.id;
+ const plans=knownPlans??(await servicePlans().state(stationId)).plans;
+ assertIdentity(operator.generation);
+ let summaries=[];
+ try{summaries=await playlistManager().list(stationId,{plans});}
+ catch(error){
+  console.warn('Service playlist status:',error.name);
+  summaries=plans.map(plan=>({serviceId:plan.id,phase:'error',message:'ProPresenter playlist status is unavailable. The shared service is still available.'}));
+ }
+ assertIdentity(operator.generation);
+ const byId=new Map(summaries.map(summary=>[summary.serviceId,summary]));
+ return plans.map(plan=>({...plan,status:require('./service-plans.cjs').serviceStatus(plan),playlist:byId.get(plan.id)}));
+}
 async function playlistAdministrator(){const operator=draftOperator(),state=require('./station-visibility.cjs').visibleState(await sharedStationPoll(),activeOperator,operatorGeneration);assertIdentity(operator.generation);if(!state.adminUnlocked)throw Error('Unlock an administrator before changing service playlist settings.');return operator;}
 handle('playlist-settings',async()=>{const operator=await playlistAdministrator(),settings=await playlistManager().settings();assertIdentity(operator.generation);return{...settings,sharedServices:true};});
 handle('playlist-settings-save',async patch=>{const operator=await playlistAdministrator(),old=await playlistManager().settings();assertIdentity(operator.generation);if(patch&&((patch.serviceRetention!==undefined&&patch.serviceRetention!==old.serviceRetention)||(patch.clearPlaylistItems!==undefined&&patch.clearPlaylistItems!==old.clearPlaylistItems)))throw Error('Automatic cleanup for shared services is still being prepared. Current services and playlists are kept.');
@@ -575,8 +588,18 @@ handle('service-templates-list',async()=>{const operator=await workspaceOperator
 handle('service-plans-list',async()=>{const operator=await workspaceOperator();return viewServicePlans(operator);});
 handle('service-plans-change',async action=>{const operator=await workspaceOperator('readSongs');if(!action||!['create','save','duplicate','archive','select','template-save','template-create','template-archive','claim-leadership','release-leadership','finalize-order','acknowledge-order'].includes(action.type))throw Error('Choose a valid service action.');
  if(!operator.capabilities.planServices&&!['claim-leadership','release-leadership','finalize-order','acknowledge-order','save'].includes(action.type))throw Error('Your role does not allow this action.');
- if(action.type.startsWith('template-')){if(!operator.capabilities.planServices)throw Error('Your role does not allow changing service templates.');const before=await legacyServicePlans().list(operator.id);await legacyServicePlans().change(operator.id,action);if(action.type==='template-create'){const created=(await legacyServicePlans().list(operator.id)).find(plan=>!before.some(old=>old.id===plan.id));await servicePlans().state(operator.deviceId);if(created)await servicePlans().change(operator.deviceId,{type:'select',id:created.id});}}
- else await servicePlans().change(operator.deviceId,action);assertIdentity(operator.generation);playlistJobs().schedule();notifyServiceChange();return viewServicePlans(operator);});
+ let plans;
+ if(action.type.startsWith('template-')){
+  if(!operator.capabilities.planServices)throw Error('Your role does not allow changing service templates.');
+  const before=action.type==='template-create'?await legacyServicePlans().list(operator.id):[];
+  const localPlans=await legacyServicePlans().change(operator.id,action);
+  if(action.type==='template-create'){
+   const created=localPlans.find(plan=>!before.some(old=>old.id===plan.id));
+   if(created)plans=await servicePlans().change(operator.deviceId,{type:'select',id:created.id});
+  }
+ }else plans=await servicePlans().change(operator.deviceId,action);
+ assertIdentity(operator.generation);playlistJobs().schedule();notifyServiceChange();return viewServicePlans(operator,plans);
+});
 handle('service-song-preview',async id=>{const operator=await workspaceOperator('readSongs'),directory=await libraryDirectory(operator);const result=await require('./conversion-work.cjs')('catalog-preview',directory,id);assertIdentity(operator.generation);return result;});
 handle('song-library-info',async id=>{const operator=await workspaceOperator('readSongs'),directory=await libraryDirectory(operator);const result=await require('./conversion-work.cjs')('catalog-info',directory,id);assertIdentity(operator.generation);return result;});
 handle('service-readiness',async id=>{const operator=await workspaceOperator('readSongs'),plans=await servicePlans().list(operator.deviceId);const plan=plans.find(item=>item.id===id);if(!plan)throw Error('Service plan unavailable.');const result=plan.songs.length?await require('./conversion-work.cjs')('service-readiness',await libraryDirectory(operator),plan.songs):{ready:true,items:[]};assertIdentity(operator.generation);const checklistStatus=require('./service-plans.cjs').serviceStatus(plan);return {...result,ready:result.ready,checklistStatus,checkedAt:Date.now()};});

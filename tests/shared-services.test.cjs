@@ -31,3 +31,31 @@ test('notes autosaves with unchanged song references do not rescan the whole lib
  const store=createSharedServiceStore({current:()=>context,local:{state:async()=>({plans:[{songs}]}),replaceSharedSnapshot:async()=>{},flush:async()=>{}},beforeAttach:async()=>scans++,send:async()=>({plans:[]})});
  await store.change('station',{type:'save',plan:{songs,notes:'Edited notes'}});assert.equal(scans,0);
 });
+
+test('simultaneous service readers share one cloud request and a read after a write sees its result', async () => {
+ const context = {credential: 'fixture', deviceId: 'station', userId: 'admin', generation: 1};
+ const calls = [];
+ let release, revision = 1;
+ const store = createSharedServiceStore({
+  current: () => context,
+  local: {replaceSharedSnapshot: async () => {}, flush: async () => {}},
+  send: async (_context, method) => {
+   calls.push(method);
+   if (calls.length === 1) await new Promise(resolve => { release = resolve; });
+   if (method === 'POST') revision++;
+   return {plans: [{revision}], activeServiceId: null};
+  }
+ });
+ const first = store.list('station');
+ const second = store.list('station');
+ const change = store.change('station', {type: 'create'});
+ const after = store.list('station');
+ await new Promise(resolve => setImmediate(resolve));
+ release();
+
+ assert.deepEqual(await first, [{revision: 1}]);
+ assert.deepEqual(await second, [{revision: 1}]);
+ assert.deepEqual(await change, [{revision: 2}]);
+ assert.deepEqual(await after, [{revision: 2}]);
+ assert.deepEqual(calls, ['GET', 'POST', 'GET']);
+});

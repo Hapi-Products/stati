@@ -72,3 +72,16 @@ test('computed playlist changes do not make an untouched draft dirty; stale-save
   await changed();assert.match(text(),/This service changed/,'A status refresh must not clear the save error');
  },{embedded:true});
 });
+
+test('a slow service summary recovers as soon as the outstanding request succeeds', async context => {
+ context.mock.timers.enable({apis: ['setInterval', 'setTimeout']});
+ let finish;
+ const pending = new Promise(resolve => { finish = resolve; });
+ await ui('ServiceTarget', {listServicePlans: () => pending}, async ({act, text}) => {
+  await act(async () => context.mock.timers.tick(8000));
+  assert.match(text(), /taking too long/);
+  await act(async () => finish([fixture()]));
+  assert.doesNotMatch(text(), /taking too long/);
+  assert.match(text(), /Waiting for ProPresenter/);
+ });
+});

@@ -27,3 +27,18 @@ it('optional history-copy CAS rejects a concurrent saved draft without overwriti
 it.each(['role','membership','station','session','catalogue'] as const)('history copy rechecks %s inside the atomic commit',async kind=>{const f=await fixture(),created=await f.create(),plan=(await f.change({type:'save',id:created.id,plan:{...created,songs:[f.song()]}})).plans[0],race=beforeBatch(async()=>{if(kind==='role')await env.DB.prepare('DELETE FROM user_ministry_roles WHERE user_id=?').bind(f.user).run();if(kind==='membership')await env.DB.prepare('DELETE FROM station_memberships WHERE device_id=? AND user_id=?').bind(f.deviceId,f.user).run();if(kind==='station')await env.DB.prepare('UPDATE devices SET revoked_at=? WHERE id=?').bind(now(),f.deviceId).run();if(kind==='session')await env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(f.user).run();if(kind==='catalogue')await env.DB.prepare('UPDATE station_catalog SET text=? WHERE device_id=?').bind('Different exact words',f.deviceId).run();});await rejected(approve(f,plan.id,2,race.bindings),409);expect(await env.DB.prepare('SELECT COUNT(*) count FROM station_service_versions WHERE device_id=?').bind(f.deviceId).first()).toEqual({count:0});});
 it('read-only roles can compare a saved version but cannot explicitly save history copies, and versions remain station-scoped',async()=>{const f=await fixture(),plan=await f.create(),accepted=(await approve(f,plan.id,1)).snapshot;await env.DB.prepare("UPDATE user_ministry_roles SET role='pastor' WHERE user_id=?").bind(f.user).run();expect((await versions(f,plan.id)).snapshot.id).toBe(accepted.id);expect((await versions(f,plan.id)).canApprove).toBe(false);await rejected(approve(f,plan.id,1),403);const other=await fixture();await rejected(versions(other,plan.id,accepted.id),404);});
 it('validates per-service slide sequences and preserves each repeated appearance independently',async()=>{const f=await fixture(),created=await f.create(),a={...f.song(),arrangement:{name:'Opening',slides:[2,1,2]}},b={...f.song(),arrangement:{name:'Closing',slides:[1]}};const plan=(await f.change({type:'save',id:created.id,plan:{...created,songs:[a,b]}})).plans[0];expect(plan.songs.map((song:any)=>song.arrangement)).toEqual([a.arrangement,b.arrangement]);await rejected(f.change({type:'save',id:plan.id,plan:{...plan,songs:[{...a,arrangement:{name:'Bad',slides:[0,501]}}]}}),400);expect((await f.read()).plans[0].songs[1].arrangement.name).toBe('Closing');});
+
+it('archives and restores the exact saved song references after the catalog changes', async () => {
+ const f = await fixture();
+ const created = await f.create();
+ const saved = (await f.change({type: 'save', id: created.id, plan: {...created, notes: 'Keep', songs: [f.song()]}})).plans[0];
+ await env.DB.prepare('DELETE FROM station_catalog WHERE device_id=? AND song_id=?').bind(f.deviceId, f.songId).run();
+
+ const archived = await f.change({type: 'archive', id: saved.id, archived: true});
+ expect(archived.activeServiceId).toBeNull();
+ expect(archived.plans[0]).toMatchObject({archived: true, notes: 'Keep', revision: 3, songs: saved.songs});
+
+ const restored = await f.change({type: 'archive', id: saved.id, archived: false});
+ expect(restored.plans[0]).toMatchObject({archived: false, notes: 'Keep', revision: 4, songs: saved.songs});
+ await rejected(f.change({type: 'save', id: saved.id, plan: {...restored.plans[0], notes: 'Still validates song references'}}), 409);
+});

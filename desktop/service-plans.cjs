@@ -61,7 +61,11 @@ function servicePlans(directory,protection){
      if(ids.has(value.id))throw Error('The shared service snapshot has duplicate identifiers.');ids.add(value.id);return value;
     });
     if(snapshot.activeServiceId!==null&&!plans.some(plan=>plan.id===snapshot.activeServiceId&&!plan.archived))throw Error('The selected shared service is unavailable. The previous cache was preserved.');
-    await write(target,{...data,sharedCache:true,plans,activeServiceId:snapshot.activeServiceId});return{activeServiceId:snapshot.activeServiceId,plans:plans.map(plan=>({...plan,active:plan.id===snapshot.activeServiceId}))};
+    const activeServiceId=snapshot.activeServiceId;
+    if(!data.sharedCache||data.activeServiceId!==activeServiceId||JSON.stringify(data.plans)!==JSON.stringify(plans)){
+     await write(target,{...data,sharedCache:true,plans,activeServiceId});
+    }
+    return{activeServiceId,plans:plans.map(plan=>({...plan,active:plan.id===activeServiceId}))};
    });pending.set(user,operation);return operation.finally(()=>{if(pending.get(user)===operation)pending.delete(user);});
   },
   change(user,action){const target=location(user);secure();if(!action||typeof action!=='object'||!['create','save','duplicate','archive','select','delete','attach-songs','template-save','template-create','template-archive'].includes(action.type))throw Error('Choose a valid service action.');

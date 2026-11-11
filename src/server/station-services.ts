@@ -75,7 +75,12 @@ export async function changeStationService(request:Request,env:Env,deviceId:stri
   else if(data.type==='archive')next={...payload(saved),archived:data.archived};
   else{if(saved.archived)throw new HttpError(409,'Choose an active service.');const songs=saved.songs.map(song=>({...song}));for(const source of data.songs){const found=songs.find(song=>song.songId===source.songId),entry={id:found?.id||crypto.randomUUID(),songId:source.songId,contentHash:source.contentHash,title:source.title||found?.title||'Song',filename:source.filename||found?.filename||'',reviewed:found?.contentHash===source.contentHash?found.reviewed:false};if(found)Object.assign(found,entry);else songs.push(entry);}if(songs.length>1000)throw new HttpError(400,'Use up to 1000 songs per service.');next={...payload(saved),songs,reviewed:false};}
  }
- validateUnique(next);next={...next,songs:await canonicalSongs(env,deviceId,next.songs)};const serialized=JSON.stringify(next),catalogue=catalogueGuard(deviceId,next.songs),selection=data.type==='attach-songs'?{sql:'EXISTS(SELECT 1 FROM station_service_selections WHERE device_id=? AND service_id=?)',params:[deviceId,data.expectedActiveServiceId]}:{sql:'1=1',params:[] as (string|number|null)[]};
+ validateUnique(next);
+ // Archiving and restoring keep the exact saved references, even if the
+ // current computer library no longer contains that version of a song.
+ const archive=data.type==='archive';
+ if(!archive)next={...next,songs:await canonicalSongs(env,deviceId,next.songs)};
+ const serialized=JSON.stringify(next),catalogue=archive?{sql:'1=1',params:[]}:catalogueGuard(deviceId,next.songs),selection=data.type==='attach-songs'?{sql:'EXISTS(SELECT 1 FROM station_service_selections WHERE device_id=? AND service_id=?)',params:[deviceId,data.expectedActiveServiceId]}:{sql:'1=1',params:[] as (string|number|null)[]};
  const capacity={sql:'(SELECT COALESCE(SUM(length(CAST(content_json AS BLOB))),0) FROM station_services WHERE device_id=? AND id<>?)+?<=?',params:[deviceId,id,new TextEncoder().encode(serialized).length,MAX_STATION_BYTES]};
  const insert=['create','import','duplicate'].includes(data.type),source=data.type==='duplicate'?{sql:'EXISTS(SELECT 1 FROM station_services WHERE device_id=? AND id=? AND revision=?)',params:[deviceId,sourceId,previousRevision]}:{sql:'1=1',params:[] as (string|number|null)[]};
  const order=['save','archive','attach-songs'].includes(data.type)?serviceOrderGuard(authority,deviceId,id):{sql:'1=1',params:[] as (string|number|null)[]};

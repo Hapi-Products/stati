@@ -53,3 +53,37 @@ test('native date and time inputs retain partial edits locally and autosave only
 test('new service uses a complete local date and rejects invalid calendar values before calling the bridge',async()=>{
  let calls=0;await ui({listServicePlans:async()=>[],changeServicePlan:async()=>{calls++;return[];}},async({window,document,act,text})=>{const form=document.querySelector('.service-create'),date=form.querySelector('input[type=date]');assert.match(date.value,/^\d{4}-\d{2}-\d{2}$/);assert.equal(form.closest('details').hasAttribute('open'),false);Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(date,'2026-02-30');await act(async()=>date.dispatchEvent(new window.Event('input',{bubbles:true})));await act(async()=>form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));assert.equal(calls,0);assert.match(text(),/complete calendar date/);});
 });
+
+test('an unavailable templates read does not block opening or creating shared services', async () => {
+ const original = fixture();
+ const created = {...fixture(), id: '22222222-2222-4222-8222-222222222222', title: 'New worship service', active: true};
+ let templatesFailed;
+ const unavailable = new Promise((_resolve, reject) => { templatesFailed = reject; });
+ let request, plans = [original];
+ await ui({
+  listServicePlans: async () => plans,
+  listServiceTemplates: () => unavailable,
+  changeServicePlan: async action => {
+   request = action;
+   plans = [{...original, active: false}, created];
+   return plans;
+  },
+ }, async ({window, document, act, click, button, text}) => {
+  await click(button('Open'));
+  assert.match(text(), /Tuesday worship/);
+  await click(document.querySelector('[aria-label="Close service"]'));
+  await act(async () => templatesFailed(Error('Templates offline')));
+
+  const form = document.querySelector('.service-create');
+  const title = form.querySelector('input[type=text], input:not([type])');
+  const value = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  await act(async () => {
+   value.call(title, created.title);
+   title.dispatchEvent(new window.Event('input', {bubbles: true}));
+  });
+  await act(async () => form.dispatchEvent(new window.Event('submit', {bubbles: true, cancelable: true})));
+  assert.equal(request.type, 'create');
+  assert.equal(request.title, created.title);
+  assert.equal(document.querySelector('.service-editor h3')?.textContent, created.title);
+ });
+});

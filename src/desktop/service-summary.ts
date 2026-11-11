@@ -17,7 +17,7 @@ export function useServiceSummary(active:boolean,onPlans:(plans:ServicePlan[])=>
    if(!live||!visible())return;
    if(pending.current){queued=true;return;}
    queued=false;const token=++version,request=Promise.resolve().then(()=>source.listServicePlans());pending.current=request;
-   deadline=setTimeout(()=>{if(live&&visible()&&token===version){version++;callbacks.current.onError('Service status is taking too long. It will retry automatically.');}},8000);
+   deadline=setTimeout(()=>{if(live&&visible()&&token===version){callbacks.current.onError('Service status is taking too long. Waiting for the current request.');}},8000);
    void request.then(plans=>{if(live&&visible()&&token===version){callbacks.current.onPlans(plans);callbacks.current.onError('');}},error=>{if(live&&visible()&&token===version)callbacks.current.onError(error instanceof Error?error.message:'Service status could not be loaded.');}).finally(()=>{
     clearTimeout(deadline);if(pending.current===request)pending.current=null;
     if(live&&queued&&visible())refresh();

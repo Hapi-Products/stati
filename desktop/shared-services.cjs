@@ -2,10 +2,13 @@
 // cache for the local ProPresenter adapter; it never wins over a server revision.
 function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},migrate=async()=>{}}){
  const queues=new Map();
- const assert=context=>{const next=current();if(!next||next.credential!==context.credential||next.deviceId!==context.deviceId||next.userId!==context.userId||next.generation!==context.generation)throw Error('The selected user or computer changed.');};
+ const sameScope=(a,b)=>!!a&&a.credential===b.credential&&a.deviceId===b.deviceId&&a.userId===b.userId&&a.generation===b.generation&&a.lease===b.lease&&a.proof===b.proof;
+ const assert=context=>{if(!sameScope(current(),context))throw Error('The selected user or computer changed.');};
  function operation(stationId,action){
   const context=current();if(!context||context.deviceId!==stationId)throw Error('Choose your profile on this computer first.');
-  const pending=(queues.get(stationId)||Promise.resolve()).catch(()=>{}).then(async()=>{
+  const tail=queues.get(stationId);
+  if(!action&&tail?.read&&sameScope(tail.context,context))return tail.task;
+  const pending=(tail?.task||Promise.resolve()).catch(()=>{}).then(async()=>{
    assert(context);await migrate(context);assert(context);
    // Publish newly referenced songs, but avoid rescanning the library for each notes autosave.
    let publish=action?.type==='attach-songs';
@@ -19,8 +22,10 @@ function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},m
    const snapshot=await send(context,action?'POST':'GET',remoteAction);assert(context);
    await local.replaceSharedSnapshot(stationId,snapshot);assert(context);
    return snapshot;
-  });queues.set(stationId,pending);
-  return pending.finally(()=>{if(queues.get(stationId)===pending)queues.delete(stationId);});
+  });
+  const entry={context,read:!action,task:pending.finally(()=>{if(queues.get(stationId)===entry)queues.delete(stationId);})};
+  queues.set(stationId,entry);
+  return entry.task;
  }
  return{
   state:stationId=>operation(stationId),
@@ -29,7 +34,7 @@ function createSharedServiceStore({current,local,send,beforeAttach=async()=>{},m
   change:async(stationId,action)=>(await operation(stationId,action)).plans,
   templates:async()=>[],
   isShared:async()=>true,
-  flush:async()=>{await Promise.allSettled([...queues.values()]);await local.flush();},
+  flush:async()=>{await Promise.allSettled([...queues.values()].map(entry=>entry.task));await local.flush();},
  };
 }
 module.exports={createSharedServiceStore};
