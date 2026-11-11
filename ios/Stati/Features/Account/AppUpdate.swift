@@ -11,10 +11,11 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 30, title: "Stați Worship on iPad", highlights: [
-        Highlight(title: "Keep the song in view", detail: "Open the Stați Cloud library from the reader and pick a song without leaving the reading workspace.", icon: "music.note.list"),
-        Highlight(title: "Jump to any page", detail: "Hold the page count to see previews. Tap a page to go straight to it.", icon: "square.grid.2x2")
-    ], details: ["Tasks and song comments are available in the iPhone app."])
+    static let current = AppUpdate(id: 31, title: "Songs and services on iPad", highlights: [
+        Highlight(title: "See your songs at a glance", detail: "Open Songs to see the first slide of every song. Recents and Groups use the same preview spacing.", icon: "square.grid.2x2"),
+        Highlight(title: "Choose the Song Selector source", detail: "In Features, choose Recents or the current service’s running order.", icon: "list.bullet"),
+        Highlight(title: "Work on the service from iPad", detail: "See who’s leading, add songs from the library with permission, and submit song files for review.", icon: "calendar")
+    ], details: ["Tap the service name for its actions.", "Reader options contains Notes and Share.", "Hold the page count to jump to a page preview."])
     static let previous: [AppUpdate] = [
         AppUpdate(id: 27, title: "QR invitations", highlights: [
             Highlight(title: "Invite with a scan", detail: "Show a joining QR on your computer or iPhone. New members scan it to create an account, then wait for approval.", icon: "qrcode")

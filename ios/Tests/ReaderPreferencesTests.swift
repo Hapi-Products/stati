@@ -63,5 +63,8 @@ struct SlideSizeSettingsTests {
         #expect(old.pdfColumns == .one)
         var newer = old; newer.pdfColumns = .two
         #expect(try JSONDecoder().decode(SongReaderSettings.self, from: JSONEncoder().encode(newer)).pdfColumns == .two)
+        #expect(old.selectorSource == .recents)
+        newer.selectorSource = .currentService
+        #expect(try JSONDecoder().decode(SongReaderSettings.self, from: JSONEncoder().encode(newer)).selectorSource == .currentService)
     }
 }

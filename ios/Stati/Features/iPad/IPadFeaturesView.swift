@@ -19,6 +19,11 @@ struct IPadFeaturesView: View {
                     Picker("PDF page effect", selection: $preferences.settings.transition) { ForEach(ReaderTransition.allCases) { Text($0.title).tag($0) } } }
             }
             Section {
+                Picker("Song Selector", selection: $preferences.settings.selectorSource) {
+                    ForEach(SongSelectorSource.allCases) { Text($0.title).tag($0) }
+                }
+            } header: { Text("Song Selector") } footer: { Text("Current service uses the active service’s running order. When there’s no active service, the selector shows recent songs.") }
+            Section {
                 Toggle("Clicker usage", isOn: $preferences.settings.clickerEnabled)
             } header: { Text("Features") }
             Section {

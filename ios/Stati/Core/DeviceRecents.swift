@@ -19,7 +19,9 @@ import Observation
     }
     func opened(song: APIRecord, computerID: String) {
         guard !computerID.isEmpty, song.id.count == 64 else { return }
-        save(DeviceRecent(kind: .song, computerID: computerID, itemID: song.id, title: song.title, firstSlide: song["firstSlide"].text, groupName: song["groupName"].text, filePath: "", openedAt: .now))
+        let firstSlide = song["firstSlide"].text
+        let preview = firstSlide.isEmpty ? (SongPages(text: song["text"].text).pages.first ?? "") : firstSlide
+        save(DeviceRecent(kind: .song, computerID: computerID, itemID: song.id, title: song.title, firstSlide: preview, groupName: song["groupName"].text, filePath: "", openedAt: .now))
     }
     func opened(file: FilePreviewItem) {
         save(DeviceRecent(kind: .file, computerID: "", itemID: file.path, title: file.filename, firstSlide: "", groupName: "", filePath: file.path, openedAt: .now))

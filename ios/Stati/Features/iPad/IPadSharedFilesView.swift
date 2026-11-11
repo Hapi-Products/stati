@@ -40,7 +40,7 @@ struct IPadSharedFilesView: View {
         VStack(spacing: 0) {
             ScrollView {
                 if listMode || dynamicTypeSize.isAccessibilitySize { fileList }
-                else { LazyVGrid(columns: [GridItem(.adaptive(minimum: largePreviews ? 176 : 112), spacing: 24)], alignment: .leading, spacing: 24) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: groupID == nil) } } }.padding(24) }
+                else { LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews), alignment: .leading, spacing: WorshipPreviewGrid.spacing) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: groupID == nil) } } }.padding(24) }
                 if loading { ProgressView("Loading shared files…").padding() }
                 if !loading && matching.isEmpty && message.isEmpty { ContentUnavailableView(query.isEmpty ? "No shared group files" : "No matches in loaded files", systemImage: "doc.on.doc", description: Text(query.isEmpty ? "Shared song notes and scanned documents appear here." : "Load older files to include them in your search.")) }
                 NoticeView(text: scanMessage).padding(.horizontal, 24)
@@ -51,7 +51,7 @@ struct IPadSharedFilesView: View {
             if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.padding(.vertical, 8) }
         }.navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Icons", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
+                ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Grid", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
                 if canUpload || groups?.canCreate == true || canManageGroup {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Add and manage", systemImage: "plus") {

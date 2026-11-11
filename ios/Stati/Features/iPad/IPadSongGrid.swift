@@ -32,9 +32,9 @@ struct IPadSongGrid: UIViewRepresentable {
         }
         func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) { collectionView.deselectItem(at: indexPath, animated: true); parent.open(parent.songs[indexPath.item]) }
         func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-            let available = max(1, collectionView.bounds.width - collectionView.adjustedContentInset.left - collectionView.adjustedContentInset.right - 56), minimum: CGFloat = parent.large ? 206 : 152
+            let available = max(1, collectionView.bounds.width - collectionView.adjustedContentInset.left - collectionView.adjustedContentInset.right - 56), minimum = WorshipPreviewGrid.width(large: parent.large)
             let columns = max(1, floor((available + 20) / (minimum + 20)))
-            return CGSize(width: max(1, floor((available - (columns - 1) * 20) / columns)), height: parent.large ? 232 : 192)
+            return CGSize(width: max(1, floor((available - (columns - 1) * 20) / columns)), height: WorshipPreviewGrid.height(large: parent.large))
         }
         func indexTitles(for collectionView: UICollectionView) -> [String]? { SongAlphabet.sections(parent.songs).map(\.id) }
         func collectionView(_ collectionView: UICollectionView, indexPathForIndexTitle title: String, at index: Int) -> IndexPath {

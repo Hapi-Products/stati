@@ -3,7 +3,7 @@ import SwiftUI
 struct SongGalleryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppStore.self) private var store
-    private let openLibrary: (() -> Void)?
+    private let openingRequest: SongGalleryRequest
     private let selectionChanged: (String) -> Void
     @State private var model: SongGalleryModel
     @State private var preferences: ReaderPreferences
@@ -15,21 +15,20 @@ struct SongGalleryView: View {
     @State private var exportError = ""
     @State private var focused = false
     @State private var choosingSong = false
+    @State private var exporting = false
+    @State private var shareAnchor = SongReaderShareAnchor()
     @ScaledMetric(relativeTo: .body) private var actionSize = 20.0
     private var actionSymbolSize: CGFloat { iPad ? 20 : actionSize }
     private var actionTarget: CGFloat { iPad ? 44 : max(44, actionSize * 1.2 + 20) }
-    init(store: AppStore, request: SongGalleryRequest, openLibrary: (() -> Void)? = nil, selectionChanged: @escaping (String) -> Void = { _ in }) {
-        self.openLibrary = openLibrary
+    init(store: AppStore, request: SongGalleryRequest, selectionChanged: @escaping (String) -> Void = { _ in }) {
+        openingRequest = request
         self.selectionChanged = selectionChanged
         _model = State(initialValue: SongGalleryModel(store: store, request: request))
         _preferences = State(initialValue: ReaderPreferences(ownerID: store.me?.id ?? ""))
     }
     private var iPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     var body: some View {
-        Group {
-            if openLibrary != nil { reader }
-            else { NavigationStack { reader } }
-        }
+        NavigationStack { reader }
         .preferredColorScheme(iPad && preferences.settings.mode == .document ? .light : iPad && preferences.settings.mode == .slides ? .dark : nil)
         .task {
             if model.song == nil { await model.load() }
@@ -38,23 +37,35 @@ struct SongGalleryView: View {
                 try? await Task.sleep(for: .seconds(1))
                 preferences.settings.mode = .slides
             }
+            if NativeReview.route == "ipad-service-selector" {
+                preferences.settings.selectorSource = .currentService
+                choosingSong = true
+            }
+            if NativeReview.route == "ipad-service-share", let song = model.song {
+                await prepareExport(song, kind: .slidePDF)
+            }
             #endif
         }
         #if DEBUG && targetEnvironment(simulator)
         .onChange(of: model.files) { if NativeReview.route == "reader-unlink" { unlinking = model.files.first(where: { $0["canDelete"].flag }) } }
         #endif
-        .onChange(of: model.position.index) { selectionChanged(model.selected.id) }
-        .onChange(of: store.accountEpoch) { if openLibrary == nil { dismiss() } }
-        .onChange(of: store.selectedComputer) { if openLibrary == nil { dismiss() } }
+        .onChange(of: model.selected.id) {
+            if model.request.isService, openingRequest.isService, openingRequest.items.contains(where: { $0.id == model.selected.id }) {
+                selectionChanged(model.selected.id)
+            }
+        }
+        .onChange(of: store.accountEpoch) { dismiss() }
+        .onChange(of: store.selectedComputer) { dismiss() }
         .fullScreenCover(item: $preview) { StatiFileViewer(request: $0) }
         .sheet(isPresented: $choosingSong) {
-            WorshipReaderSongsView(
-                items: model.request.items,
-                selectedID: model.selected.id,
-                isService: model.request.isService
-            ) { id in
-                model.selectSong(id)
+            WorshipReaderSongsView(computerID: model.request.computerID, source: preferences.settings.selectorSource, selected: model.selected) { request in
                 choosingSong = false
+                if request.items.map(\.id) == model.request.items.map(\.id), request.isService == model.request.isService {
+                    if request.position.index == model.position.index { return }
+                    model.selectSong(request.items[request.position.index].id)
+                } else {
+                    model = SongGalleryModel(store: store, request: request)
+                }
                 Task { await model.load() }
             }
         }
@@ -77,6 +88,9 @@ struct SongGalleryView: View {
         if !model.message.isEmpty, model.song != nil { NoticeView(text: model.message).padding(.horizontal, 16) }
         if model.song == nil && !model.loading { Button("Try again", systemImage: "arrow.clockwise") { Task { await model.load() } }.padding() }
     }.background(iPad && preferences.settings.mode == .document ? Color.white.ignoresSafeArea() : iPad && preferences.settings.mode == .slides ? Color.black.ignoresSafeArea() : Color(.systemBackground).ignoresSafeArea()).safeAreaInset(edge: .bottom) { if !iPad, let song = model.song { phoneActions(song) } }
+        .overlay(alignment: .topTrailing) {
+            if iPad { SongReaderShareSource(anchor: shareAnchor).frame(width: 1, height: 1).padding(.trailing, 40).allowsHitTesting(false).accessibilityHidden(true) }
+        }
         .navigationTitle(model.song?.title ?? model.selected.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(focused ? .hidden : .visible, for: .navigationBar)
@@ -93,45 +107,45 @@ struct SongGalleryView: View {
             }
         }
         .toolbar {
-            if openLibrary == nil {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle())
-                }
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle())
             }
-            if let openLibrary {
+            if iPad {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Library", systemImage: "books.vertical", action: openLibrary).labelStyle(ActionIconLabelStyle())
-                }
-            } else if iPad, model.request.items.count > 1 {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(model.request.isService ? "Running order" : "Songs", systemImage: model.request.isService ? "list.number" : "music.note.list") {
+                    Button("Song Selector") {
+                        preferences.reload()
                         choosingSong = true
                     }
-                    .labelStyle(ActionIconLabelStyle())
                 }
             }
             if iPad, let song = model.song {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    notesMenu
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Song view", selection: $preferences.settings.mode) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
                         Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
+                        Menu("Notes", systemImage: "note.text") { notesActions }
+                        Menu("Share", systemImage: "square.and.arrow.up") {
+                            ForEach(SongExportKind.allCases) { kind in
+                                Button(kind.title, systemImage: kind.symbol) { Task { await prepareExport(song, kind: kind) } }
+                            }
+                            Button("Copy text", systemImage: "doc.on.doc") { UIPasteboard.general.string = song["text"].text }
+                        }.disabled(exporting)
                     } label: { actionIcon("ellipsis") }.accessibilityLabel("Reader options")
-                    share(song)
                 }
             }
         }
     }
     private var notesMenu: some View {
-        Menu {
-            ForEach(model.files) { file in Button(file.title, systemImage: "doc.text") { preview = FilePreviewRequest(record: file, pathKey: "fileUrl") }.disabled(file["removalPending"].flag) }
-            if model.files.isEmpty { Text("No linked notes") }
-            if store.canPlan {
-                let removable = model.files.filter { $0["canDelete"].flag && !$0["removalPending"].flag }
-                if !removable.isEmpty { Menu("Unlink file", systemImage: "link.badge.minus") { ForEach(removable) { file in Button(file.title, role: .destructive) { unlinking = file } } }.disabled(unlinkBusy) }
-            }
-            if store.canPlan { Button("Link shared notes", systemImage: "link") { linking = true } }
-        } label: { actionIcon("note.text") }.accessibilityLabel("Song notes")
+        Menu { notesActions } label: { actionIcon("note.text") }.accessibilityLabel("Song notes")
+    }
+    @ViewBuilder private var notesActions: some View {
+        ForEach(model.files) { file in Button(file.title, systemImage: "doc.text") { preview = FilePreviewRequest(record: file, pathKey: "fileUrl") }.disabled(file["removalPending"].flag) }
+        if model.files.isEmpty { Text("No linked notes") }
+        if store.canPlan {
+            let removable = model.files.filter { $0["canDelete"].flag && !$0["removalPending"].flag }
+            if !removable.isEmpty { Menu("Unlink file", systemImage: "link.badge.minus") { ForEach(removable) { file in Button(file.title, role: .destructive) { unlinking = file } } }.disabled(unlinkBusy) }
+        }
+        if store.canPlan { Button("Link shared notes", systemImage: "link") { linking = true } }
     }
     private func unlink(_ file: APIRecord) async {
         guard !unlinkBusy, store.canPlan else { return }
@@ -144,6 +158,18 @@ struct SongGalleryView: View {
     private func share(_ song: APIRecord) -> some View {
         SongShareButton(text: song["text"].text, prepare: { kind in try await SongExportFiles.prepare(song: song, computerID: model.request.computerID, kind: kind, store: store) }, failure: { exportError = $0 }).frame(width: actionTarget, height: actionTarget)
     }
+    private func prepareExport(_ song: APIRecord, kind: SongExportKind) async {
+        guard !exporting else { return }
+        exporting = true
+        defer { exporting = false }
+        let epoch = store.accountEpoch, computerID = model.request.computerID
+        do {
+            let file = try await SongExportFiles.prepare(song: song, computerID: computerID, kind: kind, store: store)
+            guard !Task.isCancelled, epoch == store.accountEpoch else { SongExportFiles.remove(file); return }
+            SongShareButton.present(file, from: shareAnchor.view)
+        } catch is CancellationError { }
+        catch { exportError = error.localizedDescription }
+    }
     private func phoneActions(_ song: APIRecord) -> some View {
         HStack(spacing: 20) {
             if store.canCommentSongs { Button { commenting = true } label: { actionIcon("text.bubble") }.accessibilityLabel("Comment") }
@@ -152,4 +178,21 @@ struct SongGalleryView: View {
         }.font(.system(size: 20, weight: .regular)).buttonStyle(.plain).padding(.horizontal, 12).padding(.vertical, 4).glassEffect(.regular, in: .capsule).padding(.bottom, 8)
     }
 
+}
+
+
+private final class SongReaderShareAnchor {
+    weak var view: UIView?
+}
+
+private struct SongReaderShareSource: UIViewRepresentable {
+    let anchor: SongReaderShareAnchor
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        anchor.view = view
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {}
 }

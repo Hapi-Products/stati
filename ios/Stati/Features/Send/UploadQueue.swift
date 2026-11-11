@@ -48,12 +48,12 @@ final class UploadQueue {
         do { try save() } catch { jobs = previous; throw error }
     }
     func cancel() { operation?.cancel() }
-    func send() {
+    func send(only jobID: String? = nil) {
         guard ledgerReadable, !busy, !jobs.isEmpty else { return }
         busy = true; message = ""; let scope = generation
         operation = Task {
             defer { if scope == generation { busy = false; currentName = ""; operation = nil } }
-            for job in jobs where job.receipt == nil {
+            for job in jobs where job.receipt == nil && (jobID == nil || job.id == jobID) {
                 guard scope == generation else { return }
                 do {
                     try Task.checkCancellation(); currentName = job.filename
@@ -67,6 +67,8 @@ final class UploadQueue {
                         let bytes = try await api.upload("/receive/device:" + job.deviceID + "/uploads/" + job.id, file: job.localFile, headers: ["X-Filename": job.filename.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "file", "X-Checksum-SHA256": job.sha256, "Content-Type": "application/octet-stream", "Content-Length": String(job.bytes)])
                         receipt = try JSONDecoder().decode(JSONValue.self, from: bytes)
                     }
+                    try Task.checkCancellation()
+                    guard scope == generation else { return }
                     guard let receipt, ReceiptValidator.matches(receipt, job: job) else { throw APIError(status: 409, message: "The send receipt did not match. Check recent uploads before retrying.") }
                     if let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].receipt = receipt.fields; jobs[index].message = nil; try save() }
                 } catch is CancellationError { guard scope == generation else { return }; message = "Sending stopped. Retry remaining uses the same send IDs."; return }
@@ -86,10 +88,18 @@ final class UploadQueue {
         do { try save(); for job in finished { try? FileManager.default.removeItem(at: job.localFile) } }
         catch { jobs = previous; message = error.localizedDescription }
     }
-    func refreshReceipts() async {
-        for job in jobs where job.receipt != nil {
-            do { let current = try await api.request("/uploads/" + job.id + "?deviceId=" + job.deviceID); if ReceiptValidator.matches(current, job: job), let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].receipt = current.fields } } catch { }
+    func refreshReceipts(only jobID: String? = nil) async {
+        let scope = generation
+        for job in jobs where job.receipt != nil && (jobID == nil || job.id == jobID) {
+            do {
+                let current = try await api.request("/uploads/" + job.id + "?deviceId=" + job.deviceID)
+                try Task.checkCancellation()
+                guard scope == generation else { return }
+                if ReceiptValidator.matches(current, job: job), let index = jobs.firstIndex(where: { $0.id == job.id }) { jobs[index].receipt = current.fields }
+            } catch is CancellationError { return }
+            catch { }
         }
+        guard scope == generation else { return }
         try? save()
     }
 }

@@ -72,7 +72,7 @@ struct RootView: View {
                 else if NativeReview.route == "task-editor-check" { await NativeTaskEditorChecks.run() }
                 else if NativeReview.route == "recovery-check" { await NativeRecoveryChecks.run(api: store.api) }
                 else if NativeReview.route == "song-check" { await NativeSongCommandChecks.run() }
-                else if NativeReview.route != nil { NativeReview.prepareQueue(store: store); await NativeReviewIPad.prepareRecents(store: store); if NativeReaderReview.active && NativeReview.route != "reader-page-thumbnails" { reviewReader = NativeReaderReview.request }; if NativeReview.route?.hasPrefix("app-icons") == true { reviewIcon = true } }
+                else if NativeReview.route != nil { NativeReview.prepareQueue(store: store); await NativeReviewIPad.prepareRecents(store: store); if NativeReaderReview.active { reviewReader = NativeReaderReview.request }; if NativeReview.route?.hasPrefix("app-icons") == true { reviewIcon = true } }
                 #endif
             }
             #if DEBUG && targetEnvironment(simulator)

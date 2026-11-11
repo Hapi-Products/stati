@@ -12,7 +12,8 @@ struct AppleMarkupView: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(url: url, filename: filename, canEdit: canEdit, saved: saved, close: close) }
     func makeUIViewController(context: Context) -> UINavigationController {
         let preview = DocumentPreviewController(); preview.dataSource = context.coordinator; preview.delegate = context.coordinator
-        preview.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .done, primaryAction: UIAction { _ in context.coordinator.close() })
+        let closeAction = UIAction { _ in context.coordinator.close() }
+        preview.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: UIDevice.current.userInterfaceIdiom == .pad ? .close : .done, primaryAction: closeAction)
         let navigation = DocumentNavigationController(rootViewController: preview); navigation.navigationBar.tintColor = UIColor(named: "AccentColor"); navigation.view.tintColor = UIColor(named: "AccentColor"); navigation.navigate = navigate; return navigation
     }
     func updateUIViewController(_ view: UINavigationController, context: Context) { context.coordinator.canEdit = canEdit; (view as? DocumentNavigationController)?.navigate = navigate }

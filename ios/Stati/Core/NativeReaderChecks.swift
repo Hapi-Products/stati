@@ -72,11 +72,22 @@ import UIKit
         let fittedFont = UIFont.systemFont(ofSize: fitted, weight: .medium)
         checks["largeSlideTextFitsAllOriginalLinesWithoutWrapping"] = longLines.allSatisfy { ($0 as NSString).size(withAttributes: [.font: fittedFont]).width <= area.width + 0.1 } && fittedFont.lineHeight * CGFloat(longLines.count) <= area.height + 0.1
         checks["amenSharesLastLyricSlide"] = SongPages(text: "One\n\nFinal lyric").slides == ["One", "Final lyric\nAmen"]
+        let initialService = APIRecord(raw: NativeReview.plan.fields)
+        var replacement = initialService
+        replacement["leadership"] = .object(["leaderLabel": .string("Backup leader"), "revision": .number(2), "isLeader": .bool(false), "canEdit": .bool(false)])
+        let service = ServiceEditor(store: store, computerID: NativeReview.computerID, plan: initialService, request: { _ in
+            .object(["plans": .array([replacement.value])])
+        })
+        await service.refresh()
+        checks["serviceTakeoverUpdatesLeaderAndShowsNotice"] = !service.canEdit && service.plan["leadership"]["leaderLabel"].text == "Backup leader" && service.leadershipNotice.contains("Backup leader")
+        replacement = initialService
+        await service.refresh()
+        checks["olderLeadershipSnapshotCannotRestoreEditAccess"] = !service.canEdit && service.plan["leadership"]["revision"].number == 2
         let prior = store.me; store.me = nil
         await racing.load()
         checks["signedOutReaderClearsPrivateContent"] = racing.song == nil && racing.fileRequest == nil
         store.me = prior
-        let report: [String: Any] = ["checks": checks, "passed": checks.count == 16 && checks.values.allSatisfy { $0 }, "scope": "Actual UIKit popover policy and injected song models. No system Share tap, AirDrop, hardware key event or physical clicker verified."]
+        let report: [String: Any] = ["checks": checks, "passed": checks.count == 18 && checks.values.allSatisfy { $0 }, "scope": "Actual UIKit popover policy and injected song and service models. No system Share tap, AirDrop, hardware key event or physical clicker verified."]
         if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) { try? data.write(to: URL.applicationSupportDirectory.appending(path: "native-reader-checks.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
     }
 }

@@ -6,11 +6,13 @@ final class ServiceEditor {
     var saving = false
     var message = ""
     var failed = false
+    var changingLeader = false
+    var leadershipNotice = ""
     private let fetch: @MainActor (String) async throws -> JSONValue
     private let store: AppStore
     private let ownerID: String
     private let epoch: UUID
-    private var active: Bool { store.me?.id == ownerID && store.accountEpoch == epoch && store.api.signedIn }
+    private var active: Bool { store.me?.id == ownerID && store.accountEpoch == epoch && store.api.signedIn && store.selectedComputer == computerID }
     let computerID: String
     private var debounce: Task<Void, Never>?
     private var resave = false
@@ -37,7 +39,8 @@ final class ServiceEditor {
     func move(from: IndexSet, to: Int) { guard canEdit else { return }; var rows = plan["songs"].items; rows.move(fromOffsets: from, toOffset: to); plan["songs"] = .array(rows); changed() }
     func remove(_ id: String) { guard canEdit else { return }; plan["songs"] = .array(plan["songs"].items.filter { $0["id"].text != id }); changed() }
     func add(_ song: APIRecord) {
-        guard canEdit, songs.count < 1000 else { return }
+        guard active, canEdit else { return }
+        guard songs.count < 1000 else { message = "A service can hold up to 1,000 songs."; return }
         plan["songs"] = .array(plan["songs"].items + [.object(["id": .string(UUID().uuidString.lowercased()), "songId": .string(song.id), "title": .string(song.title), "filename": song["filename"], "contentHash": song["contentHash"], "reviewed": .bool(false)])]); changed()
     }
     func save() async {
@@ -55,22 +58,43 @@ final class ServiceEditor {
         } catch { saving = false; failed = true; message = error.localizedDescription + " Your draft is kept." }
     }
     func refresh() async {
-        guard active, !saving, store.serviceDrafts[plan.id] == nil else { return }
+        guard active, !saving, !changingLeader, store.serviceDrafts[plan.id] == nil else { return }
         let id = plan.id, revision = plan["revision"].number
         do {
             let response = try await fetch(path)
-            try Task.checkCancellation(); guard active, !saving, plan.id == id, store.serviceDrafts[id] == nil else { return }
-            guard let saved = response["plans"].records.first(where: { $0.id == id }), saved["revision"].number >= max(revision, plan["revision"].number) else { return }
-            plan = saved; message = ""
+            try Task.checkCancellation(); guard active, !saving, !changingLeader, plan.id == id, store.serviceDrafts[id] == nil else { return }
+            guard let saved = response["plans"].records.first(where: { $0.id == id }), saved["revision"].number >= max(revision, plan["revision"].number), saved["leadership"]["revision"].number >= plan["leadership"]["revision"].number else { return }
+            if plan["leadership"]["isLeader"].flag, !saved["leadership"]["isLeader"].flag,
+               !saved["leadership"]["leaderLabel"].text.isEmpty {
+                leadershipNotice = saved["leadership"]["leaderLabel"].text + " took over " + saved.title + "."
+            }
+            plan = saved
+            message = ""
         } catch is CancellationError { }
         catch { if active { message = error.localizedDescription } }
     }
     func leadership(_ type: String) async {
-        guard active else { return }
-        if store.serviceDrafts[plan.id] != nil { await save(); if failed { return } }
-        var body: [String: JSONValue] = ["type": .string(type), "id": .string(plan.id), "expectedRevision": plan["revision"], "expectedLeadershipRevision": plan["leadership"]["revision"]]
+        guard active, !saving, !changingLeader else { return }
+        changingLeader = true
+        defer { changingLeader = false }
+        if store.serviceDrafts[plan.id] != nil {
+            await save()
+            guard active, store.serviceDrafts[plan.id] == nil else { return }
+        }
+        let id = plan.id
+        var body: [String: JSONValue] = ["type": .string(type), "id": .string(id), "expectedRevision": plan["revision"], "expectedLeadershipRevision": plan["leadership"]["revision"]]
         if type == "claim-leadership", plan["leadership"]["canTakeOver"].flag { body["takeOver"] = .bool(true) }
-        do { let result = try await store.api.request(path, method: "POST", body: .object(body)); if let saved = result["plans"].records.first(where: { $0.id == plan.id }) { plan = saved }; message = "" }
-        catch { message = error.localizedDescription }
+        do {
+            let result = try await store.api.request(path, method: "POST", body: .object(body))
+            guard active else { return }
+            guard let saved = result["plans"].records.first(where: { $0.id == id }) else {
+                throw APIError(status: 409, message: "Couldn’t confirm the leadership change. Refresh the service.")
+            }
+            plan = saved
+            store.servicesChanged(computerID: computerID)
+            message = ""
+        } catch {
+            if active { message = error.localizedDescription }
+        }
     }
 }

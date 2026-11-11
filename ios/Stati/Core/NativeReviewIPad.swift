@@ -32,10 +32,17 @@ import Foundation
         let path = url.path, query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         func value(_ key: String) -> String { query.first(where: { $0.name == key })?.value ?? "" }
         if path == "/api/me" && ["ipad-member", "ipad-shared-member", "ipad-groups-none", "ipad-original"].contains(NativeReview.route ?? "") { var member = NativeReview.person.fields; member["role"] = .string("member"); member["ministryRole"] = .string("worship_member"); member["capabilities"] = .object(["readSongs": .bool(true), "planServices": .bool(false)]); return .object(["user": .object(member)]) }
-        if path.hasSuffix("/services"), ["ipad-service", "ipad-service-list", "ipad-service-reader"].contains(NativeReview.route ?? "") {
+        if path.hasSuffix("/services"), ["ipad-service", "ipad-service-list", "ipad-service-reader", "ipad-service-selector", "ipad-service-requests", "ipad-service-share"].contains(NativeReview.route ?? "") {
             var plan = NativeReview.plan.fields
             plan["songs"] = .array(songs.prefix(3).enumerated().map { index, song in .object(["id": .string("appearance" + String(index + 1)), "songId": song["id"], "title": song["title"], "contentHash": song["contentHash"]]) })
-            return .object(["plans": .array([.object(plan)])])
+            plan["active"] = .bool(true)
+            var leadership = plan["leadership"]?.fields ?? [:]
+            leadership["leaderId"] = .string(NativeReview.userID)
+            plan["leadership"] = .object(leadership)
+            return .object(["plans": .array([.object(plan)]), "activeServiceId": NativeReview.plan["id"]])
+        }
+        if path.hasSuffix("/requests"), path.contains("/services/") {
+            return .object(["items": .array([]), "canSubmit": .bool(true), "attachments": .array([])])
         }
         if path.hasSuffix("/songs") {
             let group = value("groupName"), search = value("query")

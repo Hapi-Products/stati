@@ -26,6 +26,19 @@ struct SongShareButton: UIViewRepresentable {
         }.withRenderingMode(.alwaysTemplate)
     }
     func updateUIView(_ button: UIButton, context: Context) { context.coordinator.parent = self; context.coordinator.configure(button) }
+    static func present(_ file: URL, from anchor: UIView?) {
+        guard let anchor, let root = anchor.window?.rootViewController else { SongExportFiles.remove(file); return }
+        var presenter = root
+        while let next = presenter.presentedViewController, !next.isBeingDismissed { presenter = next }
+        let share = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+        if let popover = share.popoverPresentationController {
+            popover.sourceView = anchor
+            popover.sourceRect = anchor.bounds
+            popover.permittedArrowDirections = .up
+        }
+        share.completionWithItemsHandler = { _, _, _, _ in Task { @MainActor in SongExportFiles.remove(file) } }
+        presenter.present(share, animated: true)
+    }
     @MainActor final class Coordinator {
         var parent: SongShareButton
         private var working = false
@@ -52,13 +65,7 @@ struct SongShareButton: UIViewRepresentable {
                 defer { self.working = false; button?.isEnabled = true; button?.configuration?.showsActivityIndicator = false }
                 do {
                     let file = try await self.parent.prepare(kind)
-                    guard let button, let root = button.window?.rootViewController else { SongExportFiles.remove(file); return }
-                    var presenter = root
-                    while let next = presenter.presentedViewController, !next.isBeingDismissed { presenter = next }
-                    let share = UIActivityViewController(activityItems: [file], applicationActivities: nil)
-                    if let popover = share.popoverPresentationController { popover.sourceView = button; popover.sourceRect = button.bounds; popover.permittedArrowDirections = .up }
-                    share.completionWithItemsHandler = { _, _, _, _ in Task { @MainActor in SongExportFiles.remove(file) } }
-                    presenter.present(share, animated: true)
+                    SongShareButton.present(file, from: button)
                 } catch is CancellationError { }
                 catch { self.parent.failure(error.localizedDescription) }
             }
