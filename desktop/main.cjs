@@ -315,12 +315,14 @@ handle('operator',async({id,pin})=>{
  const result=await operatorRequest('/station/operator',{method:'POST',data:{userId:id,pin},deviceCredential,proof:null,selectionLease:null});
  await activateOperator(ticket,result);return{ok:true};
 });
-handle('operator-unlock',async id=>{
+handle('operator-unlock',async (id,backupCode)=>{
+ const assisted=backupCode!==undefined;
+ if(assisted&&(typeof backupCode!=='string'||!/^[0-9a-f]{32}$/i.test(backupCode)))throw Error('Enter one of your Stați backup codes.');
  if(identitySkipped)throw Error('Open Stați again before choosing your profile.');validateId(id);assertOperatorChangeAllowed(id);clearOperator('switch',{notifyNative:!nativeHelperMode});stationPoll=null;
  const generation=operatorGeneration,{ticket,deviceCredential}=await beginOperatorChoice(id,generation);assertIdentity(generation);
- const result=await operatorRequest('/station/operator/unlock',{method:'POST',data:{userId:id},deviceCredential,proof:null,selectionLease:null});
+ const result=await operatorRequest(assisted?'/station/operator/unlock/assisted':'/station/operator/unlock',{method:'POST',data:assisted?{userId:id,code:backupCode}:{userId:id},deviceCredential,proof:null,selectionLease:null});
  if(!localOperatorSelection.bindPending(ticket,result))throw Error('This phone unlock expired or was replaced. Choose your profile again.');assertIdentity(generation);pendingOperatorTicket=ticket;
- return{token:result.token,expiresAt:result.expiresAt,qr:await QRCode.toDataURL(result.url+'?authenticate=1',{width:210,margin:2})};
+ return{token:result.token,expiresAt:result.expiresAt,qr:await QRCode.toDataURL(assisted?result.url:result.url+'?authenticate=1',{width:210,margin:2})};
 });
 handle('operator-unlock-status',async token=>{
  if(identitySkipped)throw Error('Open Stați again before choosing your profile.');if(typeof token!=='string'||token.length>100)throw Error('Invalid unlock request.');

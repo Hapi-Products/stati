@@ -11,17 +11,17 @@ function leaseClock(){
  let now=0,serial=0;const pending=new Map(),timers={setTimeout(fn,delay){const id=++serial;pending.set(id,{fn,at:now+delay});return id;},clearTimeout(id){pending.delete(id);}};
  return{now:()=>now,timers,async advance(ms){const target=now+ms;while(true){await drain();const next=[...pending.entries()].sort((a,b)=>a[1].at-b[1].at||a[0]-b[0])[0];if(!next||next[1].at>target)break;now=next[1].at;pending.delete(next[0]);next[1].fn();}now=target;await drain();}};
 }
-function serverFixture({route:custom,leaseClock:clock=leaseClock(),capability=protocol,...options}={}){
+function serverFixture({route:custom,leaseClock:clock=leaseClock(),capability=protocol,roster=members,...options}={}){
  let current=null,serial=0;
  function issuance(userId,pending=false){
-  const role=members.find(member=>member.id===userId)?.role,lease=String.fromCharCode(97+(serial++%20)).repeat(43),ttl=pending?300:45;
+  const role=roster.find(member=>member.id===userId)?.role,lease=String.fromCharCode(97+(serial++%20)).repeat(43),ttl=pending?300:45;
   current={userId,lease,proof:role==='admin'&&!pending?proof:null,pending};
   return{protocol,lease,userId,expiresAt:serverNow+Math.floor(clock.now()/1000)+ttl,ttlSeconds:ttl,active:!pending,...(pending?{token:publicToken,url:'https://stati.ciani01.org/unlock/'+publicToken}:role==='admin'?{proof,proofExpiresAt:serverNow+Math.floor(clock.now()/1000)+8*3600}:{})};
  }
  async function route(call){
   const {endpoint,method,options:request}=call,body=request.body?JSON.parse(request.body):{},headers=request.headers||{};
   const answer=await custom?.({...call,body,headers,current,issuance});if(answer!==undefined)return answer;
-  if(endpoint==='/station/state')return Response.json({operatorLeaseProtocol:capability,device:{id:deviceId,operator_id:current&&!current.pending?current.userId:null},members,adminUnlocked:!!current?.proof&&headers['X-Stati-Operator']===current.proof,transfers:[],requests:[],accessRequests:[],accessApprover:'operator'});
+  if(endpoint==='/station/state')return Response.json({operatorLeaseProtocol:capability,device:{id:deviceId,operator_id:current&&!current.pending?current.userId:null},members:roster,adminUnlocked:!!current?.proof&&headers['X-Stati-Operator']===current.proof,transfers:[],requests:[],accessRequests:[],accessApprover:'operator'});
   if(endpoint==='/station/operator'&&method==='POST'){
    if(body.userId===null){if(current?.lease===headers['X-Stati-Operator-Lease'])current=null;return Response.json({ok:true});}
    return Response.json(issuance(body.userId));
@@ -78,6 +78,24 @@ test('actual phone unlock sends only its public token to the renderer and the pr
  await assert.rejects(f.invoke('operator-unlock-status',undefined,'q'.repeat(43)),/expired|replaced/);assert.equal(f.http().some(call=>call[2]==='/station/operator/unlock/status'),false);
  const result=await f.invoke('operator-unlock-status',undefined,begin.token);assert.equal(result.approved,true);assert.deepEqual(Object.keys(result),['approved']);assert.equal(f.api.getState().activeOperator.id,adminId);
  const status=f.http().find(call=>call[2]==='/station/operator/unlock/status');assert.equal(status[3].headers['X-Stati-Operator-Lease'],pending.lease);assert.equal(status[3].headers['X-Stati-Operator'],undefined);assert.equal(JSON.parse(status[3].body).userId,adminId);assert.equal(f.api.getState().operatorProof,proof);await f.invoke('operator',undefined,{id:null});
+});
+test('assisted sign-in submits the member code only in the paired request and returns a separate approval QR',async()=>{
+ const code='1a'.repeat(16);
+ const f=serverFixture({roster:members.map(member=>({...member,requiresUnlock:true})),route:({endpoint,body,issuance})=>{
+  if(endpoint!=='/station/operator/unlock/assisted')return;
+  assert.deepEqual(body,{userId:memberId,code});
+  const pending=issuance(body.userId,true);
+  return Response.json({...pending,url:pending.url+'?assist=1'});
+ }});
+ await f.ready();
+ const result=await f.invoke('operator-unlock',undefined,memberId,code);
+ assert.deepEqual(Object.keys(result).sort(),['expiresAt','qr','token']);
+ assert.equal(result.token,publicToken);
+ assert.equal(JSON.stringify(result).includes(code),false);
+ assert.equal(f.api.getState().activeOperator,null);
+ await assert.rejects(f.invoke('workspace-open'),/Choose/);
+ await f.invoke('operator-unlock-cancel');
+ await assert.rejects(f.invoke('operator-unlock-status',undefined,result.token),/expired|replaced/);
 });
 test('actual PIN and phone Cancel invalidate authority while final station confirmation is pending',async()=>{
  for(const method of ['pin','phone']){

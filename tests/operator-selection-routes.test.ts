@@ -100,3 +100,70 @@ it('a selected-operator change between route lookup and decision batch leaves me
 it('real account role edits revoke lease/proof together and do not revive them on re-promotion',async()=>{
  const f=await fixture(),selected=await f.select(f.admin.id);expect((await f.call('/members/'+f.admin.id,{method:'PATCH',data:{action:'demote'},cookie:f.owner.cookie})).status).toBe(200);expect(await selectedRow(f.deviceId)).toBeNull();expect((await f.call('/members/'+f.admin.id,{method:'PATCH',data:{action:'promote'},cookie:f.owner.cookie})).status).toBe(200);expect((await f.decide((await f.pending()).id,selected)).status).toBe(403);
 });
+
+async function assistedFixture() {
+ const f=await fixture();
+ const signMember=await passkey(f.member.id);
+ const signAdmin=await passkey(f.admin.id);
+ const approval=await f.call('/me/station-backup-codes/options',{cookie:f.member.cookie});
+ expect(approval.status).toBe(200);
+ const challengeCookie=approval.headers.get('Set-Cookie')!.split(';')[0];
+ const options=await approval.json() as {challenge:string};
+ const generated=await f.call('/me/station-backup-codes',{
+  cookie:f.member.cookie+'; '+challengeCookie,
+  data:{response:await signMember(options.challenge)},
+ });
+ expect(generated.status).toBe(200);
+ const {codes}=await generated.json() as {codes:string[]};
+ expect(codes).toHaveLength(5);
+ const saved=await env.DB.prepare('SELECT code_hash FROM station_backup_codes WHERE user_id=?').bind(f.member.id).all<{code_hash:string}>();
+ expect(saved.results.map(row=>row.code_hash)).toEqual(expect.arrayContaining(await Promise.all(codes.map(code=>hash(code.replaceAll('-',''))))));
+ const code=codes[0].replaceAll('-','');
+ const allow=()=>env.DB.prepare("INSERT INTO station_memberships VALUES(?,?,'approved',?)").bind(f.deviceId,f.member.id,now()).run();
+ const start=(userId=f.member.id,backupCode=code)=>f.call('/station/operator/unlock/assisted',{data:{userId,code:backupCode}});
+ const path=(request:Selection)=>'/operator-unlock/'+request.token+'/approve';
+ const status=(request:Selection,lease=request.lease)=>f.call('/station/operator/unlock/status',{lease,data:{token:request.token,userId:f.member.id}});
+ return {...f,signMember,signAdmin,allow,start,path,status};
+}
+
+it('opens the named member’s existing workspace only after both a one-use backup code and an active administrator passkey',async()=>{
+ const f=await assistedFixture();
+ expect((await f.start()).status).toBe(403);
+ expect((await f.start(f.admin.id)).status).toBe(403);
+ await f.allow();
+ expect((await f.start(f.member.id,'a'.repeat(32))).status).toBe(403);
+ const began=await f.start();
+ expect(began.status).toBe(200);
+ const request=await began.json() as Selection;
+ expect(request.url).toMatch(/\?assist=1$/);
+ expect((await f.start()).status).toBe(403);
+ expect(await (await f.status(request)).json()).toEqual({approved:false});
+ expect((await f.call('/operator-unlock/'+request.token,{method:'GET'})).status).toBe(410);
+ const details=await (await f.call(f.path(request),{method:'GET'})).json() as {name:string;person:string;options:{challenge:string}};
+ expect(details).toMatchObject({name:'Isolated route PC',person:'Route T.'});
+ expect((await f.call(f.path(request),{data:{response:await f.signMember(details.options.challenge)}})).status).toBe(403);
+ expect((await f.call(f.path(request),{data:{response:await f.signAdmin(details.options.challenge)}})).status).toBe(200);
+ expect((await f.call(f.path(request),{method:'GET'})).status).toBe(410);
+ expect((await f.status(request,token())).status).toBe(403);
+ const selection=await (await f.status(request)).json() as Selection;
+ expect(selection).toMatchObject({approved:true,active:true,userId:f.member.id});
+ expect((await f.call('/station/workspace',{method:'GET',lease:selection.lease,proof:selection.proof})).status).toBe(200);
+ expect((await f.call('/station/enrollment-code',{method:'GET',lease:selection.lease,proof:selection.proof})).status).toBe(403);
+ expect((await auditRows(f.member.id)).results).toMatchObject([{actor_id:f.admin.id,action:'station-assisted-sign-in-approved'}]);
+ await env.DB.prepare("UPDATE users SET role='member' WHERE id=?").bind(f.admin.id).run();
+ expect((await f.call('/station/operator/presence',{lease:selection.lease,proof:selection.proof,data:{userId:f.member.id}})).status).toBe(403);
+});
+
+it('rejects late assisted approvals when the member disconnects or the station cancels the request',async()=>{
+ const f=await assistedFixture();
+ await f.allow();
+ const request=await (await f.start()).json() as Selection;
+ const options=await (await f.call(f.path(request),{method:'GET'})).json() as {options:{challenge:string}};
+ await env.DB.prepare("UPDATE station_memberships SET status='denied' WHERE device_id=? AND user_id=?").bind(f.deviceId,f.member.id).run();
+ expect((await f.call(f.path(request),{data:{response:await f.signAdmin(options.options.challenge)}})).status).toBe(410);
+ expect((await f.status(request)).status).toBe(403);
+ await env.DB.prepare("UPDATE station_memberships SET status='approved' WHERE device_id=? AND user_id=?").bind(f.deviceId,f.member.id).run();
+ expect((await f.call('/station/operator',{lease:request.lease,data:{userId:null}})).status).toBe(200);
+ expect((await f.call(f.path(request),{data:{response:await f.signAdmin(options.options.challenge)}})).status).toBe(410);
+ expect((await auditRows(f.member.id)).results).toEqual([]);
+});

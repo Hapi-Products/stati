@@ -52,6 +52,7 @@ final class WorkspaceModel {
     var name = Host.current().localizedName ?? "Mac"
     private(set) var pendingProfile: StationProfile?
     private(set) var awaitingPhone = false
+    private(set) var awaitingAdministrator = false
     private(set) var pairingKnown = false
     private(set) var unlock: JSONValue = .null
     private(set) var profileError = ""
@@ -83,6 +84,7 @@ final class WorkspaceModel {
     var unlocked: Bool { paired && !status["locked"].bool && !status["operatorId"].string.isEmpty }
     var profileOptions: [StationProfile] { station["members"].array.compactMap(StationProfile.init) }
     var currentProfile: StationProfile? { profileOptions.first { $0.id == status["operatorId"].string } }
+    var supportsAssistedSignIn: Bool { station["assistedSignIn"].bool }
     var operatorName: String { currentProfile?.name ?? "Choose your profile" }
     private var choosingProfile: Bool { !status["locked"].bool && paired && (showProfile || !unlocked) }
     var capabilities: JSONValue { status["capabilities"] }
@@ -160,6 +162,7 @@ final class WorkspaceModel {
         unlock = .null
         pendingProfile = nil
         awaitingPhone = false
+        awaitingAdministrator = false
     }
     func refresh() async {
         guard connected, !working else { return }
@@ -237,8 +240,11 @@ final class WorkspaceModel {
         }
         pendingProfile = profile
         if profile.isAdministrator { return }
-        if profile.requiresUnlock { await requestPhoneSignIn() }
-        else { await completeDirectSignIn() }
+        if !profile.requiresUnlock {
+            await completeDirectSignIn()
+        } else if !supportsAssistedSignIn {
+            await requestPhoneSignIn()
+        }
     }
 
     func submitPIN(_ pin: String) async {
@@ -264,12 +270,15 @@ final class WorkspaceModel {
         await refresh()
     }
 
-    func requestPhoneSignIn() async {
+    func requestPhoneSignIn(backupCode: String? = nil) async {
         guard let profile = pendingProfile, !awaitingPhone, await prepareProfileSignIn(profile) else { return }
         awaitingPhone = true
+        awaitingAdministrator = backupCode != nil
         let epoch = privateEpoch
         do {
-            let request = try await engine.call("operator-unlock", args: [.string(profile.id)])
+            var arguments: [JSONValue] = [.string(profile.id)]
+            if let backupCode { arguments.append(.string(backupCode)) }
+            let request = try await engine.call("operator-unlock", args: arguments)
             guard isCurrentSignIn(profile, epoch: epoch) else { working = false; return }
             let token = request["token"].string
             guard !token.isEmpty, !request["qr"].string.isEmpty, request["expiresAt"].number > 0 else {
@@ -278,7 +287,16 @@ final class WorkspaceModel {
             unlock = request
             profileApprovalTask = Task { [weak self] in await self?.waitForProfileApproval(token: token) }
         } catch {
-            if isCurrentSignIn(profile, epoch: epoch) { await endPendingProfile(message: error.localizedDescription) }
+            if isCurrentSignIn(profile, epoch: epoch) {
+                if backupCode == nil {
+                    await endPendingProfile(message: error.localizedDescription)
+                } else {
+                    awaitingPhone = false
+                    awaitingAdministrator = false
+                    profileError = error.localizedDescription
+                    _ = try? await engine.call("operator-unlock-cancel")
+                }
+            }
         }
         working = false
         await refresh()
@@ -296,7 +314,7 @@ final class WorkspaceModel {
         }
         invalidatePrivateState()
         status = .object(["locked": .bool(false)])
-        station = .object(["paired": .bool(paired), "members": station["members"]])
+        station = .object(["paired": .bool(paired), "members": station["members"], "assistedSignIn": station["assistedSignIn"]])
         profileError = ""
         working = true
         return true

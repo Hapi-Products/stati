@@ -46,6 +46,8 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var pinFocused: Bool
     @State private var pin = ""
+    @State private var backupCode = ""
+    @State private var showBackupCode = false
 
     var body: some View {
         ScrollView {
@@ -109,7 +111,9 @@ struct ProfileView: View {
             OperatorAvatar(profile: profile, engine: model.engine, size: 68)
             Text(profile.name).font(.title.bold()).accessibilityAddTraits(.isHeader)
             if model.awaitingPhone {
-                Text("Scan with your phone and approve the passkey.")
+                Text(model.awaitingAdministrator
+                     ? "Ask an administrator to scan and approve this sign-in."
+                     : "Scan with your phone and approve the passkey.")
                     .foregroundStyle(.secondary)
                 if model.unlock != .null {
                     QRContent(value: model.unlock)
@@ -141,11 +145,55 @@ struct ProfileView: View {
                         .statiActionStyle(prominent: true)
                         .disabled(pin.count != 4 || model.working)
                 }
+            } else if profile.requiresUnlock {
+                if showBackupCode {
+                    SecureField("Backup code", text: $backupCode)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 290)
+                        .disabled(model.working)
+                        .onSubmit(submitBackupCode)
+                    HStack(spacing: 10) {
+                        Button("Use Phone Passkey", systemImage: "iphone") {
+                            showBackupCode = false
+                            backupCode = ""
+                        }
+                        .statiActionStyle()
+                        Button("Request Approval", action: submitBackupCode)
+                            .statiActionStyle(prominent: true)
+                            .disabled(normalizedBackupCode.count != 32 || model.working)
+                    }
+                } else {
+                    Button("Use Phone Passkey", systemImage: "iphone") {
+                        Task { await model.requestPhoneSignIn() }
+                    }
+                    .statiActionStyle(prominent: true)
+                    .disabled(model.working)
+                    if model.supportsAssistedSignIn {
+                        Button("Use Backup Code", systemImage: "key") { showBackupCode = true }
+                            .statiActionStyle()
+                            .disabled(model.working)
+                    }
+                }
             } else {
                 ProgressView("Signing in…")
             }
         }
         .frame(maxWidth: .infinity)
+        .onDisappear {
+            backupCode = ""
+            showBackupCode = false
+        }
+    }
+
+    private var normalizedBackupCode: String {
+        backupCode.filter { !$0.isWhitespace && $0 != "-" }
+    }
+
+    private func submitBackupCode() {
+        let submitted = normalizedBackupCode
+        guard submitted.count == 32, !model.working else { return }
+        backupCode = ""
+        Task { await model.requestPhoneSignIn(backupCode: submitted) }
     }
 
     private func submitPIN() {

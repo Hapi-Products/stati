@@ -2,6 +2,7 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Camera,Check,Download,IdCard,LogOut,Monitor,Pencil,ShieldCheck,Trash2,X} from 'lucide-react';
 import {api,post,type Computer,type Me} from './api';
 import {StationPin} from './AdminUnlock';
+import {StationBackupCodes} from './StationBackupCodes';
 import {memberRoleLabel} from './TeamMembers';
 import './account.css';
 
@@ -19,6 +20,7 @@ export function AccountPage({me,computers,refresh,signIn,notice,fail,avatar}:Pro
   </section>
   <div className="account-settings">
    {me.role==='admin'&&<StationPin/>}
+   {me.role==='member'&&me.status==='active'&&<StationBackupCodes key={me.id}/>}
    {computers.length>0&&<details className="card account-computers"><summary><Monitor size={19}/>Computers <span className="account-count">{computers.length}</span></summary>{computers.map(computer=><AccountComputer key={computer.id} computer={computer} canRename={me.status==='active'&&me.role==='admin'} canDisconnect={me.status==='active'} refresh={refresh} notice={notice} fail={fail}/>)}</details>}
    <details className="card install"><summary><Download size={19}/>Install Stați</summary><div className="account-install-copy"><p>iPhone: Share → Add to Home Screen. Android: browser menu → Install app.</p>{me.role==='admin'&&<TestDownloads/>}<p className="hint">Slide creation is available on the PC.</p></div></details>
   </div>

@@ -1,4 +1,5 @@
 import {hash,HttpError,now,token} from './core';
+import {assistedApprover,stationMemberAccess} from './station-assisted-sign-in';
 import type {MinistryRole} from './ministry-roles';
 
 export const OPERATOR_LEASE_PROTOCOL='stati-operator-v1';
@@ -37,7 +38,9 @@ function activeSelectionGuard(authority:OperatorDeviceContext&{userId:string;sel
    OR (selected.proof_kind IN ('pin','passkey') AND ((operator.role='admin' AND selected.ministry_role IS NULL)
     OR (selected.proof_kind='passkey' AND operator.role='member' AND ((selected.ministry_role IS NULL AND NOT EXISTS(SELECT 1 FROM user_ministry_roles WHERE user_id=operator.id)) OR EXISTS(SELECT 1 FROM user_ministry_roles ministry WHERE ministry.user_id=operator.id AND ministry.role=selected.ministry_role))))
     AND EXISTS(SELECT 1 FROM operator_sessions authentication
-    WHERE authentication.token_hash=selected.admin_session_hash AND authentication.device_id=selected.device_id AND authentication.user_id=selected.user_id AND authentication.expires_at>?))))`,
+    WHERE authentication.token_hash=selected.admin_session_hash AND authentication.device_id=selected.device_id AND authentication.user_id=selected.user_id AND authentication.expires_at>?)))
+  AND NOT EXISTS(SELECT 1 FROM station_assisted_sessions assistance WHERE assistance.proof_hash=selected.admin_session_hash
+   AND NOT (${stationMemberAccess('station','operator')} AND ${assistedApprover('assistance')})))`,
   params:[authority.deviceId,authority.userId,authority.selectionHash,...(authority.proofKind?[authority.proofKind,authority.ministryRole??null]:[]),authority.adminSessionHash,time,authority.deviceTokenHash,time]};
 }
 
@@ -58,15 +61,16 @@ export async function requireSelectedOperator(request:Request,env:Env,deviceId:s
 // Every follow-up statement is fenced by the newly generated selection nonce.
 // A zero-row guarded INSERT is not an error and must not clear an older choice.
 function selectionExists(context:OperatorDeviceContext,selectionHash:string){return{sql:'EXISTS(SELECT 1 FROM operator_selections current JOIN devices station ON station.id=current.device_id WHERE current.device_id=? AND current.selection_hash=? AND station.token_hash=?)',params:[context.deviceId,selectionHash,context.deviceTokenHash]};}
-function issueSelection(env:Env,context:OperatorDeviceContext,{userId,selectionHash,kind,status,adminHash,unlockHash,expiresAt,time,pin,ministryRole=null,baseRole}:{userId:string;selectionHash:string;kind:ProofKind;status:'pending'|'active';adminHash:string|null;unlockHash:string|null;expiresAt:number;time:number;pin?:{salt:string;digest:string};ministryRole?:MinistryRole|null;baseRole?:'member'|'admin'}){
+function issueSelection(env:Env,context:OperatorDeviceContext,{userId,selectionHash,kind,status,adminHash,unlockHash,expiresAt,time,pin,ministryRole=null,baseRole,backupCodeHash}:{userId:string;selectionHash:string;kind:ProofKind;status:'pending'|'active';adminHash:string|null;unlockHash:string|null;expiresAt:number;time:number;pin?:{salt:string;digest:string};ministryRole?:MinistryRole|null;baseRole?:'member'|'admin';backupCodeHash?:string}){
  const expectedRole=baseRole||(kind==='member'||ministryRole?'member':'admin');
  return env.DB.prepare(`INSERT INTO operator_selections(device_id,user_id,selection_hash,proof_kind,status,admin_session_hash,unlock_hash,expires_at,created_at,ministry_role)
  SELECT station.id,operator.id,?,?,?,?,?,?,?,? FROM devices station JOIN users owner ON owner.id=station.owner_id JOIN users operator ON operator.id=?
  WHERE station.id=? AND station.token_hash=? AND station.revoked_at IS NULL AND owner.status='active' AND operator.status='active' AND NOT EXISTS(SELECT 1 FROM user_ministry_roles hiddenPastor WHERE hiddenPastor.user_id=operator.id AND hiddenPastor.role IN ('pastor','commenter')) AND operator.role=?
  ${ministryRole?'AND EXISTS(SELECT 1 FROM user_ministry_roles ministry WHERE ministry.user_id=operator.id AND ministry.role=?)':expectedRole==='member'?'AND NOT EXISTS(SELECT 1 FROM user_ministry_roles WHERE user_id=operator.id)':''}
  ${pin?'AND EXISTS(SELECT 1 FROM account_pins pin WHERE pin.user_id=operator.id AND pin.salt=? AND pin.digest=?)':''}
+ ${backupCodeHash?`AND ${stationMemberAccess('station','operator')} AND EXISTS(SELECT 1 FROM station_backup_codes backup WHERE backup.user_id=operator.id AND backup.code_hash=?)`:''}
  ON CONFLICT(device_id) DO UPDATE SET user_id=excluded.user_id,selection_hash=excluded.selection_hash,proof_kind=excluded.proof_kind,status=excluded.status,admin_session_hash=excluded.admin_session_hash,unlock_hash=excluded.unlock_hash,expires_at=excluded.expires_at,created_at=excluded.created_at,ministry_role=excluded.ministry_role`)
- .bind(selectionHash,kind,status,adminHash,unlockHash,expiresAt,time,ministryRole,userId,context.deviceId,context.deviceTokenHash,expectedRole,...(ministryRole?[ministryRole]:[]),...(pin?[pin.salt,pin.digest]:[]));
+ .bind(selectionHash,kind,status,adminHash,unlockHash,expiresAt,time,ministryRole,userId,context.deviceId,context.deviceTokenHash,expectedRole,...(ministryRole?[ministryRole]:[]),...(pin?[pin.salt,pin.digest]:[]),...(backupCodeHash?[backupCodeHash]:[]));
 }
 function active(lease:string,userId:string,time:number):ActiveSelection{return{protocol:OPERATOR_LEASE_PROTOCOL,lease,userId,active:true,expiresAt:time+OPERATOR_LEASE_SECONDS,ttlSeconds:OPERATOR_LEASE_SECONDS};}
 
@@ -98,20 +102,27 @@ export async function selectPinOperator(env:Env,context:OperatorDeviceContext,us
  return{...active(lease,userId,time),proof,proofExpiresAt};
 }
 
-export async function beginPhoneOperator(env:Env,context:OperatorDeviceContext,userId:string,challenge:string):Promise<PendingSelection>{
+export async function beginPhoneOperator(env:Env,context:OperatorDeviceContext,userId:string,challenge:string,backupCodeHash?:string):Promise<PendingSelection>{
  if(typeof challenge!=='string'||challenge.length<16||challenge.length>1024)throw new HttpError(400,'A new server passkey challenge is required.');
  const person=await env.DB.prepare("SELECT u.role,m.role AS ministry_role FROM users u LEFT JOIN user_ministry_roles m ON m.user_id=u.id WHERE u.id=? AND u.status='active'").bind(userId).first<{role:'member'|'admin';ministry_role:MinistryRole|null}>();
- if(!person||['pastor','commenter'].includes(person.ministry_role??''))throw unavailable();
+ if(!person||['pastor','commenter'].includes(person.ministry_role??'')||backupCodeHash&&person.role!=='member')throw unavailable();
  const ministryRole=person.role==='admin'?null:person.ministry_role;
  const lease=token(),raw=token(),[selectionHash,unlockHash]=await Promise.all([hash(lease),hash(raw)]),time=now(),expiresAt=time+phoneSeconds,guard=selectionExists(context,selectionHash);
  const results=await env.DB.batch([
-  issueSelection(env,context,{userId,selectionHash,kind:'passkey',status:'pending',adminHash:null,unlockHash,expiresAt,time,ministryRole,baseRole:person.role}),
+  issueSelection(env,context,{userId,selectionHash,kind:'passkey',status:'pending',adminHash:null,unlockHash,expiresAt,time,ministryRole,baseRole:person.role,backupCodeHash}),
   env.DB.prepare('DELETE FROM operator_sessions WHERE device_id=? AND '+guard.sql).bind(context.deviceId,...guard.params),
   env.DB.prepare('DELETE FROM operator_unlocks WHERE device_id=? AND '+guard.sql).bind(context.deviceId,...guard.params),
   env.DB.prepare('INSERT INTO operator_unlocks(token_hash,device_id,user_id,challenge,expires_at,approved) SELECT ?,?,?,?,?,0 WHERE '+guard.sql).bind(unlockHash,context.deviceId,userId,challenge,expiresAt,...guard.params),
+  ...(backupCodeHash?[
+   env.DB.prepare('DELETE FROM station_backup_codes WHERE user_id=? AND code_hash=? AND '+guard.sql).bind(userId,backupCodeHash,...guard.params),
+   env.DB.prepare('INSERT INTO station_assisted_unlocks(unlock_hash) SELECT ? WHERE '+guard.sql).bind(unlockHash,...guard.params),
+  ]:[]),
   env.DB.prepare('UPDATE devices SET operator_id=NULL WHERE id=? AND '+guard.sql).bind(context.deviceId,...guard.params),
  ]);
- if(!results[0].meta.changes)throw unavailable();
+ if(!results[0].meta.changes){
+  if(backupCodeHash)throw new HttpError(403,'This backup code is unavailable for this member and computer.');
+  throw unavailable();
+ }
  return{protocol:OPERATOR_LEASE_PROTOCOL,lease,userId,active:false,expiresAt,ttlSeconds:phoneSeconds,token:raw};
 }
 
@@ -120,7 +131,9 @@ function pendingGuard(context:OperatorDeviceContext,userId:string,selectionHash:
  JOIN operator_unlocks challenge ON challenge.token_hash=selected.unlock_hash AND challenge.device_id=selected.device_id AND challenge.user_id=selected.user_id
  WHERE selected.device_id=? AND selected.user_id=? AND selected.selection_hash=? AND selected.unlock_hash=? AND selected.proof_kind='passkey' AND selected.status='pending'
  AND selected.expires_at>? AND challenge.expires_at>? AND station.token_hash=? AND station.revoked_at IS NULL AND owner.status='active' AND operator.status='active' AND NOT EXISTS(SELECT 1 FROM user_ministry_roles hiddenPastor WHERE hiddenPastor.user_id=operator.id AND hiddenPastor.role IN ('pastor','commenter'))
- AND ((operator.role='admin' AND selected.ministry_role IS NULL) OR (operator.role='member' AND ((selected.ministry_role IS NULL AND NOT EXISTS(SELECT 1 FROM user_ministry_roles WHERE user_id=operator.id)) OR EXISTS(SELECT 1 FROM user_ministry_roles ministry WHERE ministry.user_id=operator.id AND ministry.role=selected.ministry_role))))`,params:[context.deviceId,userId,selectionHash,unlockHash,time,time,context.deviceTokenHash]};}
+ AND ((operator.role='admin' AND selected.ministry_role IS NULL) OR (operator.role='member' AND ((selected.ministry_role IS NULL AND NOT EXISTS(SELECT 1 FROM user_ministry_roles WHERE user_id=operator.id)) OR EXISTS(SELECT 1 FROM user_ministry_roles ministry WHERE ministry.user_id=operator.id AND ministry.role=selected.ministry_role))))
+ AND NOT EXISTS(SELECT 1 FROM station_assisted_unlocks assistance WHERE assistance.unlock_hash=challenge.token_hash
+  AND NOT (${stationMemberAccess('station','operator')} AND (challenge.approved=0 OR ${assistedApprover('assistance')})))`,params:[context.deviceId,userId,selectionHash,unlockHash,time,time,context.deviceTokenHash]};}
 
 /** Returns null only while this exact live phone ceremony awaits approval.
  * Consuming it once creates a separate proof and retains the private lease. */
@@ -130,6 +143,8 @@ export async function activatePhoneOperator(env:Env,context:OperatorDeviceContex
  const current=selectionExists(context,selectionHash),activated=`${current.sql} AND EXISTS(SELECT 1 FROM operator_selections selected WHERE selected.device_id=? AND selected.status='active' AND selected.admin_session_hash=?)`,activatedParams=[...current.params,context.deviceId,adminHash];
  const results=await env.DB.batch([
   env.DB.prepare(`INSERT INTO operator_sessions(token_hash,device_id,user_id,expires_at) SELECT ?,selected.device_id,selected.user_id,? FROM (${pending.sql} AND challenge.approved=1) selected`).bind(adminHash,proofExpiresAt,...pending.params),
+  env.DB.prepare(`INSERT INTO station_assisted_sessions(proof_hash,approved_by,passkey_id)
+   SELECT ?,approved_by,passkey_id FROM station_assisted_unlocks WHERE unlock_hash=? AND changes()=1`).bind(adminHash,unlockHash),
   env.DB.prepare("UPDATE operator_selections SET status='active',admin_session_hash=?,unlock_hash=NULL,expires_at=? WHERE device_id=? AND selection_hash=? AND unlock_hash=? AND status='pending' AND EXISTS(SELECT 1 FROM operator_sessions authentication WHERE authentication.token_hash=? AND authentication.device_id=operator_selections.device_id AND authentication.user_id=operator_selections.user_id)").bind(adminHash,time+OPERATOR_LEASE_SECONDS,context.deviceId,selectionHash,unlockHash,adminHash),
   env.DB.prepare('UPDATE devices SET operator_id=? WHERE id=? AND '+activated).bind(userId,context.deviceId,...activatedParams),
   env.DB.prepare('DELETE FROM operator_unlocks WHERE token_hash=? AND '+activated).bind(unlockHash,...activatedParams),

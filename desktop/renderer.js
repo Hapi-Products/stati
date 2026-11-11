@@ -71,7 +71,7 @@ async function refresh(){
      if(member.has_photo)setAvatarPhoto(avatar,member.id);
      b.addEventListener('click',()=>void run(async()=>{
       if(generation!==identityGeneration||identityChoicePending)return;
-      if(member.role==='admin'||member.requiresUnlock){selectedAdmin=member;$('admin-unlock').hidden=false;$('operators').hidden=true;$('admin-name').textContent='Unlock '+member.first_name+' '+member.last_initial+'.';$('admin-pin').closest('label').hidden=member.role!=='admin';$('admin-pin').required=member.role==='admin';$('admin-unlock').querySelector('[type=submit]').hidden=member.role!=='admin';(member.role==='admin'?$('admin-pin'):$('admin-phone')).focus();return;}
+      if(member.role==='admin'||member.requiresUnlock){selectedAdmin=member;$('admin-unlock').hidden=false;$('operators').hidden=true;$('admin-name').textContent='Unlock '+member.first_name+' '+member.last_initial+'.';$('admin-pin').closest('label').hidden=member.role!=='admin';$('admin-pin').required=member.role==='admin';$('operator-unlock-submit').hidden=member.role!=='admin';$('operator-unlock-submit').textContent='Unlock';$('admin-phone').hidden=false;$('station-use-backup').hidden=member.role==='admin'||state.assistedSignIn!==true;(member.role==='admin'?$('admin-pin'):$('admin-phone')).focus();return;}
       identityChoicePending=true;b.disabled=true;
       try{
        await window.stati.operator(member.id);
@@ -263,34 +263,90 @@ let connectionSignature='';function renderConnection(state){const member=operato
 
 bind('notification-test',async()=>{const result=await window.stati.testNotification();$('notification-status').textContent=result.supported?'Test sent. If no alert appears, enable Stați in notification settings and turn off Do not disturb.':'Notifications are unavailable on this computer.';});bind('notification-settings',()=>window.stati.notificationSettings());window.stati.onNotificationFailed(()=>{$('notification-status').textContent='This computer could not show the alert. Check notification settings and Do not disturb.';});
 
-function resetAdminUnlock(){selectedAdmin=null;clearInterval(unlockTimer);unlockTimer=null;$('admin-unlock').hidden=true;$('operators').hidden=false;$('admin-pin').value='';$('admin-unlock-qr').hidden=true;$('admin-unlock-status').textContent='';}
+function resetAdminUnlock(){selectedAdmin=null;clearInterval(unlockTimer);unlockTimer=null;$('admin-unlock').hidden=true;$('operators').hidden=false;$('admin-pin').value='';$('station-backup-code').value='';$('station-backup-label').hidden=true;$('admin-unlock-qr').hidden=true;$('admin-unlock-qr').removeAttribute('src');$('admin-unlock-status').textContent='';}
 function cancelAdminUnlock(){void window.stati.cancelOperatorUnlock().catch(()=>{});resetAdminUnlock();}
 async function finishOperatorChoice(generation=identityGeneration){if(generation!==identityGeneration)return false;await window.stati.workspaceOpen();if(generation!==identityGeneration)return false;operatorChosen=true;document.documentElement.dataset.workspaceOperator=String(generation);window.dispatchEvent(new Event('stati-workspace-change'));document.body.classList.remove('identifying');document.documentElement.classList.remove('identity-fullscreen');$('operator-shade').hidden=true;filesSignature='';return true;}
 async function finishAdminUnlock(generation=identityGeneration){if(generation!==identityGeneration)return;resetAdminUnlock();await finishOperatorChoice(generation);await refresh();}
 bind('admin-cancel',cancelAdminUnlock);
 $('admin-unlock').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{
- if(!selectedAdmin||selectedAdmin.role!=='admin'||identityChoicePending)return;
+ if(!selectedAdmin||identityChoicePending)return;
+ if(selectedAdmin.role!=='admin'){
+  const code=$('station-backup-code').value.replace(/[-\s]/g,'');
+  if($('station-backup-label').hidden||!code.match(/^[0-9a-f]{32}$/i)){
+   $('admin-unlock-status').textContent='Enter one of your Stați backup codes.';
+   return;
+  }
+  $('station-backup-code').value='';
+  await startOperatorQR(code);
+  return;
+ }
  const generation=identityGeneration,member=selectedAdmin,pin=$('admin-pin').value;
  $('admin-pin').value='';identityChoicePending=true;
  try{await window.stati.operator(member.id,pin);if(generation===identityGeneration&&selectedAdmin===member)await finishAdminUnlock(generation);}
  catch(e){if(generation===identityGeneration){$('admin-unlock-status').textContent=e.message;$('admin-pin').focus();}}
  finally{if(generation===identityGeneration)identityChoicePending=false;}
 });});
+bind('station-use-backup',()=>{
+ if(!selectedAdmin||selectedAdmin.role==='admin'||identityChoicePending||!$('admin-unlock-qr').hidden)return;
+ $('station-backup-label').hidden=false;
+ $('operator-unlock-submit').hidden=false;
+ $('operator-unlock-submit').textContent='Request approval';
+ $('station-backup-code').focus();
+});
 bind('admin-phone',()=>run(async()=>{
- if(!selectedAdmin)return;
- const generation=identityGeneration,member=selectedAdmin,result=await window.stati.operatorUnlock(member.id);
- if(generation!==identityGeneration||selectedAdmin!==member)return;
- $('admin-unlock-qr').src=result.qr;$('admin-unlock-qr').hidden=false;
- $('admin-unlock-status').textContent='Scan with your phone, then approve with your passkey. This computer unlocks automatically.';
- clearInterval(unlockTimer);let pending=false;
- unlockTimer=setInterval(async()=>{
-  if(pending||generation!==identityGeneration||selectedAdmin!==member)return;
-  if(Date.now()/1000>result.expiresAt){clearInterval(unlockTimer);$('admin-unlock-status').textContent='Expired. Press Use phone passkey to try again.';return;}
-  pending=true;
-  try{const state=await window.stati.operatorUnlockStatus(result.token);if(state.approved&&generation===identityGeneration&&selectedAdmin===member)await finishAdminUnlock(generation);}
-  catch(e){if(generation===identityGeneration)error(e);}finally{pending=false;}
- },2000);
+ if(!selectedAdmin||identityChoicePending)return;
+ if(selectedAdmin.role!=='admin'){
+  $('station-backup-label').hidden=true;
+  $('station-backup-code').value='';
+  $('operator-unlock-submit').hidden=true;
+ }
+ await startOperatorQR();
 }));
+async function startOperatorQR(backupCode){
+ if(!selectedAdmin||identityChoicePending)return;
+ const generation=identityGeneration,member=selectedAdmin;
+ identityChoicePending=true;
+ clearInterval(unlockTimer);
+ $('admin-unlock-qr').hidden=true;
+ $('admin-unlock-qr').removeAttribute('src');
+ $('admin-unlock-status').textContent='Preparing sign-in…';
+ try{
+  const result=await window.stati.operatorUnlock(member.id,backupCode);
+  if(generation!==identityGeneration||selectedAdmin!==member)return;
+  $('admin-unlock-qr').src=result.qr;
+  $('admin-unlock-qr').hidden=false;
+  $('admin-unlock-status').textContent=backupCode
+   ?'Ask an administrator to scan and approve this sign-in.'
+   :'Scan with your phone, then approve with your passkey.';
+  let pending=false;
+  unlockTimer=setInterval(async()=>{
+   if(pending||generation!==identityGeneration||selectedAdmin!==member)return;
+   if(Date.now()/1000>result.expiresAt){
+    clearInterval(unlockTimer);
+    $('admin-unlock-qr').hidden=true;
+    $('admin-unlock-qr').removeAttribute('src');
+    $('admin-unlock-status').textContent=backupCode?'Expired. Enter a new backup code to try again.':'Expired. Use your phone passkey to try again.';
+    return;
+   }
+   pending=true;
+   try{
+    const state=await window.stati.operatorUnlockStatus(result.token);
+    if(state.approved&&generation===identityGeneration&&selectedAdmin===member)await finishAdminUnlock(generation);
+   }catch(e){
+    if(generation===identityGeneration&&selectedAdmin===member){
+     clearInterval(unlockTimer);
+     $('admin-unlock-qr').hidden=true;
+     $('admin-unlock-qr').removeAttribute('src');
+     $('admin-unlock-status').textContent=e.message;
+    }
+   }finally{pending=false;}
+  },2000);
+ }catch(e){
+  if(generation===identityGeneration&&selectedAdmin===member)$('admin-unlock-status').textContent=e.message;
+ }finally{
+  if(generation===identityGeneration)identityChoicePending=false;
+ }
+}
 
 bind('history-close',()=>{$('record-panel').hidden=true;});bind('history-clear',()=>run(async()=>{await window.stati.clearHistory();filesSignature='';await refresh();}));
 
