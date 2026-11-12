@@ -15,3 +15,11 @@
 When reporting an issue, include your device, OS version, Stați build, the screen, and the exact error. Keep invite codes, passkeys, and personal account details out of public reports.
 
 [Connect a computer](https://github.com/Hapi-Products/stati/wiki/Connect-a-Computer) · [Updates](https://github.com/Hapi-Products/stati/wiki/Updates)
+
+
+## Report a problem on iPhone or iPad
+
+1. In development build 46, open **Profile → Diagnostics** on iPhone or **Account → Diagnostics** on iPad.
+2. Check the app version and recent errors. Use **Copy diagnostics** or **Share diagnostics** to keep a copy.
+3. Choose **Report a problem**. You can review the report and choose whether to attach recent errors before opening the GitHub draft.
+4. Add what you expected and the steps to reproduce the problem. GitHub issues are public. Stați’s diagnostic log contains timestamps, the app area and error type. Keep private church details out of your description.
