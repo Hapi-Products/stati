@@ -3,14 +3,47 @@ import Observation
 
 @MainActor @Observable final class AppIconAppearance {
     static let shared = AppIconAppearance()
+    static let iconNames = ["Blue", "Gold", "Green", "Greyscale", "Red"]
+    private static let iPadPreferenceKey = "stati.worship.appIcon"
+    @ObservationIgnored private var applying = false
     private(set) var name = "Blue"
     private init() { synchronize() }
     func synchronize() {
         let applied = UIApplication.shared.alternateIconName?.replacingOccurrences(of: "AppIcon", with: "") ?? "Blue"
-        name = ["Gold", "Green", "Greyscale", "Red"].contains(applied) ? applied : "Blue"
+        name = Self.iconNames.contains(applied) ? applied : "Blue"
         UINavigationBar.appearance().tintColor = UIColor(accent)
         UIBarButtonItem.appearance().tintColor = UIColor(accent)
     }
+    func apply(_ selection: String, updatePreference: Bool = true) async throws {
+        guard !applying, Self.iconNames.contains(selection), UIApplication.shared.supportsAlternateIcons else { return }
+        applying = true
+        defer { applying = false }
+        let icon = selection == "Blue" ? nil : "AppIcon" + selection
+        try await UIApplication.shared.setAlternateIconName(icon)
+        synchronize()
+        if updatePreference, UIDevice.current.userInterfaceIdiom == .pad {
+            UserDefaults.standard.set(name, forKey: Self.iPadPreferenceKey)
+        }
+    }
+
+    func applyIPadPreference() async throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad, !applying else { return }
+        let defaults = UserDefaults.standard
+        let key = Self.iPadPreferenceKey
+        guard let selected = defaults.string(forKey: key), Self.iconNames.contains(selected) else {
+            defaults.set(name, forKey: key)
+            return
+        }
+        guard selected != name, UIApplication.shared.supportsAlternateIcons else { return }
+        do {
+            try await apply(selected, updatePreference: false)
+        } catch {
+            synchronize()
+            if defaults.string(forKey: key) == selected { defaults.set(name, forKey: key) }
+            throw error
+        }
+    }
+
     var accent: Color { Color(uiColor: Self.adaptiveColor(name)) }
     // UIKit resolves dynamic colors on background rendering queues too.
     nonisolated static func adaptiveColor(_ selected: String) -> UIColor {

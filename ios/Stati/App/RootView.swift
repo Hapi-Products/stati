@@ -61,7 +61,11 @@ struct RootView: View {
                 #endif
                 await store.refresh()
                 #if DEBUG && targetEnvironment(simulator)
-                if NativeReview.route == "shortcut-song" {
+                if ["ipad-system-settings", "phone-system-settings"].contains(NativeReview.route ?? ""),
+                   let url = URL(string: UIApplication.openSettingsURLString) {
+                    await UIApplication.shared.open(url)
+                }
+                else if NativeReview.route == "shortcut-song" {
                     let intent = FindStatiSong()
                     intent.query = "Amazing Grace"
                     _ = try? await intent.perform()

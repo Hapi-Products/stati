@@ -2,6 +2,7 @@ import SwiftUI
 import VisionKit
 
 struct IPadSharedFilesView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let store: AppStore
     let defaultGroup: String
@@ -84,7 +85,8 @@ struct IPadSharedFilesView: View {
                     }
                 }
             }
-            .onAppear { if reader == nil { reader = ReaderPreferences(ownerID: ownerID) } }
+            .onAppear { if reader == nil { reader = ReaderPreferences(ownerID: ownerID, writesDeviceSettings: true) } }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { reader?.reload() } }
             .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in reader?.reload() }
             .searchable(text: $query, placement: .toolbar, prompt: "Search loaded group files").searchToolbarBehavior(.minimize)
             .fullScreenCover(item: $preview, onDismiss: { Task { await load() } }) { StatiFileViewer(request: $0) }

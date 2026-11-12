@@ -9,6 +9,7 @@ struct SongGalleryView: View {
     @State private var preferences: ReaderPreferences
     @Environment(\.scenePhase) private var scenePhase
     @State private var modeOverride: SongReaderMode?
+    @State private var showingReaderHelp = false
     private var readerMode: SongReaderMode { modeOverride ?? preferences.settings.mode }
     @State private var preview: FilePreviewRequest?
     @State private var linking = false
@@ -57,6 +58,7 @@ struct SongGalleryView: View {
                 selectionChanged(model.selected.id)
             }
         }
+        .sheet(isPresented: $showingReaderHelp) { WorshipHelpView(topic: .reader) }
         .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); modeOverride = nil } }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
@@ -125,6 +127,7 @@ struct SongGalleryView: View {
             if iPad, let song = model.song {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        Button("Reader tips", systemImage: "lightbulb") { showingReaderHelp = true }
                         Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
                         Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
                         Menu("Notes", systemImage: "note.text") { notesActions }

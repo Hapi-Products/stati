@@ -4,6 +4,7 @@ import SwiftUI
 struct StatiApp: App {
     @Environment(\.scenePhase) private var phase
     @State private var store = AppStore()
+    @State private var iconError: String?
     init() {
         UINavigationBar.appearance().tintColor = UIColor(named: "AccentColor")
         UIBarButtonItem.appearance().tintColor = UIColor(named: "AccentColor")
@@ -15,6 +16,24 @@ struct StatiApp: App {
         #endif
     }
     var body: some Scene {
-        WindowGroup { RootView().environment(store).tint(AppIconAppearance.shared.accent).onChange(of: phase) { _, phase in if phase == .active { AppIconAppearance.shared.synchronize() } } }
+        WindowGroup {
+            RootView()
+                .environment(store)
+                .tint(AppIconAppearance.shared.accent)
+                .task(id: phase) {
+                    guard phase == .active else { return }
+                    AppIconAppearance.shared.synchronize()
+                    do { try await AppIconAppearance.shared.applyIPadPreference() }
+                    catch { iconError = error.localizedDescription }
+                }
+                .alert("Could not change icon", isPresented: Binding(
+                    get: { iconError != nil },
+                    set: { if !$0 { iconError = nil } }
+                )) {
+                    Button("OK", role: .cancel) { iconError = nil }
+                } message: {
+                    Text(iconError ?? "")
+                }
+        }
     }
 }

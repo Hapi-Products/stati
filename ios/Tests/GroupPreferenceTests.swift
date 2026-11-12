@@ -3,6 +3,23 @@ import Foundation
 @testable import StatiCore
 
 @Suite @MainActor struct GroupPreferenceTests {
+    @Test func systemGroupModeMirrorsSimpleChoicesAndKeepsNamedGroupsInTheirAccount() throws {
+        let suite = "stati-group-mirror-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        GroupPreference.saveWorship(.named("private-choir"), ownerID: "a", defaults: defaults)
+        #expect(defaults.string(forKey: "stati.worship.defaultGroupMode") == "saved")
+        #expect(GroupPreference.readWorship(ownerID: "b", defaults: defaults) == .automatic)
+        defaults.set("originalSongs", forKey: "stati.worship.defaultGroupMode")
+        #expect(GroupPreference.readWorship(ownerID: "a", defaults: defaults) == .originalSongs)
+        defaults.set("saved", forKey: "stati.worship.defaultGroupMode")
+        #expect(GroupPreference.readWorship(ownerID: "a", defaults: defaults) == .named("private-choir"))
+
+        GroupPreference.saveWorship(.allGroups, ownerID: "a", defaults: defaults)
+        #expect(defaults.string(forKey: "stati.worship.defaultGroupMode") == "allGroups")
+        #expect(GroupPreference.read(ownerID: "a", defaults: defaults) == .named("private-choir"))
+    }
     @Test func namedIdentityCannotCollideWithALegacyLabel() {
         let id = UUID().uuidString.lowercased()
         #expect(GroupSelection.named(id) != .legacy(id))

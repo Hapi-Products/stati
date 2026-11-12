@@ -16,7 +16,7 @@ struct IPadAccountView: View {
                 if let person = store.me { Section { HStack(spacing: 16) { MemberAvatar(api: store.api, path: person["photoUrl"].text, initials: String(person["first_name"].text.prefix(1)), size: 54); Text(person.personName).font(.title3.weight(.semibold)) } } }
                 DefaultComputerPicker()
                 Section { NavigationLink("Worship") { worshipSettings }.navigationDestination(isPresented: $reviewWorship) { worshipSettings } }
-                Section { NavigationLink("Features") { IPadFeaturesView() }.navigationDestination(isPresented: $reviewFeatures) { IPadFeaturesView() } }
+                Section { NavigationLink("Features") { IPadFeaturesView(ownerID: preferences.ownerID) }.navigationDestination(isPresented: $reviewFeatures) { IPadFeaturesView(ownerID: preferences.ownerID) } }
                 Section { NavigationLink("What’s New", value: MoreRoute.whatsNew); NavigationLink("Privacy", value: MoreRoute.privacy) }
                 Section { Button("Sign out", role: .destructive) { signingOut = true; Task { await store.signOut(); dismiss() } }.disabled(signingOut) }
             }.navigationTitle("Account").navigationBarTitleDisplayMode(.inline)
@@ -24,7 +24,7 @@ struct IPadAccountView: View {
                 .navigationDestination(for: MoreRoute.self) { route in switch route { case .team: IPadTeamView(); case .whatsNew: WhatsNewView(); case .privacy: PrivacyView(); default: EmptyView() } }
                 .onAppear {
                     #if DEBUG && targetEnvironment(simulator)
-                    if ["ipad-features", "ipad-pdf-columns-features"].contains(NativeReview.route ?? "") { reviewFeatures = true }
+                    if ["ipad-features", "ipad-pdf-columns-features", "ipad-worship-help"].contains(NativeReview.route ?? "") { reviewFeatures = true }
                     if NativeReview.route == "ipad-worship" { reviewWorship = true }
                     if NativeReview.route == "ipad-team" { path = [.team] }
                     if NativeReview.route == "ipad-privacy" { path = [.privacy] }

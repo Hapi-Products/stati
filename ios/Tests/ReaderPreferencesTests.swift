@@ -21,6 +21,30 @@ import Foundation
         #expect(!reopened.settings.clickerEnabled)
         #expect(ReaderPreferences(ownerID: "b", defaults: defaults).settings.mode == .slides)
     }
+    @Test func inAppAndSystemSettingsShareOverridesAndKeepOtherSavedValues() throws {
+        let suite = "stati-reader-mirror-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let saved = ReaderPreferences(ownerID: "a", defaults: defaults)
+        saved.settings.slideSize = .extraLarge
+        let inApp = ReaderPreferences(ownerID: "a", defaults: defaults, writesDeviceSettings: true)
+        inApp.settings.pdfColumns = .two
+        #expect(defaults.string(forKey: "stati.reader.pdfColumns") == "2")
+        #expect(defaults.object(forKey: "stati.reader.slideSize") == nil)
+        #expect(ReaderPreferences(ownerID: "b", defaults: defaults).settings.slideSize == .large)
+
+        defaults.set("document", forKey: "stati.reader.mode")
+        defaults.set("off", forKey: "stati.reader.clicker")
+        inApp.reload()
+        #expect(inApp.settings.mode == .document)
+        #expect(!inApp.settings.clickerEnabled)
+        #expect(inApp.settings.slideSize == .extraLarge)
+
+        defaults.set("saved", forKey: "stati.reader.pdfColumns")
+        inApp.reload()
+        #expect(inApp.settings.pdfColumns == .one)
+    }
     @Test func reduceMotionDisablesReaderTransitionsAndRetentionHasExactCutoffs() {
         for effect in ReaderTransition.allCases { #expect(effect.effective(reduceMotion: true) == .instant) }
         let now = Date(timeIntervalSince1970: 2_000_000)

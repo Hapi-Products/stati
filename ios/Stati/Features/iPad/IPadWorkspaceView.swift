@@ -23,7 +23,7 @@ struct IPadWorkspaceView: View {
 
         if ["ipad-service", "ipad-service-reader", "ipad-service-selector", "ipad-service-requests", "ipad-service-share"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "service", servicePath: [.service(NativeReview.plan["id"].text)])) }
         if route == "ipad-service-list" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "service")) }
-        if ["ipad-account", "ipad-worship", "ipad-team", "ipad-privacy", "ipad-whats-new", "ipad-features", "ipad-pdf-columns-features"].contains(route) { _account = State(initialValue: true) }
+        if ["ipad-account", "ipad-worship", "ipad-team", "ipad-privacy", "ipad-whats-new", "ipad-features", "ipad-pdf-columns-features", "ipad-worship-help"].contains(route) { _account = State(initialValue: true) }
         #endif
     }
     private var preferredPlacement: AdaptableTabBarPlacement {
@@ -111,6 +111,7 @@ struct IPadWorkspaceView: View {
             .task(id: store.accountEpoch.uuidString + store.selectedComputer) { await loadWorkspace() }
             .task(id: scenePhase) {
                 guard scenePhase == .active else { return }
+                preferences.reload()
                 while !Task.isCancelled { do { try await Task.sleep(for: store.refreshDelay); await overview.loadServices(); await groups.load() } catch { return } }
             }
             .onChange(of: preferences.selection) { applyDefault() }

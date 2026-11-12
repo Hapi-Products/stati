@@ -2,12 +2,15 @@ import Foundation
 import Observation
 @MainActor @Observable final class ReaderPreferences {
     let ownerID: String
-    var settings: SongReaderSettings { didSet { save() } }
+    var settings: SongReaderSettings { didSet { save(changesFrom: oldValue) } }
     @ObservationIgnored private let defaults: UserDefaults
+    private let writesDeviceSettings: Bool
     private var reloading = false
     private var key: String { "stati.ipad.reader." + ownerID }
-    init(ownerID: String, defaults: UserDefaults = .standard) {
-        self.ownerID = ownerID; self.defaults = defaults
+    init(ownerID: String, defaults: UserDefaults = .standard, writesDeviceSettings: Bool = false) {
+        self.ownerID = ownerID
+        self.defaults = defaults
+        self.writesDeviceSettings = writesDeviceSettings
         settings = Self.read(ownerID: ownerID, defaults: defaults)
     }
     func reload() {
@@ -30,8 +33,22 @@ import Observation
         return settings
     }
 
-    private func save() {
-        guard !reloading, !ownerID.isEmpty, let bytes = try? JSONEncoder().encode(settings) else { return }
-        defaults.set(bytes, forKey: key)
+    private func save(changesFrom previous: SongReaderSettings) {
+        guard !reloading, !ownerID.isEmpty else { return }
+        if writesDeviceSettings {
+            func write(_ key: String, _ oldValue: String, _ newValue: String) {
+                if oldValue != newValue { defaults.set(newValue, forKey: "stati.reader." + key) }
+            }
+            write("mode", previous.mode.rawValue, settings.mode.rawValue)
+            write("slideSize", previous.slideSize.rawValue, settings.slideSize.rawValue)
+            write("transition", previous.transition.rawValue, settings.transition.rawValue)
+            write("pdfColumns", String(previous.pdfColumns.rawValue), String(settings.pdfColumns.rawValue))
+            write("retention", String(previous.retention.rawValue), String(settings.retention.rawValue))
+            write("selectorSource", previous.selectorSource.rawValue, settings.selectorSource.rawValue)
+            write("clicker", previous.clickerEnabled ? "on" : "off", settings.clickerEnabled ? "on" : "off")
+            write("largePreviews", previous.largePreviews ? "on" : "off", settings.largePreviews ? "on" : "off")
+        } else if let bytes = try? JSONEncoder().encode(settings) {
+            defaults.set(bytes, forKey: key)
+        }
     }
 }

@@ -42,7 +42,83 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
+			<string>Worship</string>
+			<key>FooterText</key>
+			<string>Choose a named group or song folder in Stați. Icon changes are applied when you return to Stați.</string>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Default group</string>
+			<key>Key</key>
+			<string>stati.worship.defaultGroupMode</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Use Stați selection</string>
+				<string>Automatic</string>
+				<string>Original songs</string>
+				<string>All groups</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>automatic</string>
+				<string>originalSongs</string>
+				<string>allGroups</string>
+			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>App icon</string>
+			<key>Key</key>
+			<string>stati.worship.appIcon</string>
+			<key>DefaultValue</key>
+			<string>current</string>
+			<key>Titles</key>
+			<array>
+				<string>Current icon</string>
+				<string>Blue</string>
+				<string>Gold</string>
+				<string>Green</string>
+				<string>Greyscale</string>
+				<string>Red</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>current</string>
+				<string>Blue</string>
+				<string>Gold</string>
+				<string>Green</string>
+				<string>Greyscale</string>
+				<string>Red</string>
+			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
 			<string>Reader</string>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -57,7 +133,7 @@
 			<array>
 				<string>Use saved preference</string>
 				<string>Slides</string>
-				<string>PDF</string>
+				<string>PDF document</string>
 				<string>Text</string>
 			</array>
 			<key>Values</key>
@@ -66,6 +142,10 @@
 				<string>slides</string>
 				<string>document</string>
 				<string>text</string>
+			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
 			</array>
 		</dict>
 		<dict>
@@ -93,6 +173,10 @@
 				<string>large</string>
 				<string>extraLarge</string>
 			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -106,14 +190,18 @@
 			<key>Titles</key>
 			<array>
 				<string>Use saved preference</string>
-				<string>One</string>
-				<string>Two</string>
+				<string>1 column</string>
+				<string>2 columns</string>
 			</array>
 			<key>Values</key>
 			<array>
 				<string>saved</string>
 				<string>1</string>
 				<string>2</string>
+			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
 			</array>
 		</dict>
 		<dict>
@@ -141,6 +229,10 @@
 				<string>fade</string>
 				<string>instant</string>
 			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -162,6 +254,10 @@
 				<string>saved</string>
 				<string>recents</string>
 				<string>currentService</string>
+			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
 			</array>
 		</dict>
 		<dict>
@@ -185,6 +281,20 @@
 				<string>on</string>
 				<string>off</string>
 			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Library</string>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -206,6 +316,10 @@
 				<string>saved</string>
 				<string>off</string>
 				<string>on</string>
+			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
 			</array>
 		</dict>
 		<dict>
@@ -229,6 +343,10 @@
 				<string>grid</string>
 				<string>list</string>
 			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -237,6 +355,10 @@
 			<string>Recents</string>
 			<key>FooterText</key>
 			<string>Only viewing history expires.</string>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -263,22 +385,34 @@
 				<string>7</string>
 				<string>14</string>
 			</array>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
 			<string>Updates</string>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 		<dict>
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
-			<string>Show What’s New on iPad</string>
+			<string>Show What’s New after updates</string>
 			<key>Key</key>
 			<string>nativeReleaseNotes.automaticOnIPad</string>
 			<key>DefaultValue</key>
 			<true/>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
 		</dict>
 	</array>
 </dict>

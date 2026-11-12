@@ -7,7 +7,7 @@ struct AppIconPickerView: View {
     @State private var preview: String? = UIApplication.shared.alternateIconName.map { String($0.dropFirst(7)) } ?? "Blue"
     @State private var changing = false
     @State private var message = ""
-    private let names = ["Blue", "Gold", "Green", "Greyscale", "Red"]
+    private let names = AppIconAppearance.iconNames
     private var chosen: String { if let preview, names.contains(preview) { preview } else { "Blue" } }
     private var isCurrent: Bool { current == iconName(chosen) }
     var body: some View {
@@ -99,9 +99,8 @@ struct AppIconPickerView: View {
     private func iconName(_ name: String) -> String? { name == "Blue" ? nil : "AppIcon" + name }
     private func apply() async {
         guard !changing, UIApplication.shared.supportsAlternateIcons, !isCurrent else { return }
-        let requested = iconName(chosen)
         changing = true; defer { changing = false }
-        do { try await UIApplication.shared.setAlternateIconName(requested); current = UIApplication.shared.alternateIconName; AppIconAppearance.shared.synchronize() }
+        do { try await AppIconAppearance.shared.apply(chosen); current = UIApplication.shared.alternateIconName }
         catch { current = UIApplication.shared.alternateIconName; message = error.localizedDescription }
     }
 }
