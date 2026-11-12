@@ -94,12 +94,23 @@ async function change(request:Request,env:Env,authority:MinistryAuthority,id:str
  if(!result[0].meta.changes)throw new HttpError(409,'This group, your access or its selected members changed. Refresh before saving again.');
  return json({ok:true,group:await detail(env,authority,id)});
 }
+async function archive(request:Request,env:Env,authority:MinistryAuthority,id:string){
+ const {revision}=await body(request,update.pick({revision:true}));
+ const guard=ministryAuthorityGuard(authority,'manageWorship'),access=worshipGroupAccess(authority,'worship_groups.id',true),time=now();
+ const result=await env.DB.batch([
+  env.DB.prepare(`UPDATE worship_groups SET archived_at=?,updated_at=?,revision=revision+1 WHERE id=? AND revision=? AND archived_at IS NULL AND ${guard.sql} AND ${access.sql}`).bind(time,time,id,revision,...guard.params,...access.params),
+  env.DB.prepare("INSERT INTO audit(id,actor_id,action,subject_id,created_at) SELECT ?,?,'archive-worship-group',?,? WHERE changes()>0").bind(crypto.randomUUID(),authority.user.id,id,time),
+ ]);
+ if(!result[0].meta.changes)throw new HttpError(409,'This group or your access changed. Refresh before removing it.');
+ return json({ok:true});
+}
 export async function worshipGroupsRoute(request:Request,env:Env,id?:string){
  if(id)validId(id);
  const capability=request.method==='GET'?'readSongs':'manageWorship',authority=await requireMinistryCapability(request,env,capability);
  if(request.method==='GET')return id?json({group:await detail(env,authority,id)}):list(request,env,authority);
  if(request.method==='POST'&&!id)return create(request,env,authority);
  if(request.method==='PATCH'&&id)return change(request,env,authority,id);
+ if(request.method==='DELETE'&&id)return archive(request,env,authority,id);
  throw new HttpError(405,'Use the group list or its member settings.');
 }
 
