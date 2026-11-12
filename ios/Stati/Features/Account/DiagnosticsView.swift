@@ -12,7 +12,7 @@ struct DiagnosticsView: View {
         return "\(version) (\(build))"
     }
     private var platform: String { UIDevice.current.userInterfaceIdiom == .pad ? "iPadOS" : "iOS" }
-    private var appInfo: String { "Stați \(version) · \(platform) \(UIDevice.current.systemVersion)" }
+    private var appInfo: String { "Stați \(version) · \(platform) \(UIDevice.current.systemVersion)\nSiri AI preview — \(SiriPreviewAvailability.current.detail)" }
     private var report: String {
         ([appInfo, ""] + (entries.isEmpty ? ["No recent errors."] : entries)).joined(separator: "\n")
     }
@@ -22,6 +22,10 @@ struct DiagnosticsView: View {
             Section("App Information") {
                 LabeledContent("Version", value: version)
                 LabeledContent(platform, value: UIDevice.current.systemVersion)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Siri AI preview")
+                    Text(SiriPreviewAvailability.current.detail).foregroundStyle(.secondary)
+                }
             }
             Section {
                 Button("Copy diagnostics", systemImage: "document.on.document") {

@@ -6,7 +6,7 @@ import Foundation
     static var receipts: [String: JSONValue] = [:]
     static var putCount = 0
     static var loseNextReply = false
-    private static func requestBody(_ request: URLRequest) -> Data? {
+    static func requestBody(_ request: URLRequest) -> Data? {
         if let body = request.httpBody { return body }
         guard let stream = request.httpBodyStream else { return nil }
         stream.open(); defer { stream.close() }

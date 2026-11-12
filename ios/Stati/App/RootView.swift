@@ -135,7 +135,7 @@ struct RootView: View {
                 await TaskEventFeed(api: store.api).run(isCurrent: { store.me?.id == owner && store.accountEpoch == epoch && store.api.signedIn && scenePhase == .active }, invalidate: { store.workspaceInvalidated($0) }, connected: { live in if store.me?.id == owner && store.accountEpoch == epoch { store.workspaceLive = live } })
             }
             .onChange(of: store.me?.id) { previous, current in
-                if previous != nil && previous != current { shortcuts.request = nil; shortcutRequest = nil; profileImage = nil; libraryQuery = ""; libraryPath = []; taskPath = []; morePath = []; libraryArea = "songs"; tab = "send" }
+                if previous != nil && previous != current { shortcuts.request = nil; shortcuts.readerID = nil; shortcuts.placementReaderID = nil; shortcutRequest = nil; profileImage = nil; libraryQuery = ""; libraryPath = []; taskPath = []; morePath = []; libraryArea = "songs"; tab = "send" }
             }
             .onChange(of: store.canReadSongs) { _, allowed in if !allowed && tab == "songs" { tab = "send"; libraryQuery = ""; libraryPath = [] } }
             .task(id: taskEventScope + tab) {

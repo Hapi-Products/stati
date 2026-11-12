@@ -150,7 +150,7 @@ nonisolated final class NativeReviewProtocol: URLProtocol, @unchecked Sendable {
                 client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost))
                 return
             }
-            if let result = NativeSendNetworkCheck.response(request) {
+            if let result = NativeSendNetworkCheck.response(request) ?? NativeReaderReview.placementResponse(request) {
                 let response = HTTPURLResponse(url: request.url!, statusCode: result.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 if let data = try? JSONEncoder().encode(result.body) { client?.urlProtocol(self, didLoad: data) }

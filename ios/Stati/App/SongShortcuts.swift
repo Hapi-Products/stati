@@ -6,24 +6,28 @@ struct SongShortcutRequest: Identifiable {
     let query: String
     var destination: Destination = .songs
 
-    enum Destination { case songs, services, recents }
+    enum Destination { case songs, services, recents, placeSong }
 }
 
 @MainActor @Observable
 final class SongShortcutNavigation {
     static let shared = SongShortcutNavigation()
     var request: SongShortcutRequest?
+    var readerID: UUID?
+    var placementReaderID: UUID?
 }
 
 enum StatiShortcutError: LocalizedError {
     case disabled
     case siriSearchDisabled
     case missingSong
+    case previewUnavailable(String)
 
     var errorDescription: String? {
         switch self {
         case .disabled: "Turn on Siri Shortcuts in Stați’s Features page to use this action."
         case .siriSearchDisabled: "Turn on Siri AI Song Search in Stați’s Features page."
+        case .previewUnavailable(let reason): reason
         case .missingSong: "Give Siri a song title or part of the lyrics."
         }
     }
@@ -63,6 +67,7 @@ struct SearchStatiLibrary: ShowInAppSearchResultsIntent {
     var criteria: StringSearchCriteria
 
     @MainActor func perform() async throws -> some IntentResult {
+        guard SiriPreviewAvailability.current == .ready else { throw StatiShortcutError.previewUnavailable(SiriPreviewAvailability.current.detail) }
         guard UserDefaults.standard.bool(forKey: "stati.siriAI.songSearch") else {
             throw StatiShortcutError.siriSearchDisabled
         }
@@ -106,6 +111,34 @@ struct OpenStatiServices: AppIntent {
     }
 }
 
+struct PlaceStatiSongInService: AppIntent {
+    static let title: LocalizedStringResource = "Save Song to a Service"
+    static let description = IntentDescription("Place the song open in Stați in a service, or find a song and choose its position in the running order.")
+    static let openAppWhenRun = true
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    @Parameter(title: "Song title or lyrics")
+    var query: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Save a song to a service") { \.$query }
+    }
+
+    @MainActor func perform() async throws -> some IntentResult {
+        let term = (query ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard UserDefaults.standard.object(forKey: "stati.shortcuts.enabled") as? Bool ?? true else {
+            throw StatiShortcutError.disabled
+        }
+        let navigation = SongShortcutNavigation.shared
+        if term.isEmpty, let readerID = navigation.readerID {
+            navigation.placementReaderID = readerID
+        } else {
+            try StatiShortcutError.open(SongShortcutRequest(query: String(term.prefix(200)), destination: .placeSong))
+        }
+        return .result()
+    }
+}
+
 struct StatiShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -121,6 +154,12 @@ struct StatiShortcuts: AppShortcutsProvider {
             systemImageName: "music.note.list"
         )
         AppShortcut(intent: OpenStatiServices(), phrases: ["Show services in \(.applicationName)"], shortTitle: "Services", systemImageName: "calendar")
+        AppShortcut(
+            intent: PlaceStatiSongInService(),
+            phrases: ["Save this song to a service in \(.applicationName)", "Add a song to a service in \(.applicationName)"],
+            shortTitle: "Save Song to a Service",
+            systemImageName: "text.badge.plus"
+        )
         AppShortcut(intent: OpenStatiRecents(), phrases: ["Show recent songs in \(.applicationName)"], shortTitle: "Recent Songs", systemImageName: "clock")
     }
 }
@@ -133,6 +172,7 @@ struct SongShortcutView: View {
     @State private var selection: SongGalleryRequest?
     @State private var query: String
     @State private var didSearch = false
+    @State private var songToPlace: APIRecord?
 
     init(store: AppStore, request: SongShortcutRequest) {
         self.store = store
@@ -160,7 +200,7 @@ struct SongShortcutView: View {
                         .buttonStyle(.plain)
                 }
             }
-            .navigationTitle("Songs")
+            .navigationTitle(request.destination == .placeSong ? "Choose a song" : "Songs")
             .searchable(text: $query, prompt: "Title or lyrics")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -179,6 +219,10 @@ struct SongShortcutView: View {
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.canReadSongs) { _, allowed in if !allowed { dismiss() } }
         .fullScreenCover(item: $selection) { SongGalleryView(store: store, request: $0) }
+        .sheet(item: $songToPlace) { song in
+            AddSongToService(computerID: store.selectedComputer, song: song) { songToPlace = nil }
+        }
+        .onChange(of: store.selectedComputer) { songToPlace = nil }
     }
 
     private func search() async {
@@ -193,6 +237,10 @@ struct SongShortcutView: View {
     }
 
     private func open(_ song: APIRecord) {
+        if request.destination == .placeSong {
+            songToPlace = song
+            return
+        }
         selection = SongGalleryRequest(computerID: store.selectedComputer, songs: results, selectedID: song.id)
     }
 }
@@ -205,8 +253,18 @@ struct SongShortcutDestination: View {
     var body: some View {
         Group {
             switch request.destination {
-            case .songs:
-                SongShortcutView(store: store, request: request)
+            case .songs, .placeSong:
+                if request.destination == .placeSong && !store.canPlan {
+                    ContentUnavailableView {
+                        Label("Service editing unavailable", systemImage: "calendar")
+                    } description: {
+                        Text("Your account needs permission to plan services.")
+                    } actions: {
+                        Button("Close") { dismiss() }
+                    }
+                } else {
+                    SongShortcutView(store: store, request: request)
+                }
             case .services, .recents:
                 NavigationStack {
                     Group {

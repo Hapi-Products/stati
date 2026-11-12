@@ -11,12 +11,16 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 48, title: "Simpler page controls", highlights: [
+    static let current = AppUpdate(id: 49, title: "Put a song in the running order", highlights: [
+        Highlight(title: "Save a song to a service", detail: "Use Siri or the song menu, choose a service, drag the song into place and tap Done.", icon: "text.badge.plus"),
+        Highlight(title: "Check Siri AI availability", detail: "Diagnostics explains which device requirements are met.", icon: "stethoscope")
+    ], details: [])
+    static let previous: [AppUpdate] = [
+        AppUpdate(id: 48, title: "Simpler page controls", highlights: [
         Highlight(title: "Move through songs", detail: "The arrows and page counter share one glass control.", icon: "arrow.left.and.right"),
         Highlight(title: "Set the slide text size", detail: "Tap the slider track or drag the thumb to adjust the size.", icon: "textformat.size"),
         Highlight(title: "See recent songs and files", detail: "Recents has one toolbar action to clear your history.", icon: "clock")
-    ], details: ["The beta is identified by its app name and uses a fixed icon and accent."])
-    static let previous: [AppUpdate] = [
+    ], details: ["The beta is identified by its app name and uses a fixed icon and accent."]),
         AppUpdate(id: 47, title: "Stazi Beta", highlights: [], details: ["The development app uses a fixed icon and accent. Recents shows your history without a search bar."]),
         AppUpdate(id: 46, title: "Simpler settings and support", highlights: [
         Highlight(title: "Find Siri in Features", detail: "Open Features in Stați for Siri and reading controls. Apple Settings keeps the beta preference and app information.", icon: "gearshape"),

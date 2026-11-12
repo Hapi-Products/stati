@@ -18,6 +18,9 @@ struct SongGalleryView: View {
     @State private var commenting = false
     @State private var exportError = ""
     @State private var focused = false
+    @State private var shortcutNavigation = SongShortcutNavigation.shared
+    @State private var shortcutReaderID = UUID()
+    @State private var songToPlace: APIRecord?
     @State private var choosingSong = false
     @State private var exporting = false
     @State private var shareAnchor = SongReaderShareAnchor()
@@ -37,6 +40,9 @@ struct SongGalleryView: View {
         .task {
             if model.song == nil { await model.load() }
             #if DEBUG && targetEnvironment(simulator)
+            if NativeReview.route == "reader-place-song" {
+                _ = try? await PlaceStatiSongInService().perform()
+            }
             if NativeReview.route == "reader-document-switch" {
                 try? await Task.sleep(for: .seconds(1))
                 modeOverride = .slides
@@ -59,6 +65,22 @@ struct SongGalleryView: View {
             }
         }
 
+        .onAppear { shortcutNavigation.readerID = shortcutReaderID }
+        .onDisappear {
+            if shortcutNavigation.readerID == shortcutReaderID { shortcutNavigation.readerID = nil }
+        }
+        .onChange(of: shortcutNavigation.placementReaderID) { _, readerID in
+            guard readerID == shortcutReaderID else { return }
+            shortcutNavigation.placementReaderID = nil
+            guard store.canPlan, let song = model.song else {
+                exportError = "Open a library song using an account that can plan services."
+                return
+            }
+            songToPlace = song
+        }
+        .sheet(item: $songToPlace) { song in
+            AddSongToService(computerID: model.request.computerID, song: song) { songToPlace = nil }
+        }
         .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); modeOverride = nil } }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
@@ -137,6 +159,9 @@ struct SongGalleryView: View {
                         Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
                         Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
                         Menu("Notes", systemImage: "note.text") { notesActions }
+                        if store.canPlan {
+                            Button("Add to service", systemImage: "text.badge.plus") { songToPlace = song }
+                        }
                         Menu("Share", systemImage: "square.and.arrow.up") {
                             ForEach(SongExportKind.allCases) { kind in
                                 Button(kind.title, systemImage: kind.symbol) { Task { await prepareExport(song, kind: kind) } }

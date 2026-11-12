@@ -8,7 +8,7 @@ struct SiriFeaturesSection: View {
     var body: some View {
         Section {
             Toggle("Siri Shortcuts", isOn: $shortcuts)
-            if #available(iOS 27.3, *) {
+            if SiriPreviewAvailability.current == .ready {
                 Toggle("Siri AI Song Search", isOn: $songSearch)
             }
             ShortcutsLink()
