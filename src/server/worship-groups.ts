@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {body,hash,HttpError,json,now} from './core';
+import {requireStationMinistry,stationMinistryGuard} from './station-catalog';
 import {ministryAuthorityGuard,requireMinistryCapability,type MinistryAuthority} from './ministry-roles';
 import type {WorshipGroup,WorshipGroupDetail,WorshipGroupList,WorshipGroupMember} from '../shared/worship-groups-types';
 
@@ -34,8 +35,8 @@ async function ensureMembers(env:Env,ids:string[],owner:string){
  const eligible=validMembers(ids,owner);
  if(!await env.DB.prepare('SELECT 1 WHERE '+eligible.sql).bind(...eligible.params).first())throw new HttpError(400,'Choose approved worship members for this group.');
 }
-async function detail(env:Env,authority:MinistryAuthority,id:string):Promise<WorshipGroupDetail>{
- const guard=ministryAuthorityGuard(authority,'readSongs'),access=worshipGroupAccess(authority,'named.id');
+async function detail(env:Env,authority:MinistryAuthority,id:string,deviceId?:string):Promise<WorshipGroupDetail>{
+ const guard=deviceId?stationMinistryGuard(authority,deviceId,'readSongs'):ministryAuthorityGuard(authority,'readSongs'),access=worshipGroupAccess(authority,'named.id');
  const where=`named.id=? AND named.archived_at IS NULL AND ${guard.sql} AND ${access.sql}`,params=[id,...guard.params,...access.params];
  const results=await env.DB.batch([
   env.DB.prepare(`SELECT named.*,(SELECT COUNT(*) FROM worship_group_members membership JOIN users member ON member.id=membership.user_id WHERE membership.group_id=named.id AND member.status='active') AS member_count FROM worship_groups named WHERE ${where}`).bind(...params),
@@ -47,10 +48,10 @@ async function detail(env:Env,authority:MinistryAuthority,id:string):Promise<Wor
  const members=(results[1].results as {id:string;first_name:string;last_initial:string;has_photo:number;ministry_role:string|null}[]).map(member=>({id:member.id,name:[member.first_name,member.last_initial?member.last_initial+'.':''].filter(Boolean).join(' '),photoUrl:member.has_photo?'/api/members/'+member.id+'/photo':null,ministryRole:member.ministry_role} satisfies WorshipGroupMember));
  return{...group(row,authority),members};
 }
-async function list(request:Request,env:Env,authority:MinistryAuthority){
+async function list(request:Request,env:Env,authority:MinistryAuthority,deviceId?:string){
  const before=new URL(request.url).searchParams.get('before');let cursor:{time:number;id:string}|null=null;
  if(before){const match=before.match(/^(\d{1,12}):([a-f\d-]{36})$/i);if(!match||!identifier.safeParse(match[2]).success)throw new HttpError(400,'Refresh the group list.');cursor={time:Number(match[1]),id:match[2]};}
- const guard=ministryAuthorityGuard(authority,'readSongs'),access=worshipGroupAccess(authority,'named.id');
+ const guard=deviceId?stationMinistryGuard(authority,deviceId,'readSongs'):ministryAuthorityGuard(authority,'readSongs'),access=worshipGroupAccess(authority,'named.id');
  const rows=await env.DB.prepare(`SELECT named.*,(SELECT COUNT(*) FROM worship_group_members membership JOIN users member ON member.id=membership.user_id WHERE membership.group_id=named.id AND member.status='active') AS member_count
  FROM worship_groups named WHERE named.archived_at IS NULL AND ${guard.sql} AND ${access.sql}${cursor?' AND (named.created_at<? OR (named.created_at=? AND named.id<?))':''} ORDER BY named.created_at DESC,named.id DESC LIMIT 101`)
  .bind(...guard.params,...access.params,...(cursor?[cursor.time,cursor.time,cursor.id]:[])).all<GroupRow>();
@@ -104,10 +105,10 @@ async function archive(request:Request,env:Env,authority:MinistryAuthority,id:st
  if(!result[0].meta.changes)throw new HttpError(409,'This group or your access changed. Refresh before removing it.');
  return json({ok:true});
 }
-export async function worshipGroupsRoute(request:Request,env:Env,id?:string){
+export async function worshipGroupsRoute(request:Request,env:Env,id?:string,deviceId?:string){
  if(id)validId(id);
- const capability=request.method==='GET'?'readSongs':'manageWorship',authority=await requireMinistryCapability(request,env,capability);
- if(request.method==='GET')return id?json({group:await detail(env,authority,id)}):list(request,env,authority);
+ const capability=request.method==='GET'?'readSongs':'manageWorship',authority=deviceId&&request.method==='GET'?await requireStationMinistry(request,env,deviceId,capability,true):await requireMinistryCapability(request,env,capability);
+ if(request.method==='GET')return id?json({group:await detail(env,authority,id,deviceId)}):list(request,env,authority,deviceId);
  if(request.method==='POST'&&!id)return create(request,env,authority);
  if(request.method==='PATCH'&&id)return change(request,env,authority,id);
  if(request.method==='DELETE'&&id)return archive(request,env,authority,id);
