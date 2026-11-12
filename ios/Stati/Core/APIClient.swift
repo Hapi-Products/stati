@@ -57,12 +57,23 @@ final class APIClient {
         if let cookie { request.setValue("stati_session=" + cookie, forHTTPHeaderField: "Cookie") }
         for (key, value) in headers { request.setValue(value, forHTTPHeaderField: key) }
         let (data, response): (Data, URLResponse)
-        if let file { (data, response) = try await session.upload(for: request, fromFile: file) }
-        else { (data, response) = try await session.data(for: request) }
+        do {
+            if let file { (data, response) = try await session.upload(for: request, fromFile: file) }
+            else { (data, response) = try await session.data(for: request) }
+        } catch {
+            if !Task.isCancelled, scope == generation, (error as? URLError)?.code != .cancelled {
+                DiagnosticsLog.record(.init(path: path), .transport)
+            }
+            throw error
+        }
         try Task.checkCancellation()
         guard scope == generation else { throw CancellationError() }
-        guard let http = response as? HTTPURLResponse else { throw APIError(status: 0, message: "The server did not respond. Try again.") }
+        guard let http = response as? HTTPURLResponse else {
+            DiagnosticsLog.record(.init(path: path), .invalidResponse)
+            throw APIError(status: 0, message: "The server did not respond. Try again.")
+        }
         guard (200..<300).contains(http.statusCode) else {
+            DiagnosticsLog.record(.init(path: path), .server(http.statusCode))
             let message = (try? JSONDecoder().decode(JSONValue.self, from: data))?["error"].text ?? ""
             throw APIError(status: http.statusCode, message: message.isEmpty ? "Stați could not complete this request (\(http.statusCode)). Try again." : message)
         }

@@ -53,6 +53,7 @@ enum WorshipHelpTopic {
     private var topic: WorshipHelpTopic?
     private weak var popover: UIViewController?
     private var presentationID = UUID()
+    private var spotlight: UIView?
 
     func register(_ view: UIView, at target: WorshipGuideTarget) {
         anchors[target] = Anchor(view)
@@ -67,6 +68,7 @@ enum WorshipHelpTopic {
     func stop() {
         presentationID = UUID()
         topic = nil
+        clearSpotlight()
         popover?.dismiss(animated: true)
         popover = nil
     }
@@ -76,6 +78,7 @@ enum WorshipHelpTopic {
         let id = UUID()
         presentationID = id
         self.popover = nil
+        clearSpotlight()
         popover.dismiss(animated: true) { [weak self] in
             guard let self, self.presentationID == id else { return }
             self.present(step: position)
@@ -103,6 +106,9 @@ enum WorshipHelpTopic {
         presentation.sourceRect = source.bounds
         presentation.delegate = self
         popover = controller
+        let highlight = WorshipGuideSpotlight(source: source, frame: presenter.view.bounds)
+        spotlight = highlight
+        presenter.view.addSubview(highlight)
         presenter.present(controller, animated: true)
     }
 
@@ -114,6 +120,55 @@ enum WorshipHelpTopic {
         guard popover === presentationController.presentedViewController else { return }
         popover = nil
         topic = nil
+        clearSpotlight()
+    }
+
+    private func clearSpotlight() {
+        spotlight?.removeFromSuperview()
+        spotlight = nil
+    }
+}
+
+private final class WorshipGuideSpotlight: UIView {
+    private weak var source: UIView?
+    private let shade = CAShapeLayer()
+    private let outline = CAShapeLayer()
+
+    init(source: UIView, frame: CGRect) {
+        self.source = source
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        accessibilityElementsHidden = true
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        shade.fillRule = .evenOdd
+        shade.fillColor = UIColor.black.withAlphaComponent(0.22).cgColor
+        outline.fillColor = UIColor.clear.cgColor
+        outline.strokeColor = source.tintColor.cgColor
+        outline.lineWidth = 2
+        layer.addSublayer(shade)
+        layer.addSublayer(outline)
+        if !UIAccessibility.isReduceMotionEnabled {
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 1
+            pulse.toValue = 0.52
+            pulse.duration = 1.25
+            pulse.autoreverses = true
+            pulse.repeatCount = .infinity
+            outline.add(pulse, forKey: "pulse")
+        }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let source, source.window != nil else { return }
+        let rect = source.convert(source.bounds, to: self).insetBy(dx: -4, dy: -3)
+        let target = UIBezierPath(roundedRect: rect, cornerRadius: 10)
+        let surrounding = UIBezierPath(rect: bounds)
+        surrounding.append(target)
+        shade.path = surrounding.cgPath
+        outline.path = target.cgPath
     }
 }
 

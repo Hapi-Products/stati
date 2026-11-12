@@ -1,5 +1,4 @@
 import SwiftUI
-import AppIntents
 
 struct IPadFeaturesView: View {
     @Environment(AppStore.self) private var store
@@ -7,9 +6,8 @@ struct IPadFeaturesView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var preferences: ReaderPreferences
     @State private var guide = WorshipGuide()
+    @State private var opensPDFLayout = false
     @State private var sizeWhileDragging: Double?
-    @AppStorage("stati.shortcuts.enabled") private var siriShortcuts = true
-    @AppStorage("stati.siriAI.songSearch") private var siriAISongSearch = false
     @AppStorage("stati.liveSong.enabled") private var liveSong = false
     @AppStorage("stati.reader.libraryLayout") private var libraryLayout = "grid"
     @AppStorage("nativeReleaseNotes.automaticOnIPad") private var automaticUpdates = true
@@ -23,7 +21,7 @@ struct IPadFeaturesView: View {
         Form {
             Section {
                 readerOptions
-                    .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             } header: {
                 HStack(spacing: 4) {
                     Text("Songs")
@@ -40,15 +38,7 @@ struct IPadFeaturesView: View {
                 Toggle("Clicker", isOn: $preferences.settings.clickerEnabled)
                 Toggle("Live song on Lock Screen", isOn: $liveSong)
             }
-            Section {
-                Toggle("Siri Shortcuts", isOn: $siriShortcuts)
-                Toggle("Siri AI Song Search", isOn: $siriAISongSearch)
-                ShortcutsLink()
-            } header: {
-                Text("Siri")
-            } footer: {
-                Text("Siri AI searches your Stați song library on supported devices with Siri AI enabled.")
-            }
+            SiriFeaturesSection()
             Section("Recents") {
                 Picker("Remove from Recents", selection: $preferences.settings.retention) {
                     ForEach(RecentRetention.allCases) { Text($0.title).tag($0) }
@@ -60,6 +50,7 @@ struct IPadFeaturesView: View {
                 NavigationLink("What’s New") { WhatsNewView() }
             }
         }
+        .navigationDestination(isPresented: $opensPDFLayout) { pdfSettings }
         .navigationTitle("Features")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -98,12 +89,12 @@ struct IPadFeaturesView: View {
             }
         } else {
             ViewThatFits(in: .horizontal) {
-                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 16) {
+                Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 4) {
                     GridRow { readingFormat; selector }
                     GridRow { slideSize; previews }
                     GridRow { layout; pdfOptions }
                 }
-                .frame(minWidth: 300)
+                .frame(minWidth: 460)
                 VStack(alignment: .leading, spacing: 16) {
                     readingFormat
                     slideSize
@@ -121,9 +112,9 @@ struct IPadFeaturesView: View {
         return option("Open songs as") {
             Picker("Open songs as", selection: $preferences.settings.mode) {
                 ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) }
-            }.labelsHidden()
+            }.pickerStyle(.menu).labelsHidden().buttonStyle(.borderless)
+            .worshipGuide(guide, at: .readingFormat)
         }
-        .worshipGuide(guide, at: .readingFormat)
     }
 
     private var selector: some View {
@@ -131,9 +122,9 @@ struct IPadFeaturesView: View {
         return option("Song selector") {
             Picker("Song selector", selection: $preferences.settings.selectorSource) {
                 ForEach(SongSelectorSource.allCases) { Text($0.title).tag($0) }
-            }.labelsHidden()
+            }.pickerStyle(.menu).labelsHidden().buttonStyle(.borderless)
+            .worshipGuide(guide, at: .selectorSetting)
         }
-        .worshipGuide(guide, at: .selectorSetting)
     }
 
     private var slideSize: some View {
@@ -156,8 +147,8 @@ struct IPadFeaturesView: View {
             }
             .accessibilityLabel("Slide text size")
             .accessibilityValue("\(Int(points.rounded())) points")
+            .worshipGuide(guide, at: .textSize)
         }
-        .worshipGuide(guide, at: .textSize)
     }
 
     private var previews: some View {
@@ -165,6 +156,7 @@ struct IPadFeaturesView: View {
         return option("Larger previews") {
             Toggle("Larger previews", isOn: $preferences.settings.largePreviews)
                 .labelsHidden()
+                .accessibilityLabel("Larger previews")
         }
     }
 
@@ -173,36 +165,44 @@ struct IPadFeaturesView: View {
             Picker("Song library layout", selection: $libraryLayout) {
                 Text("Grid").tag("grid")
                 Text("List").tag("list")
-            }.labelsHidden()
+            }.pickerStyle(.menu).labelsHidden().buttonStyle(.borderless)
         }
     }
 
     private var pdfOptions: some View {
-        @Bindable var preferences = preferences
-        return option("PDF options") {
-            NavigationLink {
-                Form {
-                    Picker("Columns", selection: $preferences.settings.pdfColumns) {
-                        ForEach(PDFColumnCount.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Page effect", selection: $preferences.settings.transition) {
-                        ForEach(ReaderTransition.allCases) { Text($0.title).tag($0) }
-                    }
-                }.navigationTitle("PDF options")
-            } label: {
-                Label("Edit", systemImage: "doc").accessibilityLabel("Open PDF options")
-            }
+        option("PDF layout") {
+            Button("Open PDF layout", systemImage: "chevron.right") { opensPDFLayout = true }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+                .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
         }
     }
 
-    private func option<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.subheadline).foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            control()
+    private var pdfSettings: some View {
+        @Bindable var preferences = preferences
+        return Form {
+            Section {
+                Picker("Columns", selection: $preferences.settings.pdfColumns) {
+                    ForEach(PDFColumnCount.allCases) { Text($0.title).tag($0) }
+                }
+                Picker("Page transition", selection: $preferences.settings.transition) {
+                    ForEach(ReaderTransition.allCases) { Text($0.title).tag($0) }
+                }
+            } footer: {
+                Text("Applies when you open a song as a PDF.")
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 59, alignment: .topLeading)
-        .padding(10)
-        .background(.quaternary.opacity(0.38), in: .rect(cornerRadius: 12))
+        .navigationTitle("PDF Layout")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func option<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
+        HStack(spacing: 12) {
+            Text(title).foregroundStyle(.primary).accessibilityHidden(true)
+            Spacer(minLength: 0)
+            control()
+                .frame(maxWidth: title == "Slide text size" ? 140 : nil, alignment: .trailing)
+        }
+        .frame(maxWidth: .infinity, minHeight: 44)
     }
 }

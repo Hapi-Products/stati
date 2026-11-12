@@ -6,41 +6,19 @@
 	<array>
 		<dict>
 			<key>Type</key>
-			<string>PSChildPaneSpecifier</string>
-			<key>Title</key>
-			<string>Features</string>
-			<key>File</key>
-			<string>Features</string>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Siri</string>
+			<string>Beta</string>
 			<key>FooterText</key>
-			<string>Siri AI Song Search requires iOS or iPadOS 27.3 and Siri AI on a supported device.</string>
+			<string>Opt in to future previews. This switch does not install a beta.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
 			<string>PSToggleSwitchSpecifier</string>
 			<key>Title</key>
-			<string>Siri Shortcuts</string>
+			<string>Beta Features</string>
 			<key>Key</key>
-			<string>stati.shortcuts.enabled</string>
-			<key>DefaultValue</key>
-			<true/>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
-			<key>Title</key>
-			<string>Siri AI Song Search</string>
-			<key>Key</key>
-			<string>stati.siriAI.songSearch</string>
+			<string>stati.beta.enabled</string>
 			<key>DefaultValue</key>
 			<false/>
 		</dict>
@@ -48,17 +26,19 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Service</string>
+			<string>App Information</string>
+			<key>FooterText</key>
+			<string>To view logs or send diagnostics, open Diagnostics in Stați. Stați profiles use passkeys and do not have an email address.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
+			<string>PSTitleValueSpecifier</string>
 			<key>Title</key>
-			<string>Live song on Lock Screen</string>
+			<string>Version</string>
 			<key>Key</key>
-			<string>stati.liveSong.enabled</string>
+			<string>stati.settings.appVersion</string>
 			<key>DefaultValue</key>
-			<false/>
+			<string>0.1.0 (46)</string>
 		</dict>
 	</array>
 </dict>

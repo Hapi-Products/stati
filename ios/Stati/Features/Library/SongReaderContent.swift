@@ -37,20 +37,22 @@ struct SongReaderContent: View {
                                     guide?.stop()
                                     showsPagePreviews = true
                                 } : nil,
-                                guide: guide
-                            )
-                            .popover(isPresented: $showsPagePreviews, arrowEdge: .bottom) {
-                                SongPageThumbnails(
-                                    pages: pages,
-                                    document: mode == .document ? document : nil,
-                                    slideSize: slideSize,
-                                    selectedIndex: index
-                                ) { target in
-                                    guard (0..<count).contains(target) else { return }
-                                    index = target
-                                    showsPagePreviews = false
+                                guide: guide,
+                                previewPresented: $showsPagePreviews,
+                                previews: {
+                                    SongPageThumbnails(
+                                        pages: pages,
+                                        document: mode == .document ? document : nil,
+                                        slideSize: slideSize,
+                                        selectedIndex: index
+                                    ) { target in
+                                        guard (0..<count).contains(target) else { return }
+                                        index = target
+                                        showsPagePreviews = false
+                                    }
                                 }
-                            }
+                            )
+
                         }
                     }
             } else if !failure.isEmpty { ContentUnavailableView("Document unavailable", systemImage: "doc", description: Text(failure)) }

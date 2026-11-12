@@ -45,6 +45,13 @@ import Foundation
         store.prune(before: now.addingTimeInterval(-14 * 86400)); #expect(store.items.map(\.title) == ["New"])
         #expect(try Data(contentsOf: original) == bytes)
         let reopened = DeviceRecents(storageDirectory: directory); reopened.load(ownerID: owner); #expect(reopened.items.map(\.title) == ["New"])
+        store.clearHistory()
+        store.reconcile(checkedIDs: Set(rows.map(\.id)), availableIDs: Set(rows.map(\.id)))
+        #expect(store.items.isEmpty)
+        #expect(try Data(contentsOf: original) == bytes)
+        let cleared = DeviceRecents(storageDirectory: directory)
+        cleared.load(ownerID: owner)
+        #expect(cleared.items.isEmpty)
     }
     @Test func availabilityOnlyRemovesCheckedMissingItemsAndKeepsNewlyOpenedItems() throws {
         let directory = URL.temporaryDirectory.appending(path: UUID().uuidString)

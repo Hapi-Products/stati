@@ -22,8 +22,8 @@ enum StatiShortcutError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .disabled: "Turn on Siri Shortcuts in Settings to use this Stați action."
-        case .siriSearchDisabled: "Turn on Siri AI Song Search in Stați settings."
+        case .disabled: "Turn on Siri Shortcuts in Stați’s Features page to use this action."
+        case .siriSearchDisabled: "Turn on Siri AI Song Search in Stați’s Features page."
         case .missingSong: "Give Siri a song title or part of the lyrics."
         }
     }

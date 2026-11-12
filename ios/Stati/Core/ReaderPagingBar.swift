@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ReaderPagingBar: View {
+struct ReaderPagingBar<Previews: View>: View {
     let index: Int
     let count: Int
     var disabled = false
@@ -10,6 +10,8 @@ struct ReaderPagingBar: View {
     var pageLabels = false
     var showPagePreviews: (() -> Void)?
     var guide: WorshipGuide?
+    var previewPresented: Binding<Bool>
+    @ViewBuilder var previews: () -> Previews
     var body: some View {
         HStack(spacing: 12) {
             if !actions.isEmpty {
@@ -17,9 +19,8 @@ struct ReaderPagingBar: View {
                     ForEach(actions) { action in Button(action.title, systemImage: action.symbol, action: action.perform) }
                 }.labelStyle(.iconOnly).foregroundStyle(disabled ? .tertiary : .primary).frame(minWidth: 44, minHeight: 44).disabled(disabled)
             }
-            Button(pageLabels ? "Previous page" : "Previous item", systemImage: "chevron.left", action: previous)
-                .disabled(index == 0 || disabled).labelStyle(.iconOnly)
-                .foregroundStyle(index == 0 || disabled ? .tertiary : .primary).frame(minWidth: 44, minHeight: 44)
+            arrow(pageLabels ? "Previous page" : "Previous item", symbol: "chevron.left",
+                  inactive: index == 0, action: previous)
             if let showPagePreviews {
                 Button(action: showPagePreviews) {
                     pageCount.frame(minHeight: 44)
@@ -30,13 +31,15 @@ struct ReaderPagingBar: View {
                 .accessibilityHint("Opens page previews.")
                 .hoverEffect(.highlight)
                 .worshipGuide(guide, at: .pageCounter)
+                .popover(isPresented: previewPresented, arrowEdge: .bottom, content: previews)
             } else {
                 pageCount
             }
-            Button(pageLabels ? "Next page" : "Next item", systemImage: "chevron.right", action: next)
-                .disabled(index + 1 >= count || disabled).labelStyle(.iconOnly)
-                .foregroundStyle(index + 1 >= count || disabled ? .tertiary : .primary).frame(minWidth: 44, minHeight: 44)
-        }.foregroundStyle(.primary).buttonStyle(.plain).fontWeight(.medium).padding(.horizontal, 12).padding(.vertical, 4)
+            arrow(pageLabels ? "Next page" : "Next item", symbol: "chevron.right",
+                  inactive: index + 1 >= count, action: next)
+        }
+            .foregroundStyle(.primary).buttonStyle(.plain).fontWeight(.medium)
+            .padding(.horizontal, 8).padding(.vertical, 4)
             .glassEffect(.regular, in: .capsule)
             .simultaneousGesture(DragGesture(minimumDistance: 50).onEnded { value in
                 guard !disabled, abs(value.translation.width) > abs(value.translation.height) * 1.8 else { return }
@@ -44,6 +47,18 @@ struct ReaderPagingBar: View {
                 else if value.translation.width > 70, index > 0 { previous() }
             })
             .accessibilityHint(pageLabels ? "Swipe across the control to change pages in this song." : "Swipe across the control to change items.").padding(.horizontal, 16).padding(.bottom, 8)
+    }
+
+    private func arrow(_ title: String, symbol: String, inactive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .accessibilityLabel(title)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .disabled(inactive || disabled)
     }
 
     private var pageCount: some View {

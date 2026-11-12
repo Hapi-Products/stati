@@ -33,7 +33,7 @@ struct SongPageHost: UIViewControllerRepresentable {
             controller.navigate = { [weak self] in self?.step($0) }
             if controller.keysEnabled && controller.view.window != nil { controller.becomeFirstResponder() }
             if edgeTap.view == nil { controller.view.addGestureRecognizer(edgeTap) }
-            edgeTap.isEnabled = parent.document == nil
+            edgeTap.isEnabled = parent.count > 1
             if controller.view.gestureRecognizers?.contains(where: { $0 is UISwipeGestureRecognizer }) != true {
                 let left = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:))); left.direction = .left
                 let right = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:))); right.direction = .right

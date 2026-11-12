@@ -31,6 +31,7 @@ import Observation
         let proposed = [item] + items.filter { $0.id != item.id }.prefix(79)
         persist(proposed)
     }
+    func clearHistory() { persist([]) }
     func remove(id: String) { persist(items.filter { $0.id != id }) }
     func prune(before cutoff: Date?) {
         guard let cutoff else { return }

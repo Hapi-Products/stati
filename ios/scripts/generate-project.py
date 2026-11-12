@@ -1,3 +1,4 @@
+import plistlib
 from pathlib import Path
 import hashlib
 root=Path(__file__).resolve().parents[1]
@@ -23,10 +24,15 @@ group=obj('group',f'{{isa = PBXGroup; children = ({",".join(refs)},{products},);
 sources=obj('sources',f'{{isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ({",".join(build)},); runOnlyForDeploymentPostprocessing = 0; }}')
 res=obj('resources',f'{{isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ({",".join(resources)},); runOnlyForDeploymentPostprocessing = 0; }}')
 frameworks=obj('frameworks','{isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; }')
-settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'26.3','SWIFT_VERSION':'6.0','SWIFT_STRICT_CONCURRENCY':'complete','SWIFT_APPROACHABLE_CONCURRENCY':'YES','SWIFT_DEFAULT_ACTOR_ISOLATION':'MainActor','PRODUCT_BUNDLE_IDENTIFIER':'org.hapiproducts.stati.ios','DEVELOPMENT_TEAM':'T9F657VHPQ','CODE_SIGN_STYLE':'Automatic','GENERATE_INFOPLIST_FILE':'NO','INFOPLIST_FILE':'Stati/Info.plist','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES':'AppIconWhite AppIconGold AppIconGreen AppIconGreyscale AppIconRed','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','TARGETED_DEVICE_FAMILY':'1,2','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','PRODUCT_NAME':'$(TARGET_NAME)','ENABLE_USER_SCRIPT_SANDBOXING':'YES','CLANG_ENABLE_MODULES':'YES','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'45','SWIFT_EMIT_LOC_STRINGS':'YES'}
+settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'26.3','SWIFT_VERSION':'6.0','SWIFT_STRICT_CONCURRENCY':'complete','SWIFT_APPROACHABLE_CONCURRENCY':'YES','SWIFT_DEFAULT_ACTOR_ISOLATION':'MainActor','PRODUCT_BUNDLE_IDENTIFIER':'org.hapiproducts.stati.ios','DEVELOPMENT_TEAM':'T9F657VHPQ','CODE_SIGN_STYLE':'Automatic','GENERATE_INFOPLIST_FILE':'NO','INFOPLIST_FILE':'Stati/Info.plist','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES':'AppIconWhite AppIconGold AppIconGreen AppIconGreyscale AppIconRed','ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME':'AccentColor','TARGETED_DEVICE_FAMILY':'1,2','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','PRODUCT_NAME':'$(TARGET_NAME)','ENABLE_USER_SCRIPT_SANDBOXING':'YES','CLANG_ENABLE_MODULES':'YES','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'46','SWIFT_EMIT_LOC_STRINGS':'YES'}
 notes=(root/'Stati/Features/Account/AppUpdate.swift').read_text()
 if f"static let current = AppUpdate(id: {settings['CURRENT_PROJECT_VERSION']}," not in notes:
     raise SystemExit("Update AppUpdate.current to match CURRENT_PROJECT_VERSION.")
+settings_plist = root/'Stati/Settings.bundle/Root.plist'
+preferences = plistlib.loads(settings_plist.read_bytes())
+version = next(row for row in preferences['PreferenceSpecifiers'] if row.get('Key') == 'stati.settings.appVersion')
+version['DefaultValue'] = f"{settings['MARKETING_VERSION']} ({settings['CURRENT_PROJECT_VERSION']})"
+settings_plist.write_bytes(plistlib.dumps(preferences, sort_keys=False))
 configs=[];projectconfigs=[]
 for name in ['Debug','Release']:
  s=dict(settings);s['SWIFT_OPTIMIZATION_LEVEL']='-Onone' if name=='Debug' else '-O';s['SWIFT_ACTIVE_COMPILATION_CONDITIONS']='DEBUG' if name=='Debug' else '';s['DEBUG_INFORMATION_FORMAT']='dwarf' if name=='Debug' else 'dwarf-with-dsym'

@@ -83,6 +83,19 @@ import SwiftUI
         store.resources.clear(); revision += 1
         return value["group"]
     }
+    func remove(_ group: APIRecord) async throws {
+        guard active, group["canManage"].flag, UUID(uuidString: group.id) != nil else { throw CancellationError() }
+        let value = try await fetch("/worship-groups/" + group.id, "DELETE", .object(["revision": group["revision"]]))
+        guard active else { reset(); throw CancellationError() }
+        guard value["ok"].flag else { throw invalid() }
+        generation = UUID()
+        loading = false
+        groups.removeAll { $0.id == group.id }
+        store.resources.clear()
+        revision += 1
+        store.filesChanged()
+    }
+
     private static func validated(_ group: APIRecord) throws -> APIRecord {
         guard UUID(uuidString: group.id) != nil, UUID(uuidString: group["ownerId"].text) != nil, !group.name.isEmpty, group.name.utf16.count <= 80,
               let revision = Int(exactly: group["revision"].number), revision >= 1,

@@ -43,6 +43,10 @@ struct ProfileView: View {
                     }
                 }
                 VStack(spacing: 0) {
+                    NavigationLink { PhoneFeaturesView() } label: { ProfileDestinationRow(title: "Features", icon: "slider.horizontal.3") }
+                    Divider().padding(.leading, 56)
+                    NavigationLink { DiagnosticsView() } label: { ProfileDestinationRow(title: "Diagnostics", icon: "stethoscope") }
+                    Divider().padding(.leading, 56)
                     NavigationLink(value: MoreRoute.whatsNew) { ProfileDestinationRow(title: "What’s New", icon: "sparkles") }
                     Divider().padding(.leading, 56)
                     NavigationLink(value: MoreRoute.privacy) { ProfileDestinationRow(title: "Privacy", icon: "hand.raised") }

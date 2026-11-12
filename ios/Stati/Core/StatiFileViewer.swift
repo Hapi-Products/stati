@@ -52,10 +52,11 @@ struct StatiFileViewer: View {
                 if let navigation {
                     ReaderPagingBar(index: navigation.index, count: navigation.count, disabled: closing || markup?.needsSync == true,
                                     previous: { navigate(navigation.previous) }, next: { navigate(navigation.next) },
-                                    actions: navigation.actions.map { entry in ReaderAction(id: entry.id, title: entry.title, symbol: entry.symbol, perform: { navigate(entry.perform) }) })
+                                    actions: navigation.actions.map { entry in ReaderAction(id: entry.id, title: entry.title, symbol: entry.symbol, perform: { navigate(entry.perform) }) },
+                                    previewPresented: .constant(false)) { EmptyView() }
                 } else if request.items.count > 1 {
                     ReaderPagingBar(index: index, count: request.items.count, disabled: closing || markup?.needsSync == true,
-                                    previous: { change(to: index - 1) }, next: { change(to: index + 1) })
+                                    previous: { change(to: index - 1) }, next: { change(to: index + 1) }, previewPresented: .constant(false)) { EmptyView() }
                 }
             }.padding(.horizontal, 16).padding(.vertical, 8).frame(maxWidth: .infinity)
         }

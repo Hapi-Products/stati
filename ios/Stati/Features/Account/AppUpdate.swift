@@ -11,12 +11,17 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 45, title: "Clearer controls on iPad", highlights: [
+    static let current = AppUpdate(id: 46, title: "Simpler settings and support", highlights: [
+        Highlight(title: "Find Siri in Features", detail: "Open Features in Stați for Siri and reading controls. Apple Settings keeps the beta preference and app information.", icon: "gearshape"),
+        Highlight(title: "Start fresh in Recents", detail: "Clear your iPad’s history while keeping your songs and files.", icon: "trash"),
+        Highlight(title: "Review diagnostics", detail: "See recent errors, copy a report, or open a draft on GitHub.", icon: "stethoscope")
+    ], details: ["Switch worship groups inside Groups.", "PDF Layout has its own controls.", "The account header shows your photo and name."])
+    static let previous: [AppUpdate] = [
+        AppUpdate(id: 45, title: "Clearer controls on iPad", highlights: [
         Highlight(title: "Find the right control", detail: "Help opens beside the control you need, with arrows to move through the guide.", icon: "questionmark.circle"),
         Highlight(title: "Adjust reading size smoothly", detail: "Features puts six song controls in two columns. The slide text slider moves continuously.", icon: "textformat.size"),
         Highlight(title: "Keep services and groups in place", detail: "Open groups and services inside their own tabs. Service leadership and refresh now have toolbar icons.", icon: "calendar")
-    ], details: ["On iPad, the gear opens Apple Settings from Features.", "The book icon in a guide opens its full wiki page.", "Switching tabs clears the temporary group or service detail.", "The current update and its build number are listed in What’s New."])
-    static let previous: [AppUpdate] = [
+    ], details: ["On iPad, the gear opens Apple Settings from Features.", "The book icon in a guide opens its full wiki page.", "Switching tabs clears the temporary group or service detail.", "The current update and its build number are listed in What’s New."]),
         AppUpdate(id: 43, title: "Simpler Features and Siri search", highlights: [], details: ["Features now has its own page in Apple Settings on iPad.", "Clicker is an on/off switch.", "Enable Siri AI Song Search to open matching songs on a supported device."]),
         AppUpdate(id: 42, title: "Worship settings and guides", highlights: [], details: ["Worship preferences can be changed inside Stați or in Apple Settings on iPad.", "Added guides for Worship settings and the song reader."]),
         AppUpdate(id: 40, title: "A cleaner song library", highlights: [], details: ["Removed Hymnary from iPhone and iPad.", "The Send queue is available on iPhone."]),

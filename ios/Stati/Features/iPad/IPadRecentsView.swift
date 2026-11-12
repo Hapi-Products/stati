@@ -7,6 +7,7 @@ struct IPadRecentsView: View {
     var active = true
     @State private var preferences: ReaderPreferences?
     @State private var message = ""
+    @State private var confirmsClear = false
     @State private var query = ""
     @State private var preview: FilePreviewRequest?
     @State private var songs: SongGalleryRequest?
@@ -29,6 +30,18 @@ struct IPadRecentsView: View {
             NoticeView(text: store.recents.message).padding()
             NoticeView(text: message).padding(.horizontal)
         }.navigationTitle("Recents").navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Clear all recents", systemImage: "trash") { confirmsClear = true }
+                        .disabled(store.recents.items.isEmpty)
+                }
+            }
+            .alert("Clear all recents?", isPresented: $confirmsClear) {
+                Button("Yes, clear recents", role: .destructive) { store.recents.clearHistory() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Songs and files will stay on this device.")
+            }
             .searchable(text: $query, placement: .toolbar, prompt: "Search recent items").searchToolbarBehavior(.minimize)
             .onAppear {
                 #if DEBUG && targetEnvironment(simulator)

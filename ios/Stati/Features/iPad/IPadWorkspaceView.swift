@@ -32,7 +32,7 @@ struct IPadWorkspaceView: View {
         #endif
         return .tabBar
     }
-    private var showsGroups: Bool { store.canReadSongs && !preferences.selection.hidesGroups && (store.isAdmin || !groups.groups.isEmpty) }
+    private var showsGroups: Bool { store.canReadSongs && (store.isAdmin || (!preferences.selection.hidesGroups && !groups.groups.isEmpty)) }
     private var groupSelection: GroupSelection { navigation.groupSelection ?? preferences.selection }
     private var selectedGroupID: String? {
         if case .named(let id) = groupSelection { return groups.groups.contains(where: { $0.id == id }) ? id : nil }
@@ -84,9 +84,6 @@ struct IPadWorkspaceView: View {
                 Tab("Service", systemImage: "calendar", value: "service") {
                     IPadNavigation(store: store) { services }
                 }
-                if showsGroups && !groups.groups.isEmpty {
-                    TabSection("Worship groups") { ForEach(groups.groups) { group in Tab(group.name, systemImage: "person.2", value: "named:" + group.id) { EmptyView() }.tabPlacement(.sidebarOnly) } }.tabPlacement(.sidebarOnly)
-                }
                 TabSection("Song folders") { ForEach(overview.songGroups, id: \.self) { group in Tab(group, systemImage: "folder", value: "group:" + group) { EmptyView() }.tabPlacement(.sidebarOnly) } }.tabPlacement(.sidebarOnly)
             }
         }.tabViewStyle(.sidebarAdaptable).defaultAdaptableTabBarPlacement(preferredPlacement).environment(\.symbolVariants, .none).environment(store)
@@ -103,7 +100,7 @@ struct IPadWorkspaceView: View {
             .onChange(of: groups.revision) {
                 resolveDefault()
                 if case .named(let id) = navigation.groupSelection, !groups.groups.contains(where: { $0.id == id }) { navigation.groupSelection = nil }
-                if navigation.tab == "shared" && !showsGroups { navigation.select("groups") }
+                if groups.loaded && navigation.tab == "shared" && !showsGroups { navigation.select("groups") }
             }
             .task(id: store.accountEpoch.uuidString + store.selectedComputer) { await loadWorkspace() }
             .task(id: scenePhase) {

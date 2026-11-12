@@ -34,12 +34,12 @@ struct WhatsNewView: View {
                     }
                 }
             }.frame(maxWidth: 560, alignment: .leading).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 28)
-        }.background(Color(.secondarySystemGroupedBackground))
+        }.background(Color(.systemGroupedBackground))
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 12) {
                     Button("Previous updates") { history = true }.font(.subheadline).frame(minHeight: 44)
                     Button { dismiss() } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(AppIconAppearance.shared.fill).foregroundStyle(.white).buttonBorderShape(.capsule).controlSize(.large).frame(maxWidth: .infinity)
-                }.frame(maxWidth: 560).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.bottom, 20).background(Color(.secondarySystemGroupedBackground))
+                }.frame(maxWidth: 560).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.bottom, 20).background(Color(.systemGroupedBackground))
             }
             .navigationTitle("").navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
