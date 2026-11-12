@@ -8,3 +8,5 @@
 - Keep service song hashes, ownership checks, authorization and idempotent delivery receipts intact when fixing bugs.
 - Use Wrangler for this Cloudflare project because it has `wrangler.jsonc`.
 - Review dependency installation scripts before executing them. Use the committed lockfile.
+
+- With each user-visible Stați update, edit the relevant platform or shared guide in `docs/wiki/` and the Updates page in the same change. Record **Updated on** and **Updated by** on each changed page and label preview or unverified behavior accurately. Publish the verified pages to the GitHub Wiki and check the public URLs. Keep new in-app help topics linked to their matching guide.
