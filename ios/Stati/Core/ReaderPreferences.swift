@@ -23,7 +23,12 @@ import Observation
             .flatMap { try? JSONDecoder().decode(SongReaderSettings.self, from: $0) } ?? SongReaderSettings()
         let prefix = "stati.reader."
         if let raw = defaults.string(forKey: prefix + "mode"), let value = SongReaderMode(rawValue: raw) { settings.mode = value }
-        if let raw = defaults.string(forKey: prefix + "slideSize"), let value = SlideTextSize(rawValue: raw) { settings.slideSize = value }
+        if let position = defaults.object(forKey: prefix + "slideScale") as? NSNumber,
+           let size = SlideTextSize(sliderPosition: position.doubleValue) {
+            settings.slideSize = size
+        } else if let raw = defaults.string(forKey: prefix + "slideSize"), let size = SlideTextSize(rawValue: raw) {
+            settings.slideSize = size
+        }
         if let raw = defaults.string(forKey: prefix + "transition"), let value = ReaderTransition(rawValue: raw) { settings.transition = value }
         if let raw = defaults.string(forKey: prefix + "pdfColumns").flatMap(Int.init), let value = PDFColumnCount(rawValue: raw) { settings.pdfColumns = value }
         if let raw = defaults.string(forKey: prefix + "retention").flatMap(Int.init), let value = RecentRetention(rawValue: raw) { settings.retention = value }
@@ -33,6 +38,28 @@ import Observation
         return settings
     }
 
+    static func prepareDeviceDefaults(ownerID: String, defaults: UserDefaults = .standard) {
+        guard !ownerID.isEmpty else { return }
+        let current = read(ownerID: ownerID, defaults: defaults)
+        let prefix = "stati.reader."
+        let choices: [(String, String)] = [
+            ("mode", current.mode.rawValue),
+            ("transition", current.transition.rawValue),
+            ("pdfColumns", String(current.pdfColumns.rawValue)),
+            ("retention", String(current.retention.rawValue)),
+            ("selectorSource", current.selectorSource.rawValue),
+            ("clicker", current.clickerEnabled ? "on" : "off"),
+            ("largePreviews", current.largePreviews ? "on" : "off"),
+            ("libraryLayout", defaults.bool(forKey: "stati.worship.songListAfterGridRestore") ? "list" : "grid")
+        ]
+        for (key, value) in choices where [nil, "saved"].contains(defaults.string(forKey: prefix + key)) {
+            defaults.set(value, forKey: prefix + key)
+        }
+        if defaults.object(forKey: prefix + "slideScale") == nil {
+            defaults.set(current.slideSize.sliderPosition, forKey: prefix + "slideScale")
+        }
+    }
+
     private func save(changesFrom previous: SongReaderSettings) {
         guard !reloading, !ownerID.isEmpty else { return }
         if writesDeviceSettings {
@@ -40,7 +67,9 @@ import Observation
                 if oldValue != newValue { defaults.set(newValue, forKey: "stati.reader." + key) }
             }
             write("mode", previous.mode.rawValue, settings.mode.rawValue)
-            write("slideSize", previous.slideSize.rawValue, settings.slideSize.rawValue)
+            if previous.slideSize != settings.slideSize {
+                defaults.set(settings.slideSize.sliderPosition, forKey: "stati.reader.slideScale")
+            }
             write("transition", previous.transition.rawValue, settings.transition.rawValue)
             write("pdfColumns", String(previous.pdfColumns.rawValue), String(settings.pdfColumns.rawValue))
             write("retention", String(previous.retention.rawValue), String(settings.retention.rawValue))

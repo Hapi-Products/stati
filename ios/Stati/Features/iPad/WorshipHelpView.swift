@@ -24,8 +24,8 @@ enum WorshipHelpTopic {
         switch self {
         case .settings:
             [
-                Step(title: "Find your settings", instruction: "In Stați, open Account → Features. You can also change these preferences in Settings → Apps → Stați on this iPad."),
-                Step(title: "Choose a reading format", instruction: "Choose Slides, PDF document, or Text. Adjust the slide text size, or set the number of PDF columns and the page effect."),
+                Step(title: "Find your settings", instruction: "In Stați, open Account → Features. You can also change these preferences in Settings → Apps → Stați → Features on this iPad."),
+                Step(title: "Choose a reading format", instruction: "Choose Slides, PDF document, or Text. Use the slide text size slider, or open PDF options to change columns and the page effect."),
                 Step(title: "Set the song selector", instruction: "Choose Recents or Current service. The selector shows Recents when there is no active service."),
                 Step(title: "Choose a group or computer", instruction: "Use Account → Worship for a named group or song folder. Choose your default computer in Account.")
             ]

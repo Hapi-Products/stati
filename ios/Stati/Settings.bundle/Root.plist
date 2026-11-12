@@ -6,9 +6,23 @@
 	<array>
 		<dict>
 			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+			<key>Title</key>
+			<string>Features</string>
+			<key>File</key>
+			<string>Features</string>
+			<key>SupportedUserInterfaceIdioms</key>
+			<array>
+				<string>Pad</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Shortcuts</string>
+			<string>Siri</string>
+			<key>FooterText</key>
+			<string>Siri AI Song Search requires iOS or iPadOS 27.3 and Siri AI on a supported device.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -22,11 +36,19 @@
 		</dict>
 		<dict>
 			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Siri AI Song Search</string>
+			<key>Key</key>
+			<string>stati.siriAI.songSearch</string>
+			<key>DefaultValue</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
 			<string>Service</string>
-			<key>FooterText</key>
-			<string>Live Activities show the current song from your connected church computer. The song may be visible on your Lock Screen.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -37,382 +59,6 @@
 			<string>stati.liveSong.enabled</string>
 			<key>DefaultValue</key>
 			<false/>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
-			<key>Title</key>
-			<string>Worship</string>
-			<key>FooterText</key>
-			<string>Choose a named group or song folder in Stați. Icon changes are applied when you return to Stați.</string>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Default group</string>
-			<key>Key</key>
-			<string>stati.worship.defaultGroupMode</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use Stați selection</string>
-				<string>Automatic</string>
-				<string>Original songs</string>
-				<string>All groups</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>automatic</string>
-				<string>originalSongs</string>
-				<string>allGroups</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>App icon</string>
-			<key>Key</key>
-			<string>stati.worship.appIcon</string>
-			<key>DefaultValue</key>
-			<string>current</string>
-			<key>Titles</key>
-			<array>
-				<string>Current icon</string>
-				<string>Blue</string>
-				<string>Gold</string>
-				<string>Green</string>
-				<string>Greyscale</string>
-				<string>Red</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>current</string>
-				<string>Blue</string>
-				<string>Gold</string>
-				<string>Green</string>
-				<string>Greyscale</string>
-				<string>Red</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
-			<key>Title</key>
-			<string>Reader</string>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Open songs as</string>
-			<key>Key</key>
-			<string>stati.reader.mode</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Slides</string>
-				<string>PDF document</string>
-				<string>Text</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>slides</string>
-				<string>document</string>
-				<string>text</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Slide text size</string>
-			<key>Key</key>
-			<string>stati.reader.slideSize</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Small</string>
-				<string>Default</string>
-				<string>Large</string>
-				<string>Extra large</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>small</string>
-				<string>standard</string>
-				<string>large</string>
-				<string>extraLarge</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>PDF columns</string>
-			<key>Key</key>
-			<string>stati.reader.pdfColumns</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>1 column</string>
-				<string>2 columns</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>1</string>
-				<string>2</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>PDF page effect</string>
-			<key>Key</key>
-			<string>stati.reader.transition</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Slide</string>
-				<string>Page turn</string>
-				<string>Fade</string>
-				<string>Instant</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>slide</string>
-				<string>pageTurn</string>
-				<string>fade</string>
-				<string>instant</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Song selector</string>
-			<key>Key</key>
-			<string>stati.reader.selectorSource</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Recents</string>
-				<string>Current service</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>recents</string>
-				<string>currentService</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Clicker</string>
-			<key>Key</key>
-			<string>stati.reader.clicker</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>On</string>
-				<string>Off</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>on</string>
-				<string>off</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
-			<key>Title</key>
-			<string>Library</string>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Song previews</string>
-			<key>Key</key>
-			<string>stati.reader.largePreviews</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Standard</string>
-				<string>Large</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>off</string>
-				<string>on</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Song library layout</string>
-			<key>Key</key>
-			<string>stati.reader.libraryLayout</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Grid</string>
-				<string>List</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>grid</string>
-				<string>list</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
-			<key>Title</key>
-			<string>Recents</string>
-			<key>FooterText</key>
-			<string>Only viewing history expires.</string>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSMultiValueSpecifier</string>
-			<key>Title</key>
-			<string>Remove from Recents</string>
-			<key>Key</key>
-			<string>stati.reader.retention</string>
-			<key>DefaultValue</key>
-			<string>saved</string>
-			<key>Titles</key>
-			<array>
-				<string>Use saved preference</string>
-				<string>Never</string>
-				<string>After a day</string>
-				<string>After a week</string>
-				<string>After two weeks</string>
-			</array>
-			<key>Values</key>
-			<array>
-				<string>saved</string>
-				<string>0</string>
-				<string>1</string>
-				<string>7</string>
-				<string>14</string>
-			</array>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
-			<key>Title</key>
-			<string>Updates</string>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
-			<key>Title</key>
-			<string>Show What’s New after updates</string>
-			<key>Key</key>
-			<string>nativeReleaseNotes.automaticOnIPad</string>
-			<key>DefaultValue</key>
-			<true/>
-			<key>SupportedUserInterfaceIdioms</key>
-			<array>
-				<string>Pad</string>
-			</array>
 		</dict>
 	</array>
 </dict>

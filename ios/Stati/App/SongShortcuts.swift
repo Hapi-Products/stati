@@ -17,8 +17,16 @@ final class SongShortcutNavigation {
 
 enum StatiShortcutError: LocalizedError {
     case disabled
+    case siriSearchDisabled
+    case missingSong
 
-    var errorDescription: String? { "Turn on Siri Shortcuts in Settings to use this Stați action." }
+    var errorDescription: String? {
+        switch self {
+        case .disabled: "Turn on Siri Shortcuts in Settings to use this Stați action."
+        case .siriSearchDisabled: "Turn on Siri AI Song Search in Stați settings."
+        case .missingSong: "Give Siri a song title or part of the lyrics."
+        }
+    }
 
     @MainActor static func open(_ request: SongShortcutRequest) throws {
         guard UserDefaults.standard.object(forKey: "stati.shortcuts.enabled") as? Bool ?? true else { throw Self.disabled }
@@ -41,6 +49,26 @@ struct FindStatiSong: AppIntent {
 
     @MainActor func perform() async throws -> some IntentResult {
         try StatiShortcutError.open(SongShortcutRequest(query: String(query.prefix(200))))
+        return .result()
+    }
+}
+
+@AppIntent(schema: .system.search)
+struct SearchStatiLibrary: ShowInAppSearchResultsIntent {
+    static let title: LocalizedStringResource = "Search the Stați Song Library"
+    static let description = IntentDescription("Find worship songs in the signed-in Stați library by title or part of a lyric. Opens matching songs in Stați so you can pick the version you want.")
+    static let searchScopes: [StringSearchScope] = [.general]
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    var criteria: StringSearchCriteria
+
+    @MainActor func perform() async throws -> some IntentResult {
+        guard UserDefaults.standard.bool(forKey: "stati.siriAI.songSearch") else {
+            throw StatiShortcutError.siriSearchDisabled
+        }
+        let query = criteria.term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { throw StatiShortcutError.missingSong }
+        SongShortcutNavigation.shared.request = SongShortcutRequest(query: String(query.prefix(200)))
         return .result()
     }
 }

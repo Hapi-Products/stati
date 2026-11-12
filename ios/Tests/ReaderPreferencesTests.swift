@@ -45,6 +45,33 @@ import Foundation
         inApp.reload()
         #expect(inApp.settings.pdfColumns == .one)
     }
+    @Test func simplifiedSettingsMigrateStoredValuesAndUseTheSlider() throws {
+        let suite = "stati-reader-slider-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let saved = ReaderPreferences(ownerID: "a", defaults: defaults)
+        saved.settings.pdfColumns = .two
+        saved.settings.clickerEnabled = false
+        defaults.set("saved", forKey: "stati.reader.pdfColumns")
+        defaults.set("extraLarge", forKey: "stati.reader.slideSize")
+        defaults.set("currentService", forKey: "stati.reader.selectorSource")
+        defaults.set(true, forKey: "stati.worship.songListAfterGridRestore")
+        ReaderPreferences.prepareDeviceDefaults(ownerID: "a", defaults: defaults)
+
+        #expect(defaults.string(forKey: "stati.reader.pdfColumns") == "2")
+        #expect(defaults.string(forKey: "stati.reader.clicker") == "off")
+        #expect(defaults.string(forKey: "stati.reader.libraryLayout") == "list")
+        #expect(defaults.double(forKey: "stati.reader.slideScale") == 3)
+        #expect(defaults.string(forKey: "stati.reader.selectorSource") == "currentService")
+
+        defaults.set(0.75, forKey: "stati.reader.slideScale")
+        ReaderPreferences.prepareDeviceDefaults(ownerID: "b", defaults: defaults)
+        let inApp = ReaderPreferences(ownerID: "b", defaults: defaults, writesDeviceSettings: true)
+        #expect(inApp.settings.slideSize == .standard)
+        inApp.settings.slideSize = .small
+        #expect(defaults.double(forKey: "stati.reader.slideScale") == 0)
+    }
     @Test func reduceMotionDisablesReaderTransitionsAndRetentionHasExactCutoffs() {
         for effect in ReaderTransition.allCases { #expect(effect.effective(reduceMotion: true) == .instant) }
         let now = Date(timeIntervalSince1970: 2_000_000)

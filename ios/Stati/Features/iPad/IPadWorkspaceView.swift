@@ -122,6 +122,11 @@ struct IPadWorkspaceView: View {
             .onAppear { if !store.canReadSongs { navigation.select("account") } }
     }
     private func loadWorkspace() async {
+        #if DEBUG && targetEnvironment(simulator)
+        if NativeReview.route == nil { ReaderPreferences.prepareDeviceDefaults(ownerID: preferences.ownerID) }
+        #else
+        ReaderPreferences.prepareDeviceDefaults(ownerID: preferences.ownerID)
+        #endif
                 guard store.canReadSongs else { return }
                 async let metadata: Void = overview.load(); await groups.load(); await metadata
                 resolveDefault()

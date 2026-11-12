@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Songs</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Open songs as</string>
+			<key>Key</key>
+			<string>stati.reader.mode</string>
+			<key>DefaultValue</key>
+			<string>slides</string>
+			<key>Titles</key>
+			<array>
+				<string>Slides</string>
+				<string>PDF document</string>
+				<string>Text</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>slides</string>
+				<string>document</string>
+				<string>text</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Song selector</string>
+			<key>Key</key>
+			<string>stati.reader.selectorSource</string>
+			<key>DefaultValue</key>
+			<string>recents</string>
+			<key>Titles</key>
+			<array>
+				<string>Recents</string>
+				<string>Current service</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>recents</string>
+				<string>currentService</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Larger previews</string>
+			<key>Key</key>
+			<string>stati.reader.largePreviews</string>
+			<key>DefaultValue</key>
+			<string>off</string>
+			<key>TrueValue</key>
+			<string>on</string>
+			<key>FalseValue</key>
+			<string>off</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Song library layout</string>
+			<key>Key</key>
+			<string>stati.reader.libraryLayout</string>
+			<key>DefaultValue</key>
+			<string>grid</string>
+			<key>Titles</key>
+			<array>
+				<string>Grid</string>
+				<string>List</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>grid</string>
+				<string>list</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSChildPaneSpecifier</string>
+			<key>Title</key>
+			<string>PDF options</string>
+			<key>File</key>
+			<string>PDF</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Slide text size</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSSliderSpecifier</string>
+			<key>Key</key>
+			<string>stati.reader.slideScale</string>
+			<key>DefaultValue</key>
+			<real>2.0</real>
+			<key>MinimumValue</key>
+			<real>0.0</real>
+			<key>MaximumValue</key>
+			<real>3.0</real>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Controls</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Clicker</string>
+			<key>Key</key>
+			<string>stati.reader.clicker</string>
+			<key>DefaultValue</key>
+			<string>on</string>
+			<key>TrueValue</key>
+			<string>on</string>
+			<key>FalseValue</key>
+			<string>off</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Worship</string>
+			<key>FooterText</key>
+			<string>Choose a named group or song folder in Stați. Icon changes apply when you return to Stați.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Default group</string>
+			<key>Key</key>
+			<string>stati.worship.defaultGroupMode</string>
+			<key>DefaultValue</key>
+			<string>saved</string>
+			<key>Titles</key>
+			<array>
+				<string>Selected in Stați</string>
+				<string>Automatic</string>
+				<string>Original songs</string>
+				<string>All groups</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>saved</string>
+				<string>automatic</string>
+				<string>originalSongs</string>
+				<string>allGroups</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>App icon</string>
+			<key>Key</key>
+			<string>stati.worship.appIcon</string>
+			<key>DefaultValue</key>
+			<string>current</string>
+			<key>Titles</key>
+			<array>
+				<string>Current icon</string>
+				<string>Blue</string>
+				<string>Gold</string>
+				<string>Green</string>
+				<string>Greyscale</string>
+				<string>Red</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>current</string>
+				<string>Blue</string>
+				<string>Gold</string>
+				<string>Green</string>
+				<string>Greyscale</string>
+				<string>Red</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Recents</string>
+			<key>FooterText</key>
+			<string>Only viewing history expires.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Remove from Recents</string>
+			<key>Key</key>
+			<string>stati.reader.retention</string>
+			<key>DefaultValue</key>
+			<string>0</string>
+			<key>Titles</key>
+			<array>
+				<string>Never</string>
+				<string>After a day</string>
+				<string>After a week</string>
+				<string>After two weeks</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>0</string>
+				<string>1</string>
+				<string>7</string>
+				<string>14</string>
+			</array>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Updates</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Show What’s New after updates</string>
+			<key>Key</key>
+			<string>nativeReleaseNotes.automaticOnIPad</string>
+			<key>DefaultValue</key>
+			<true/>
+		</dict>
+	</array>
+</dict>
+</plist>

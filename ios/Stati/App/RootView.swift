@@ -1,4 +1,7 @@
 import SwiftUI
+#if DEBUG && targetEnvironment(simulator)
+import AppIntents
+#endif
 
 struct RootView: View {
     @Environment(AppStore.self) private var store
@@ -64,6 +67,12 @@ struct RootView: View {
                 if ["ipad-system-settings", "phone-system-settings"].contains(NativeReview.route ?? ""),
                    let url = URL(string: UIApplication.openSettingsURLString) {
                     await UIApplication.shared.open(url)
+                }
+                else if NativeReview.route == "siri-ai-song" {
+                    UserDefaults.standard.set(true, forKey: "stati.siriAI.songSearch")
+                    let intent = SearchStatiLibrary()
+                    intent.criteria = StringSearchCriteria(term: "Amazing Grace")
+                    _ = try? await intent.perform()
                 }
                 else if NativeReview.route == "shortcut-song" {
                     let intent = FindStatiSong()
