@@ -4,6 +4,8 @@
 
 The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where your role allows it. The current development builds target iOS 26.3 or later. Check [Updates](https://github.com/Hapi-Products/stati/wiki/Updates) for the status of a specific build.
 
+Find the current build’s highlights and earlier updates in **Profile → What’s New**.
+
 ## Send a file or song text
 
 1. Open **Send** and select the intended computer under the heading.

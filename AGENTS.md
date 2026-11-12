@@ -10,3 +10,4 @@
 - Review dependency installation scripts before executing them. Use the committed lockfile.
 
 - With each user-visible Stați update, edit the relevant platform or shared guide in `docs/wiki/` and the Updates page in the same change. Record **Updated on** and **Updated by** on each changed page and label preview or unverified behavior accurately. Publish the verified pages to the GitHub Wiki and check the public URLs. Keep new in-app help topics linked to their matching guide.
+- For a new iPhone or iPad build, update `AppUpdate.current` and move the previous entry to history before regenerating the Xcode project. Verify the new What’s New entry in the built app.
