@@ -6,6 +6,8 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 51 | Wiki guide controls and highlights use neutral colors by default and follow the selected Stați accent. |
+| iPhone and iPad development build 50 | Adds opt-in Developer Mode for Stați shortcuts, icons in Account and Features, a 24-hour diagnostic log, and an in-app private report form. Installed and checked on a physical iPad. Live report delivery requires server setup. |
 | iPhone and iPad development build 49 | Opens the service picker from Siri or the song menu. Drag a catalog song into the running order and save. Diagnostics reports Siri AI preview requirements. |
 | Windows preview 44 | Adds signed-in Tasks and Groups pages with task notes, member lists, and shared file listings. |
 | iPhone and iPad development build 48 | Stazi Beta uses a fixed blue icon and accent. Removes the beta switch and iPad Recents search. Combines the reader controls in one glass bar and improves tap and drag on the slide text slider. |

@@ -106,7 +106,9 @@ enum WorshipHelpTopic {
         presentation.sourceRect = source.bounds
         presentation.delegate = self
         popover = controller
-        let highlight = WorshipGuideSpotlight(source: source, frame: presenter.view.bounds)
+        let appearance = AppIconAppearance.shared
+        let outlineColor = appearance.name == "Blue" ? UIColor.label : UIColor(appearance.accent)
+        let highlight = WorshipGuideSpotlight(source: source, frame: presenter.view.bounds, outlineColor: outlineColor)
         spotlight = highlight
         presenter.view.addSubview(highlight)
         presenter.present(controller, animated: true)
@@ -133,9 +135,11 @@ private final class WorshipGuideSpotlight: UIView {
     private weak var source: UIView?
     private let shade = CAShapeLayer()
     private let outline = CAShapeLayer()
+    private let outlineColor: UIColor
 
-    init(source: UIView, frame: CGRect) {
+    init(source: UIView, frame: CGRect, outlineColor: UIColor) {
         self.source = source
+        self.outlineColor = outlineColor
         super.init(frame: frame)
         isUserInteractionEnabled = false
         accessibilityElementsHidden = true
@@ -143,7 +147,6 @@ private final class WorshipGuideSpotlight: UIView {
         shade.fillRule = .evenOdd
         shade.fillColor = UIColor.black.withAlphaComponent(0.22).cgColor
         outline.fillColor = UIColor.clear.cgColor
-        outline.strokeColor = source.tintColor.cgColor
         outline.lineWidth = 2
         layer.addSublayer(shade)
         layer.addSublayer(outline)
@@ -169,6 +172,7 @@ private final class WorshipGuideSpotlight: UIView {
         surrounding.append(target)
         shade.path = surrounding.cgPath
         outline.path = target.cgPath
+        outline.strokeColor = outlineColor.resolvedColor(with: traitCollection).cgColor
     }
 }
 
@@ -208,6 +212,11 @@ private struct WorshipGuidePopover: View {
     let position: Int
     let width: CGFloat
 
+    private var tint: Color {
+        let appearance = AppIconAppearance.shared
+        return appearance.name == "Blue" ? .primary : appearance.accent
+    }
+
     var body: some View {
         let step = topic.steps[position]
         VStack(alignment: .leading, spacing: 12) {
@@ -217,9 +226,9 @@ private struct WorshipGuidePopover: View {
                 Link(destination: topic.wikiURL) {
                     Label("Read the full wiki guide", systemImage: "book")
                         .labelStyle(.iconOnly)
-                }.frame(minWidth: 44, minHeight: 32)
+                }.foregroundStyle(tint).frame(minWidth: 44, minHeight: 32)
                 Button("Close guide", systemImage: "xmark") { guide.stop() }
-                    .labelStyle(.iconOnly).frame(minWidth: 40, minHeight: 32)
+                    .labelStyle(.iconOnly).foregroundStyle(.primary).frame(minWidth: 40, minHeight: 32)
             }
             Text(step.instruction).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
@@ -233,7 +242,7 @@ private struct WorshipGuidePopover: View {
                 }
                 if position + 1 < topic.steps.count {
                     Button("Next step", systemImage: "chevron.right") { guide.move(to: position + 1) }
-                        .labelStyle(.iconOnly).buttonStyle(.borderedProminent)
+                        .labelStyle(.iconOnly).buttonStyle(.bordered)
                 } else {
                     Button("Finish guide", systemImage: "checkmark") { guide.stop() }
                         .labelStyle(.iconOnly).buttonStyle(.borderedProminent)
@@ -242,5 +251,6 @@ private struct WorshipGuidePopover: View {
         }
         .padding(16)
         .frame(width: width)
+        .tint(tint)
     }
 }
