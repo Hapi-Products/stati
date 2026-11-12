@@ -68,7 +68,8 @@ import Foundation
         defaults.set(0.75, forKey: "stati.reader.slideScale")
         ReaderPreferences.prepareDeviceDefaults(ownerID: "b", defaults: defaults)
         let inApp = ReaderPreferences(ownerID: "b", defaults: defaults, writesDeviceSettings: true)
-        #expect(inApp.settings.slideSize == .standard)
+        #expect(inApp.settings.slideSize.sliderPosition == 0.75)
+        #expect(inApp.settings.slideSize.points == 34)
         inApp.settings.slideSize = .small
         #expect(defaults.double(forKey: "stati.reader.slideScale") == 0)
     }
@@ -100,6 +101,13 @@ struct SlideSizeSettingsTests {
         #expect(settings.mode == .document && settings.transition == .pageTurn)
         #expect(!settings.clickerEnabled && settings.largePreviews && settings.retention == .week)
         #expect(settings.slideSize == .large)
+    }
+    @Test func currentSizesKeepFractionalPositionsAndReadOlderPresetNames() throws {
+        let previous = try JSONDecoder().decode(SlideTextSize.self, from: Data(#""extraLarge""#.utf8))
+        #expect(previous == .extraLarge)
+        let current = try #require(SlideTextSize(sliderPosition: 2.5))
+        #expect(current.points == 56)
+        #expect(try JSONDecoder().decode(SlideTextSize.self, from: JSONEncoder().encode(current)) == current)
     }
     @Test func slideSizesHaveIncreasingReadableSteps() {
         #expect(SlideTextSize.small.points < SlideTextSize.standard.points)

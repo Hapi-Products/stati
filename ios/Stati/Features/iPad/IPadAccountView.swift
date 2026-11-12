@@ -24,7 +24,7 @@ struct IPadAccountView: View {
                 .navigationDestination(for: MoreRoute.self) { route in switch route { case .team: IPadTeamView(); case .whatsNew: WhatsNewView(); case .privacy: PrivacyView(); default: EmptyView() } }
                 .onAppear {
                     #if DEBUG && targetEnvironment(simulator)
-                    if ["ipad-features", "ipad-pdf-columns-features", "ipad-worship-help"].contains(NativeReview.route ?? "") { reviewFeatures = true }
+                    if ["ipad-features", "ipad-pdf-columns-features", "ipad-worship-help", "ipad-worship-help-next"].contains(NativeReview.route ?? "") { reviewFeatures = true }
                     if NativeReview.route == "ipad-worship" { reviewWorship = true }
                     if NativeReview.route == "ipad-team" { path = [.team] }
                     if NativeReview.route == "ipad-privacy" { path = [.privacy] }

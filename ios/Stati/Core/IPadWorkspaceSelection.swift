@@ -1,13 +1,27 @@
 import Foundation
+
 nonisolated struct IPadWorkspaceSelection {
     var tab = "groups"
     var path: [IPadSidebarRoute] = []
-    var servicePath: [IPadSidebarRoute] = []
+    var serviceID: String?
+    var groupSelection: GroupSelection?
+
     mutating func select(_ value: String) {
-        if let page = IPadSidebarRoute(selection: value) {
-            if case .service = page { servicePath = [page]; path = []; tab = "service" }
-            else { path = [page]; tab = "browse" }
+        path = []
+        serviceID = nil
+        groupSelection = nil
+        switch IPadSidebarRoute(selection: value) {
+        case .service(let id):
+            tab = "service"
+            serviceID = id
+        case .group(let id):
+            tab = "shared"
+            groupSelection = .named(id)
+        case .folder(let name):
+            tab = "browse"
+            path = [.folder(name)]
+        case nil:
+            tab = value
         }
-        else { tab = value; path = [] }
     }
 }

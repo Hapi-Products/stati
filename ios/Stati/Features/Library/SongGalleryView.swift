@@ -9,7 +9,7 @@ struct SongGalleryView: View {
     @State private var preferences: ReaderPreferences
     @Environment(\.scenePhase) private var scenePhase
     @State private var modeOverride: SongReaderMode?
-    @State private var showingReaderHelp = false
+    @State private var guide = WorshipGuide()
     private var readerMode: SongReaderMode { modeOverride ?? preferences.settings.mode }
     @State private var preview: FilePreviewRequest?
     @State private var linking = false
@@ -58,7 +58,7 @@ struct SongGalleryView: View {
                 selectionChanged(model.selected.id)
             }
         }
-        .sheet(isPresented: $showingReaderHelp) { WorshipHelpView(topic: .reader) }
+
         .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); modeOverride = nil } }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
@@ -88,7 +88,7 @@ struct SongGalleryView: View {
         if NativeReaderReview.active { Text("Sample data · Simulator review").font(.caption).dynamicTypeSize(.large).foregroundStyle(Color.statiSecondary).padding(8) }
         #endif
         if let song = model.song {
-            SongReaderContent(song: song, mode: iPad ? readerMode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize, showsPagingControls: !focused).id(song.id + song["contentHash"].text)
+            SongReaderContent(song: song, mode: iPad ? readerMode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize, showsPagingControls: !focused, guide: iPad ? guide : nil).id(song.id + song["contentHash"].text)
         } else if model.loading { ProgressView("Opening song…").frame(maxWidth: .infinity, maxHeight: .infinity) }
         else { ContentUnavailableView("Song unavailable", systemImage: "music.note", description: Text(model.message)) }
         if !model.message.isEmpty, model.song != nil { NoticeView(text: model.message).padding(.horizontal, 16) }
@@ -120,14 +120,20 @@ struct SongGalleryView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Song Selector", systemImage: "music.note.list") {
                         preferences.reload()
+                        guide.stop()
                         choosingSong = true
-                    }.labelStyle(.iconOnly)
+                    }
+                    .labelStyle(.iconOnly)
+                    .worshipGuide(guide, at: .songSelector)
                 }
             }
             if iPad, let song = model.song {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("Song controls help", systemImage: "questionmark.circle") {
+                        let hasPages = readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1
+                        guide.start(.reader(hasPages: hasPages))
+                    }.labelStyle(.iconOnly)
                     Menu {
-                        Button("Reader tips", systemImage: "lightbulb") { showingReaderHelp = true }
                         Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
                         Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
                         Menu("Notes", systemImage: "note.text") { notesActions }

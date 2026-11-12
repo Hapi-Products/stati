@@ -2,11 +2,11 @@ import SwiftUI
 
 struct ServiceEditorContent: View {
     @Environment(AppStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @Bindable var editor: ServiceEditor
     private var iPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var canEdit: Bool { editor.canEdit && !iPad }
     private var leadership: JSONValue { editor.plan["leadership"] }
+    @State private var guide = WorshipGuide()
     @State private var readingID: String?
     @State private var adding = false
     @State private var history = false
@@ -18,7 +18,7 @@ struct ServiceEditorContent: View {
             if !editor.message.isEmpty { Section { NoticeView(text: editor.message); if editor.failed { Button("Retry saving") { Task { await editor.save() } } } } }
             Section {
                 if iPad {
-                    Text(editor.title).font(.title2.bold()).textSelection(.enabled)
+                    Text(editor.title).font(.title2.bold()).accessibilityAddTraits(.isHeader)
                     Label(editor.schedule.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar").textSelection(.enabled)
                 } else {
                     TextField("Service name", text: $editor.title).disabled(!canEdit)
@@ -64,26 +64,17 @@ struct ServiceEditorContent: View {
         .environment(\.editMode, .constant(canEdit ? .active : .inactive))
         .toolbar {
             if iPad {
-                ToolbarItem(placement: .principal) {
-                    Menu {
-                        Button("All services", systemImage: "calendar") { dismiss() }
-                        Button("Refresh service", systemImage: "arrow.clockwise") { Task { await editor.refresh() } }
-                        if editor.canEdit {
-                            Button("Add song from library", systemImage: "plus") { adding = true }
-                                .disabled(editor.changingLeader || editor.songs.count >= 1000)
-                        }
-                        if !editor.plan["archived"].flag {
-                            Button("Song requests and uploads", systemImage: "tray.and.arrow.up") { showingRequests = true }
-                        }
-                        Divider()
-                        leadershipActions
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(editor.title).font(.headline).lineLimit(1)
-                            Image(systemName: "chevron.down").font(.caption.weight(.semibold))
-                        }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    leadershipActions.labelStyle(.iconOnly)
+                    Button("Refresh service", systemImage: "arrow.clockwise") {
+                        guide.stop()
+                        Task { await editor.refresh() }
                     }
-                    .accessibilityHint("Opens service actions")
+                    .labelStyle(.iconOnly)
+                    .worshipGuide(guide, at: .serviceRefresh)
+                    Button("Service controls help", systemImage: "questionmark.circle") {
+                        guide.start(.service)
+                    }.labelStyle(.iconOnly)
                 }
             } else {
                 ToolbarItem(placement: .topBarTrailing) { leadershipActions }

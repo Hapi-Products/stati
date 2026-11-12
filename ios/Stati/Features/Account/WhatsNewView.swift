@@ -15,7 +15,11 @@ struct WhatsNewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HStack(alignment: .top, spacing: 12) {
-                    Text("What's New").font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("What’s New").font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                        Text(update.title).font(.headline)
+                        Text("Build \(update.id)").font(.subheadline).foregroundStyle(.secondary)
+                    }
                     Spacer(minLength: 0)
                     Button("View details", systemImage: "info.circle") { details = true }
                         .labelStyle(ActionIconLabelStyle()).frame(minWidth: 44, minHeight: 44).help("View update details")

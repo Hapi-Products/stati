@@ -10,6 +10,7 @@ struct IPadSharedFilesView: View {
     let groupTitle: String?
     let groups: WorshipGroupsModel?
     let switchGroup: ((String) -> Void)?
+    @State private var guide = WorshipGuide()
     @State private var actions: WorshipGroupActions?
     private let ownerID: String
     private let epoch: UUID
@@ -53,8 +54,8 @@ struct IPadSharedFilesView: View {
             if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.padding(.vertical, 8) }
         }.navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if let switchGroup, let groups, groups.groups.count > 1 {
-                    ToolbarItem(placement: .topBarLeading) {
+                if let switchGroup, let groups, !groups.groups.isEmpty, groups.groups.count > 1 || store.isAdmin {
+                    ToolbarItemGroup(placement: .topBarLeading) {
                         Menu("Switch worship group", systemImage: "person.2") {
                             ForEach(groups.groups) { group in
                                 Button {
@@ -67,6 +68,11 @@ struct IPadSharedFilesView: View {
                             if store.isAdmin {
                                 Button("All groups") { switchGroup("") }
                             }
+                        }
+                        .labelStyle(.iconOnly)
+                        .worshipGuide(guide, at: .groupSwitcher)
+                        Button("Group switcher help", systemImage: "questionmark.circle") {
+                            guide.start(.groups)
                         }.labelStyle(.iconOnly)
                     }
                 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IPadServicesView: View {
     @Environment(AppStore.self) private var store
+    var openService: ((String) -> Void)? = nil
     @State private var plans: [APIRecord] = []
     @State private var loading = false
     @State private var message = ""
@@ -9,17 +10,11 @@ struct IPadServicesView: View {
     var body: some View {
         List {
             ForEach(plans.filter { !$0["archived"].flag && (query.isEmpty || $0.title.localizedStandardContains(query) || $0["date"].text.localizedStandardContains(query)) }) { plan in
-                NavigationLink(value: IPadSidebarRoute.service(plan.id)) {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(plan.title).font(.headline)
-                            Text(plan["date"].text + " · " + plan["time"].text + " · \(plan["songs"].items.count) songs")
-                                .font(.footnote).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if !plan["leadership"]["leaderLabel"].text.isEmpty { ServiceLeaderBadge(plan: plan) }
-                    }
-                    .padding(.vertical, 4)
+                if let openService {
+                    Button { openService(plan.id) } label: { serviceRow(plan) }
+                        .buttonStyle(.plain)
+                } else {
+                    NavigationLink(value: IPadSidebarRoute.service(plan.id)) { serviceRow(plan) }
                 }
             }
             if loading { ProgressView("Loading services…") }
@@ -30,6 +25,20 @@ struct IPadServicesView: View {
             .onChange(of: store.serviceChangeRevision) { Task { await load() } }
             .task(id: store.accountEpoch.uuidString + store.selectedComputer) { await load() }.refreshable { await load() }
     }
+    private func serviceRow(_ plan: APIRecord) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(plan.title).font(.headline)
+                Text(plan["date"].text + " · " + plan["time"].text + " · \(plan["songs"].items.count) songs")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if !plan["leadership"]["leaderLabel"].text.isEmpty { ServiceLeaderBadge(plan: plan) }
+        }
+        .padding(.vertical, 4)
+        .contentShape(.rect)
+    }
+
     private func load() async {
         guard !store.selectedComputer.isEmpty else { plans = []; return }
         let epoch = store.accountEpoch, owner = store.me?.id, computer = store.selectedComputer

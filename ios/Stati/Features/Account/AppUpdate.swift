@@ -11,12 +11,20 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 34, title: "Quicker song and computer controls", highlights: [
+    static let current = AppUpdate(id: 45, title: "Clearer controls on iPad", highlights: [
+        Highlight(title: "Find the right control", detail: "Help opens beside the control you need, with arrows to move through the guide.", icon: "questionmark.circle"),
+        Highlight(title: "Adjust reading size smoothly", detail: "Features puts six song controls in two columns. The slide text slider moves continuously.", icon: "textformat.size"),
+        Highlight(title: "Keep services and groups in place", detail: "Open groups and services inside their own tabs. Service leadership and refresh now have toolbar icons.", icon: "calendar")
+    ], details: ["On iPad, the gear opens Apple Settings from Features.", "The book icon in a guide opens its full wiki page.", "Switching tabs clears the temporary group or service detail.", "The current update and its build number are listed in What’s New."])
+    static let previous: [AppUpdate] = [
+        AppUpdate(id: 43, title: "Simpler Features and Siri search", highlights: [], details: ["Features now has its own page in Apple Settings on iPad.", "Clicker is an on/off switch.", "Enable Siri AI Song Search to open matching songs on a supported device."]),
+        AppUpdate(id: 42, title: "Worship settings and guides", highlights: [], details: ["Worship preferences can be changed inside Stați or in Apple Settings on iPad.", "Added guides for Worship settings and the song reader."]),
+        AppUpdate(id: 40, title: "A cleaner song library", highlights: [], details: ["Removed Hymnary from iPhone and iPad.", "The Send queue is available on iPhone."]),
+        AppUpdate(id: 34, title: "Quicker song and computer controls", highlights: [
         Highlight(title: "Switch worship groups", detail: "When you have more than one group, use the people icon on the left of Groups.", icon: "person.2"),
         Highlight(title: "Select and send lyrics", detail: "On iPhone, double-tap lyrics to select a passage. The correction keyboard has Romanian accent keys.", icon: "text.cursor"),
         Highlight(title: "See which computer is online", detail: "Tap the computer name under Send to switch or add a computer.", icon: "desktopcomputer")
-    ], details: ["The music-list icon opens Song Selector on iPad.", "After sending a song, you can keep a copy for today. The computer’s saved-file receipt keeps the copy available long-term."])
-    static let previous: [AppUpdate] = [
+    ], details: ["The music-list icon opens Song Selector on iPad.", "After sending a song, you can keep a copy for today. The computer’s saved-file receipt keeps the copy available long-term."]),
         AppUpdate(id: 27, title: "QR invitations", highlights: [
             Highlight(title: "Invite with a scan", detail: "Show a joining QR on your computer or iPhone. New members scan it to create an account, then wait for approval.", icon: "qrcode")
         ], details: ["Administrator invitations show a QR and expiry, without a separate six-digit code.", "New-computer pairing links now work in Add computer.", "Six-digit codes still connect to computers already set up.", "Pairing asks for confirmation and stops if your signed-in account changes."]),

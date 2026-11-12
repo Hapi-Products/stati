@@ -1,29 +1,35 @@
 import Testing
 @testable import StatiCore
+
 @Suite struct IPadWorkspaceSelectionTests {
-    @Test func servicesStayInTheirOwnDestinationAndGroupsStayInBrowse() {
+    @Test func namedGroupOpensInsideGroupsAndClearsWhenLeaving() {
+        var value = IPadWorkspaceSelection()
+        value.select("named:private-id")
+        #expect(value.tab == "shared")
+        #expect(value.groupSelection == .named("private-id"))
+        #expect(value.path.isEmpty)
+        value.select("browse")
+        value.select("shared")
+        #expect(value.groupSelection == nil)
+    }
+
+    @Test func serviceDetailsStayInsideServiceAndClearWhenLeaving() {
         var value = IPadWorkspaceSelection()
         value.select("service:sunday")
         #expect(value.tab == "service")
-        #expect(value.servicePath == [.service("sunday")])
-        value.select("named:private-id")
-        #expect(value.tab == "browse")
-        #expect(value.path == [.group("private-id")])
+        #expect(value.serviceID == "sunday")
+        #expect(value.path.isEmpty)
+        value.select("browse")
+        value.select("service")
+        #expect(value.serviceID == nil)
     }
-    @Test func topLevelNavigationClearsThePreviousSidebarPage() {
-        var value = IPadWorkspaceSelection()
-        value.select("service:sunday"); value.select("tasks")
-        #expect(value.tab == "tasks" && value.path.isEmpty)
-        value.select("group:Choir"); value.select("browse")
-        #expect(value.tab == "browse" && value.path.isEmpty)
-    }
-}
 
-@Suite struct ServiceDestinationTests {
- @Test func returningToServiceKeepsItsRunningOrderWithoutBrowsing() {
-  var value = IPadWorkspaceSelection(); value.select("service:sunday"); value.select("tasks"); value.select("service")
-  #expect(value.tab == "service")
-  #expect(value.servicePath == [.service("sunday")])
-  #expect(value.path.isEmpty)
- }
+    @Test func folderNavigationStillUsesTheSongsPath() {
+        var value = IPadWorkspaceSelection()
+        value.select("group:Choir")
+        #expect(value.tab == "browse")
+        #expect(value.path == [.folder("Choir")])
+        value.select("browse")
+        #expect(value.path.isEmpty)
+    }
 }

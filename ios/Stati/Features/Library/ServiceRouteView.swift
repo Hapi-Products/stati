@@ -4,6 +4,7 @@ struct ServiceRouteView: View {
     @Environment(AppStore.self) private var store
     let computerID: String
     let serviceID: String
+    var showServices: (() -> Void)? = nil
     @State private var plan: APIRecord?
     @State private var message = ""
     var body: some View {
@@ -11,7 +12,16 @@ struct ServiceRouteView: View {
             if let plan { ServiceDetailView(computerID: computerID, initial: plan) }
             else if !message.isEmpty { ContentUnavailableView("Service unavailable", systemImage: "calendar.badge.exclamationmark", description: Text(message)) }
             else { ProgressView("Opening service…") }
-        }.task(id: store.accountEpoch.uuidString + computerID + serviceID) {
+        }
+        .toolbar {
+            if let showServices {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("All services", systemImage: "chevron.left", action: showServices)
+                        .labelStyle(.iconOnly)
+                }
+            }
+        }
+        .task(id: store.accountEpoch.uuidString + computerID + serviceID) {
             let epoch = store.accountEpoch
             plan = nil; message = ""
             do {

@@ -9,6 +9,7 @@ struct SongReaderContent: View {
     var pdfColumns: PDFColumnCount = .one
     var slideSize: SlideTextSize = .large
     var showsPagingControls = true
+    var guide: WorshipGuide?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var index = 0
     @State private var showsPagePreviews = false
@@ -25,14 +26,18 @@ struct SongReaderContent: View {
                 ScrollView { Text(song["text"].text).font(.title2).lineSpacing(8).textSelection(.enabled).padding(.horizontal, 28).padding(.vertical, 12).frame(maxWidth: 820, alignment: .leading).frame(maxWidth: .infinity, alignment: .center) }
             } else if count > 0 {
                 SongPageHost(pages: pages, document: mode == .document ? document : nil, index: $index, effect: transition.effective(for: mode, reduceMotion: reduceMotion), clickerEnabled: clickerEnabled, slideSize: slideSize)
-                    .id(mode.rawValue + transition.effective(for: mode, reduceMotion: reduceMotion).rawValue + slideSize.rawValue)
+                    .id(mode.rawValue + transition.effective(for: mode, reduceMotion: reduceMotion).rawValue + String(slideSize.sliderPosition))
                     .safeAreaInset(edge: .bottom) {
                         if showsPagingControls {
                             ReaderPagingBar(
                                 index: index, count: count,
                                 previous: { move(-1) }, next: { move(1) },
                                 pageLabels: true,
-                                showPagePreviews: count > 1 ? { showsPagePreviews = true } : nil
+                                showPagePreviews: count > 1 ? {
+                                    guide?.stop()
+                                    showsPagePreviews = true
+                                } : nil,
+                                guide: guide
                             )
                             .popover(isPresented: $showsPagePreviews, arrowEdge: .bottom) {
                                 SongPageThumbnails(

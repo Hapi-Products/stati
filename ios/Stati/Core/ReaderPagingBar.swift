@@ -9,6 +9,7 @@ struct ReaderPagingBar: View {
     var actions: [ReaderAction] = []
     var pageLabels = false
     var showPagePreviews: (() -> Void)?
+    var guide: WorshipGuide?
     var body: some View {
         HStack(spacing: 12) {
             if !actions.isEmpty {
@@ -28,6 +29,7 @@ struct ReaderPagingBar: View {
                 .onLongPressGesture(perform: showPagePreviews)
                 .accessibilityHint("Opens page previews.")
                 .hoverEffect(.highlight)
+                .worshipGuide(guide, at: .pageCounter)
             } else {
                 pageCount
             }
