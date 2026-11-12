@@ -1,6 +1,6 @@
 # Stați Worship for iPad
 
-**Updated on** November 11, 2026 · **Updated by** Codex for Stați
+**Updated on** November 12, 2026 · **Updated by** Codex for Stați
 
 Stați Worship gives iPad users **Recents**, **Groups**, **Songs**, and **Service**. The computer you select and your church role determine the material you can open.
 
@@ -12,6 +12,10 @@ Stați Worship gives iPad users **Recents**, **Groups**, **Songs**, and **Servic
 4. Return to **Service** to see the running order again. Use **Songs** when you need to search by title or lyrics.
 
 **Groups** gives you access to shared files. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**. **Recents** is a quick way back to a song or file you already opened. For search, use **Songs** or **Groups**. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
+
+## Add a song in order
+
+In the song reader, open the menu and choose **Add to service**, or use the Siri shortcut. Pick an active service, drag the song into place and tap **Done**. The selected computer sees the updated order in its shared plan. [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts)
 
 ## Refresh or lead a service
 

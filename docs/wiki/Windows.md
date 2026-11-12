@@ -1,6 +1,6 @@
 # Stați for Windows
 
-**Updated on** November 11, 2026 · **Updated by** Codex for Stați
+**Updated on** November 12, 2026 · **Updated by** Codex for Stați
 
 Use Windows for the church presentation computer. This is where you receive submissions, manage the shared library, and use the desktop presentation tools.
 
@@ -10,6 +10,10 @@ Use Windows for the church presentation computer. This is where you receive subm
 2. Open Stați. For a new installation, follow the pairing prompt. If the computer is already paired, choose your profile and complete its sign-in.
 3. Use **Queue** to review incoming files. Open a submission before choosing how to save or reject it.
 4. In **Prepare Slides**, select the source files and the appropriate destination. Check the generated slides and slide order in the presentation app before service.
+
+## Tasks and Groups
+
+Windows preview 44 adds **Tasks** and **Groups** to the sidebar after you unlock your profile. Tasks shows the board, status and notes. Groups shows worship groups you can access, their members, and the names of files shared with each group.
 
 ## Plan a service
 

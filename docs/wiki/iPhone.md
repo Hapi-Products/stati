@@ -1,6 +1,6 @@
 # Stați for iPhone
 
-**Updated on** November 11, 2026 · **Updated by** Codex for Stați
+**Updated on** November 12, 2026 · **Updated by** Codex for Stați
 
 The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where your role allows it. The current development builds target iOS 26.3 or later. Check [Updates](https://github.com/Hapi-Products/stati/wiki/Updates) for the status of a specific build.
 
@@ -20,7 +20,7 @@ The development build appears as **Stazi Beta** with a fixed blue icon and accen
 
 Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. Turn on Siri Shortcuts in **Profile → Features**.
 
-On a compatible device, turn on **Siri AI Song Search** in **Profile → Features**. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for available actions and example phrases. Open **Profile → Diagnostics** to read recent errors or draft a GitHub report.
+On a compatible device, turn on **Siri AI Song Search** in **Profile → Features**. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for available actions and example phrases. Open **Profile → Diagnostics** to see whether the device meets the Siri AI preview requirements, read recent errors or draft a GitHub report. **Save Song to a Service** opens a service picker for accounts that can plan services.
 
 Song comments and corrections depend on your role and the song you opened. For an authorized correction, open the song and choose the correction action. Review the selected text before submitting.
 
