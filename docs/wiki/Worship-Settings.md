@@ -2,7 +2,7 @@
 
 **Updated on** November 11, 2026 · **Updated by** Codex for Stați
 
-In development build 48, open **Account → Features** inside the app to edit Worship preferences. Saved reader choices carry forward. In Apple Settings, the app’s page shows the version and where to find Diagnostics. The development build is called **Stazi Beta** and uses a fixed blue icon and accent. The regular build offers the app icon picker.
+Open **Account → Features** inside the app to edit Worship preferences. Saved reader choices carry forward. In Apple Settings, the app’s page shows the version and where to find Diagnostics. The development build is called **Stazi Beta** and uses a fixed blue icon and accent. The regular build offers the app icon picker. In Stazi Beta build 50, **Developer Mode** in Features opts this device into Stați shortcuts on iPadOS 27.3 or later.
 
 The Songs controls use two columns when there’s room. Tap the lightbulb beside Songs to start a guide. The pop-up dims the surrounding screen and highlights the control it describes. The arrow buttons move through the guide, and the book icon opens this wiki page. Use the gear at the top of Features to open Apple Settings.
 

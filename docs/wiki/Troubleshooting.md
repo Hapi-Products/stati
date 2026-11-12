@@ -19,7 +19,7 @@ When reporting an issue, include your device, OS version, Stați build, the scre
 
 ## Report a problem on iPhone or iPad
 
-1. In development build 46, open **Profile → Diagnostics** on iPhone or **Account → Diagnostics** on iPad.
-2. Check the app version and recent errors. Use **Copy diagnostics** or **Share diagnostics** to keep a copy.
-3. Choose **Report a problem**. You can review the report and choose whether to attach recent errors before opening the GitHub draft.
-4. Add what you expected and the steps to reproduce the problem. GitHub issues are public. Stați’s diagnostic log contains timestamps, the app area and error type. Keep private church details out of your description.
+1. Open **Profile → Diagnostics** on iPhone or **Account → Diagnostics** on iPad.
+2. In build 50, use the copy icon in the top-right corner to copy every error retained from the last 24 hours.
+3. Choose **Report a problem**, optionally describe what happened, and tap the checkmark. Confirm **Yes, Send** to submit. The report automatically includes your app information and up to 200 recent errors. Each diagnostic entry shows a timestamp, the app area and the type of failure.
+4. Reports use a private GitHub inbox for authorized support staff. Live delivery requires a configured server credential. If sending is unavailable, you can still review and copy diagnostics on your device.

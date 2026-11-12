@@ -5,8 +5,9 @@
 ## Run a shortcut
 
 1. Sign in to Stați. On iPhone, open **Profile → Features**. On iPad, open **Account → Features**.
-2. Turn on **Siri Shortcuts**. Open **Shortcuts** and look for the Stați app to run its actions directly.
-3. Try the phrases below. If Siri hears the name differently, run the action in Shortcuts or rename a personal shortcut to a phrase that Siri recognizes.
+2. In **Stazi Beta** build 50 or later, turn on **Developer Mode** in Features. The switch is available on iOS and iPadOS 27.3 or later. In the regular app, turn on **Siri Shortcuts**.
+3. Open **Shortcuts** and look for Stați to run its actions directly.
+4. Try the phrases below. If Siri hears the name differently, run the action in Shortcuts or rename a personal shortcut to a phrase that Siri recognizes.
 
 | Try saying | Stați action |
 | --- | --- |
@@ -28,6 +29,6 @@ Use the app name shown in Shortcuts when speaking a phrase. The phrases above ar
 
 ## Try Siri AI search
 
-On a compatible device, enable Siri AI in Apple Settings and turn on **Siri AI Song Search** in Stați’s Features. Try “Search Stați for Amazing Grace.” This is a preview of Apple’s in-app search action. It searches the Stați library and lets you choose a result. Siri recognition and whether it routes a spoken request to Stați depend on Apple’s supported devices, languages, and settings. The regular shortcuts above are available separately from Siri AI. The developer preview requires iOS or iPadOS 27.3 or later and Apple Intelligence. In **Diagnostics**, the Siri AI preview entry shows when the OS is older, the device is unsupported, Apple Intelligence is off, or its models are preparing. The same status appears in copied and shared diagnostics.
+On a compatible device, enable Siri AI in Apple Settings and turn on **Siri AI Song Search** in Stați’s Features. Try “Search Stați for Amazing Grace.” This is a preview of Apple’s in-app search action. It searches the Stați library and lets you choose a result. Siri recognition and whether it routes a spoken request to Stați depend on Apple’s supported devices, languages, and settings. In Stazi Beta, Developer Mode enables the regular shortcuts even if the device does not support Apple Intelligence. Siri AI Song Search also requires Apple Intelligence. The developer preview requires iOS or iPadOS 27.3 or later and Apple Intelligence. In **Diagnostics**, the Siri AI preview entry shows when the OS is older, the device is unsupported, Apple Intelligence is off, or its models are preparing. The same status appears in copied diagnostics.
 
 [Apple’s Siri AI developer preview](https://developer.apple.com/documentation/appintents/siri-ai-developer-preview) · [Apple’s supported devices](https://support.apple.com/en-us/121115) · [Worship settings](https://github.com/Hapi-Products/stati/wiki/Worship-Settings)

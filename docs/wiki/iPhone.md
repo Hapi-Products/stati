@@ -20,7 +20,7 @@ The development build appears as **Stazi Beta** with a fixed blue icon and accen
 
 Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. Turn on Siri Shortcuts in **Profile → Features**.
 
-On a compatible device, turn on **Siri AI Song Search** in **Profile → Features**. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for available actions and example phrases. Open **Profile → Diagnostics** to see whether the device meets the Siri AI preview requirements, read recent errors or draft a GitHub report. **Save Song to a Service** opens a service picker for accounts that can plan services.
+In Stazi Beta, enable **Developer Mode** in **Profile → Features** to run Stați shortcuts on iOS 27.3 or later. On a compatible device, turn on **Siri AI Song Search** there too. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for available actions and example phrases. Open **Profile → Diagnostics** to see whether the device meets the Siri AI preview requirements, review recent errors or report a problem privately. **Save Song to a Service** opens a service picker for accounts that can plan services.
 
 Song comments and corrections depend on your role and the song you opened. For an authorized correction, open the song and choose the correction action. Review the selected text before submitting.
 
