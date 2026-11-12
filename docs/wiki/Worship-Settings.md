@@ -2,15 +2,15 @@
 
 **Updated on** November 11, 2026 · **Updated by** Codex for Stați
 
-These steps describe development build 45. Edit Worship preferences in **Stați → Account → Features** or under **Settings → Apps → Stați → Features** on iPad. Reopen Stați after making a change in Apple’s Settings. Your saved reader choices carry forward when you open the new build.
+In development build 46, open **Stați → Account → Features** to edit Worship preferences. Saved reader choices carry forward. **Settings → Apps → Stați Worship** shows the beta opt-in, app version and where to find Diagnostics. The beta switch does not enroll you in a test program or install software.
 
-The Songs controls use two columns when there’s room. Tap the lightbulb beside Songs to start a guide. Each pop-up points to the control it describes. The arrow buttons move through the guide, and the book icon opens this wiki page. Use the gear at the top of Features to open Apple Settings.
+The Songs controls use two columns when there’s room. Tap the lightbulb beside Songs to start a guide. The pop-up dims the surrounding screen and highlights the control it describes. The arrow buttons move through the guide, and the book icon opens this wiki page. Use the gear at the top of Features to open Apple Settings.
 
 ## Make songs easier to read
 
 1. Open **Open songs as** and choose Slides, PDF document, or Text.
 2. For Slides, drag the **Slide text size** slider. It adjusts between the old size presets and saves when you let go. Open a longer song to check readability.
-3. Open **PDF options** to set columns and the page effect. Choose one column for a wider page.
+3. Open **PDF Layout** to set columns and the page transition. These settings apply when you open a song as a PDF. Choose one column for a wider page.
 4. Turn **Larger previews** on for bigger thumbnails. Use **Song library layout** to choose Grid or List.
 
 ## Choose what the reader follows
@@ -23,8 +23,8 @@ The Songs controls use two columns when there’s room. Tap the lightbulb beside
 
 ## Appearance, Siri, updates, and the Lock Screen
 
-Choose an **App icon** in Settings and return to Stați for it to apply. The in-app picker lets you preview the choices. Turn **Show What’s New after updates** on or off according to your preference. **Live song on Lock Screen** is an opt-in preview. A working church setup also needs the compatible presentation computer and server feed.
+Choose an **App icon** in Features. The picker lets you preview the choices. Turn **Show What’s New after updates** on or off according to your preference. **Live song on Lock Screen** is an opt-in preview. A working church setup also needs the compatible presentation computer and server feed.
 
-**Siri AI Song Search** is available from the Siri section in **Settings → Apps → Stați** and from Features in Stați Worship. Turn it on, then try “Search Stați for Amazing Grace” on an Apple Intelligence device with Siri AI enabled. Build 43 registers Apple's in-app search action and opens the matching songs in Stați. The Siri AI developer preview requires iOS or iPadOS 27.3 and supported hardware, language, and region. The older **Find a Song** shortcut is also available. [Apple’s Siri AI announcement](https://developer.apple.com/news/?id=gdk2umrf)
+Turn on Siri Shortcuts or Siri AI Song Search in **Features → Siri**. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for phrases, requirements, and how to run an action by hand.
 
 [Stați Worship for iPad](https://github.com/Hapi-Products/stati/wiki/iPadOS) · [Updates](https://github.com/Hapi-Products/stati/wiki/Updates)

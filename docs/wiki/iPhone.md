@@ -16,9 +16,9 @@ Find the current build’s highlights and earlier updates in **Profile → What�
 
 ## Find songs and use Shortcuts
 
-Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. You can control Siri Shortcuts under **Settings → Apps → Stați**.
+Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. Turn on Siri Shortcuts in **Profile → Features**.
 
-On a device with the Siri AI developer preview, build 43 adds **Siri AI Song Search** under **Settings → Apps → Stați**. Enable it to let Siri open matching songs in your Stați library. [Apple’s Siri AI requirements](https://developer.apple.com/news/?id=gdk2umrf)
+On a compatible device, turn on **Siri AI Song Search** in **Profile → Features**. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for available actions and example phrases. Open **Profile → Diagnostics** to read recent errors or draft a GitHub report.
 
 Song comments and corrections depend on your role and the song you opened. For an authorized correction, open the song and choose the correction action. Review the selected text before submitting.
 

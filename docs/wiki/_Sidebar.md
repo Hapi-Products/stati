@@ -1,4 +1,4 @@
-**Stați wiki**
+**Stați Wiki**
 
 [Home](https://github.com/Hapi-Products/stati/wiki) · [Updates](https://github.com/Hapi-Products/stati/wiki/Updates)
 
@@ -19,4 +19,5 @@
 - [Connect a computer](https://github.com/Hapi-Products/stati/wiki/Connect-a-Computer)
 - [Song reader](https://github.com/Hapi-Products/stati/wiki/Song-Reader)
 - [Worship settings](https://github.com/Hapi-Products/stati/wiki/Worship-Settings)
+- [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts)
 - [Troubleshooting](https://github.com/Hapi-Products/stati/wiki/Troubleshooting)
