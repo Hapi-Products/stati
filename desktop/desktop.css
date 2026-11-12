@@ -35,3 +35,13 @@ body.identifying .operator-modal{--ui-surface:#fff;--ui-text:#1a1a1a;--ui-second
 
 /* Administrator invitations are QR-only. */
 .sidebar-join{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;gap:12px;padding:16px 8px}.sidebar-join img{width:144px;height:144px}.sidebar-join h2{margin-bottom:0}#enrollment-countdown{font-size:11px}#enrollment-status:empty{display:none}.sidebar-join .invite-instructions{font-size:12px}
+
+.team-columns { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.4fr); gap: 16px; align-items: start; }
+.team-list > ul { list-style: none; padding: 0; margin: 0; }
+.team-list li + li { margin-top: 4px; }
+.team-list li button { display: grid; gap: 4px; width: 100%; padding: 10px 12px; text-align: left; background: transparent; border-color: transparent; }
+.team-list li button[aria-pressed="true"] { background: color-mix(in srgb, currentColor 9%, transparent); }
+.team-list small { opacity: .72; }
+.team-detail { overflow-wrap: anywhere; }
+.team-detail p { white-space: pre-wrap; }
+@media (max-width: 900px) { .team-columns { grid-template-columns: 1fr; } }

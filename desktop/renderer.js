@@ -13,18 +13,34 @@ function error(e){const message=e.message||String(e);$('error').textContent=mess
 async function run(fn){try{$('error').hidden=true;if($('identity-error'))$('identity-error').hidden=true;return await fn();}catch(e){error(e);}}
 function bind(id,fn){$(id).addEventListener('click',()=>void run(fn));}
 const workspaceSections=['prepare','library','services','powerpoint','audio'];
+const teamSections=['tasks','groups'];
+const teamWorkspace=typeof createTeamWorkspace==='function' ? createTeamWorkspace(window.stati) : null;
 function tab(id){
  if(id==='settings'&&!adminUnlocked)return;
+ if(teamSections.includes(id)&&!document.documentElement.dataset.workspaceOperator)return;
  const changing=new Event('stati-before-navigate',{cancelable:true});if(!window.dispatchEvent(changing))return;
  document.documentElement.dataset.workspaceTab=id;
  document.querySelectorAll('aside nav button').forEach(b=>{const selected=(b.dataset.tab||b.id)===id||(id==='audio'&&b.id==='prepare');b.classList.toggle('active',selected);if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  ['station','clocks','settings'].forEach(t=>$(t+'-panel').hidden=t!==id||(!paired&&t==='station'));
  $('workspace-panel').hidden=!workspaceSections.includes(id);
+ if(teamWorkspace){
+  $('team-panel').hidden=!teamSections.includes(id);
+  teamWorkspace.show(teamSections.includes(id)?id:null);
+ }
  $('pair-panel').hidden=paired||id!=='station';
  window.dispatchEvent(new Event('stati-workspace-change'));
  if(id==='clocks')void run(renderClocks);if(id==='settings')void run(loadIdentitySettings);
 }
 window.addEventListener('stati-workspace-selected',event=>{const id=event.detail;if(!workspaceSections.includes(document.documentElement.dataset.workspaceTab))return;document.documentElement.dataset.workspaceTab=id;document.querySelectorAll('aside nav button').forEach(b=>{const selected=(b.dataset.tab||b.id)===id;b.classList.toggle('active',selected);if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});});
+
+function setTeamNavigation(unlocked) {
+ if (!teamWorkspace) return;
+ for (const page of teamSections) document.querySelector(`[data-tab="${page}"]`).hidden = !unlocked;
+ if (!unlocked) {
+  teamWorkspace.show(null);
+  if (teamSections.includes(document.documentElement.dataset.workspaceTab)) tab('station');
+ }
+}
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 async function refresh(){
@@ -175,7 +191,7 @@ async function showPairing(data){
 bind('pair',async()=>{const button=$('pair');button.disabled=true;try{await showPairing(await window.stati.pair($('computer-name').value));}finally{button.disabled=false;}});
 function clearIdentityContent(){if($('connected-people')){$('connected-people').hidden=true;$('connected-people-list').replaceChildren();}
  $('linked-changes-alert').hidden=true;linkedCheckAt=0;
- delete document.documentElement.dataset.workspaceOperator;window.dispatchEvent(new Event('stati-workspace-change'));
+ delete document.documentElement.dataset.workspaceOperator;setTeamNavigation(false);window.dispatchEvent(new Event('stati-workspace-change'));
  identityChoicePending=false;
  closeMediaPreview();window.dispatchEvent(new Event('stati-previews-reset'));
  $('rename-file-dialog').close();$('reject-dialog').close();$('file-action-status').textContent='';
@@ -257,7 +273,7 @@ window.stati.onRequest(()=>{$('requests-panel').hidden=false;$('request-bell').s
 
 window.stati.onClocksChanged(()=>void run(renderClocks));window.stati.onClockContrastStatus(message=>{$('clock-contrast-status').textContent=message;$('clock-contrast-status').hidden=!message;});
 
-window.stati.onNavigate(section=>{if(privacyAllowed&&(section!=='settings'||adminUnlocked)&&['station','clocks','settings',...workspaceSections].includes(section))tab(section);});
+window.stati.onNavigate(section=>{if(privacyAllowed&&(section!=='settings'||adminUnlocked)&&['station','clocks','settings',...workspaceSections,...teamSections].includes(section))tab(section);});
 $('rename-computer-form').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{const input=$('station-name'),button=$('computer-rename');const name=input.value.trim();if(!name){$('computer-saved').textContent='Enter a computer name.';input.focus();return;}computerNameRevision++;button.disabled=true;input.disabled=true;$('computer-saved').textContent='Saving…';try{const result=await window.stati.renameComputer(name);computerNameRevision++;input.value=result.name;$('computer-saved').textContent='Computer name saved.';await refresh();}catch(error){$('computer-saved').textContent=error.message||'Unable to rename this computer.';throw error;}finally{button.disabled=false;input.disabled=false;}});});
 let connectionSignature='';function renderConnection(state){const member=operatorChosen?state.members.find(m=>m.id===state.device.operator_id):null;const signature=JSON.stringify(member||null);if(signature===connectionSignature)return;connectionSignature=signature;const target=$('connection');target.replaceChildren();if(!member){target.textContent='Connected';return;}const avatar=el('span',member.first_name[0]+member.last_initial,'avatar');const text=el('span');text.append(el('strong',member.first_name+' '+member.last_initial+'.'),el('small','Connected'));target.append(avatar,text);if(member.has_photo)setAvatarPhoto(avatar,member.id);}
 
@@ -265,7 +281,7 @@ bind('notification-test',async()=>{const result=await window.stati.testNotificat
 
 function resetAdminUnlock(){selectedAdmin=null;clearInterval(unlockTimer);unlockTimer=null;$('admin-unlock').hidden=true;$('operators').hidden=false;$('admin-pin').value='';$('admin-unlock-qr').hidden=true;$('admin-unlock-status').textContent='';}
 function cancelAdminUnlock(){void window.stati.cancelOperatorUnlock().catch(()=>{});resetAdminUnlock();}
-async function finishOperatorChoice(generation=identityGeneration){if(generation!==identityGeneration)return false;await window.stati.workspaceOpen();if(generation!==identityGeneration)return false;operatorChosen=true;document.documentElement.dataset.workspaceOperator=String(generation);window.dispatchEvent(new Event('stati-workspace-change'));document.body.classList.remove('identifying');document.documentElement.classList.remove('identity-fullscreen');$('operator-shade').hidden=true;filesSignature='';return true;}
+async function finishOperatorChoice(generation=identityGeneration){if(generation!==identityGeneration)return false;await window.stati.workspaceOpen();if(generation!==identityGeneration)return false;operatorChosen=true;document.documentElement.dataset.workspaceOperator=String(generation);setTeamNavigation(true);window.dispatchEvent(new Event('stati-workspace-change'));document.body.classList.remove('identifying');document.documentElement.classList.remove('identity-fullscreen');$('operator-shade').hidden=true;filesSignature='';return true;}
 async function finishAdminUnlock(generation=identityGeneration){if(generation!==identityGeneration)return;resetAdminUnlock();await finishOperatorChoice(generation);await refresh();}
 bind('admin-cancel',cancelAdminUnlock);
 $('admin-unlock').addEventListener('submit',event=>{event.preventDefault();void run(async()=>{
@@ -329,7 +345,7 @@ async function useIdentityWindow(){applyIdentityPresentation(await window.stati.
 bind('identity-skip',async()=>{const generation=identityGeneration,result=await window.stati.skipIdentity();if(result.skipped&&generation===identityGeneration){identityGeneration++;clearIdentityContent();applyIdentityPresentation(result);}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!event.defaultPrevented&&identityPresentation==='fullscreen'&&document.body.classList.contains('identifying')&&!document.querySelector('dialog[open]')){event.preventDefault();void run(useIdentityWindow);}});
 window.stati.onIdentityPresentation(applyIdentityPresentation);
-window.stati.onWorkspaceReset?.(()=>{delete document.documentElement.dataset.workspaceOperator;window.dispatchEvent(new Event('stati-workspace-change'));});
+window.stati.onWorkspaceReset?.(()=>{delete document.documentElement.dataset.workspaceOperator;setTeamNavigation(false);window.dispatchEvent(new Event('stati-workspace-change'));});
 window.stati.onIdentityRequired(()=>void run(()=>requireIdentity()));
 
 bind('changelog',()=>window.stati.openChangelog());

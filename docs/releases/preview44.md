@@ -1,0 +1,1 @@
+Adds Tasks and Groups to the Windows sidebar after profile sign-in. Open a task to see its status and notes. Open a worship group to see its members and shared files. Includes the Windows service fixes from the previous preview.

@@ -620,6 +620,18 @@ handle('song-library-save',async({id,contentHash,data})=>{const operator=await w
 handle('song-library-clone',async({id,contentHash,groupName})=>{const operator=await workspaceOperator('editLyrics'),directory=await libraryDirectory(operator);assertIdentity(operator.generation);const result=await require('./song-save.cjs').cloneLibrarySong(directory,id,contentHash,groupName,()=>assertIdentity(operator.generation));assertIdentity(operator.generation);catalogChanged();return result;});
 handle('prepare-draft-load',async()=>{const operator=await workspaceOperator('createSlides');const result=await drafts().load(operator.id);assertIdentity(operator.generation);return result;});
 handle('prepare-draft-save',async data=>{const operator=await workspaceOperator('createSlides');const result=await drafts().save(operator.id,data);assertIdentity(operator.generation);return result;});
+handle('team-page', async input => {
+ const actor = draftOperator();
+ const scope = localOperatorSelection.privateAuthority({userId: actor.id, generation: actor.generation});
+ if (!scope || operatorAwaitingWorkspace) throw Error('Unlock your profile to view the team workspace.');
+ const endpoint = require('./team-page.cjs').teamEndpoint(input);
+ const result = await request(endpoint, {deviceCredential: credential, proof: scope.proof, selectionLease: scope.lease});
+ assertIdentity(actor.generation);
+ if (!localOperatorSelection.privateAuthority({userId: actor.id, generation: actor.generation})) {
+  throw Error('The selected profile changed.');
+ }
+ return result;
+});
 handle('prepare',async section=>{if(section!==undefined&&!['prepare','library','services','powerpoint','audio'].includes(section))throw Error('Choose a valid workspace.');await workspaceOperator(['powerpoint','audio'].includes(section)?'editLyrics':!section||section==='prepare'?'createSlides':'readSongs');return openPrepare(section);});
 async function savedFile(id){const generation=await assertFileAccess(id);const receipts=await readJson('deliveries.json',{});if(!receipts[id])throw new Error('Save this file to the computer first.');await fs.access(receipts[id]);assertIdentity(generation);return receipts[id];}
 function previewActive(generation,deviceCredential,id,signal){signal?.throwIfAborted();assertIdentity(generation);if(quitting||sessionLocked||credential!==deviceCredential||blockedTransfers.has(id))throw Error('This preview is no longer available.');}
