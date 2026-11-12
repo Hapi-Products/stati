@@ -11,7 +11,7 @@
 
 ## Set up the reader
 
-In **Account → Features**, choose the reading format, size, and song selector. On iPad these preferences are also available in **Settings → Apps → Stați** starting with development build 41.
+In **Account → Features**, choose the reading format, size, and song selector. On iPad, open **Settings → Apps → Stați → Features** for these preferences in development build 43.
 
 In development build 42, open the reader’s options menu and choose **Reader tips** to view the walkthrough in Stați. The guide includes a link back to this page.
 

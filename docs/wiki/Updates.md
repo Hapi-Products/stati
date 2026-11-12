@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 43 | Adds the iPad Features page in Apple Settings, a slide text size slider and a Clicker switch. Registers the optional Siri AI library search action for compatible devices. Installed and launched on an iPad running iPadOS 27.3. The search action was tested with sample songs in the simulator. |
 | iPhone and iPad development build 42 | Adds built-in Worship settings and song reader help on iPad. |
 | iPhone and iPad development build 41 | Restores Worship controls in the app and mirrors them to Apple Settings on iPad. |
 | iPhone and iPad development build 40 | Removes Hymnary. Send remains on iPhone and the iPad Songs toolbar focuses on the library. |

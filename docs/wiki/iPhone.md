@@ -16,6 +16,8 @@ The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where 
 
 Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. You can control Siri Shortcuts under **Settings → Apps → Stați**.
 
+On a device with the Siri AI developer preview, build 43 adds **Siri AI Song Search** under **Settings → Apps → Stați**. Enable it to let Siri open matching songs in your Stați library. [Apple’s Siri AI requirements](https://developer.apple.com/news/?id=gdk2umrf)
+
 Song comments and corrections depend on your role and the song you opened. For an authorized correction, open the song and choose the correction action. Review the selected text before submitting.
 
 [Phone apps](https://github.com/Hapi-Products/stati/wiki/Phone-Apps) · [Connect a computer](https://github.com/Hapi-Products/stati/wiki/Connect-a-Computer)
