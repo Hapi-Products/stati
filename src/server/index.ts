@@ -1,3 +1,4 @@
+import {sendSupportReport} from './support-reports';
 import {issuePhoneEnrollment} from './phone-enrollment';
 import {songComments,readSongComment} from './song-comments';
 export {TaskEvents} from './task-events';
@@ -55,6 +56,7 @@ async function signIn(env:Env,id:string){const raw=token();await env.DB.prepare(
 const webauthnPayload=z.object({response:z.record(z.string(),z.unknown())});
 async function routes(r:Request,env:Env,ctx:ExecutionContext):Promise<Response>{
  const url=new URL(r.url),p=url.pathname,m=r.method;
+ if(p==='/api/support/reports'&&m==='POST')return sendSupportReport(r,env,(await user(r,env)).id);
  if(p==='/api/mobile/authorization')return mobileSession(r,env,true);
  if(p==='/api/mobile/session')return mobileSession(r,env,false);
  const fileEdit=p.match(/^\/api\/file-edits\/(group|task)\/([0-9a-f-]{36})$/i);if(fileEdit){const kind=fileEdit[1].toLowerCase() as 'group'|'task',response=await fileEditRoute(r,env,kind,fileEdit[2]);if(kind==='task'&&m==='PUT'&&response.ok)ctx.waitUntil(notifyTaskChange(env));return response;}
