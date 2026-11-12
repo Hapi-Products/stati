@@ -1,5 +1,7 @@
 # Stați
 
+[Stați user wiki](https://github.com/Hapi-Products/stati/wiki) covers setup, platform guides, and troubleshooting.
+
 Church presentation and worship tools by Hapi Products. Stați connects the presentation computer, website, Stați for iPhone, and Stați Worship for iPad. Use them to send materials, manage songs and services, share group files, and coordinate tasks and song corrections.
 
 This repository contains the application sources under the [Apache License 2.0](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The license does not grant rights to church song lyrics, uploaded documents, or third-party media. No church library, account database, private signing key, or production secret is included.

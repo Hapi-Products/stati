@@ -1,0 +1,17 @@
+# Stați updates
+
+**Updated on** November 11, 2026 · **Updated by** Codex for Stați
+
+Published downloads are listed at [Stați releases](https://github.com/markusciani/stati-releases/releases). This page also documents development builds so you can tell when the instructions require a preview.
+
+| Build or platform | Change and status |
+| --- | --- |
+| iPhone and iPad development build 42 | Adds built-in Worship settings and song reader help on iPad. |
+| iPhone and iPad development build 41 | Restores Worship controls in the app and mirrors them to Apple Settings on iPad. |
+| iPhone and iPad development build 40 | Removes Hymnary. Send remains on iPhone and the iPad Songs toolbar focuses on the library. |
+| iPhone and iPad development build 39 | Sets the minimum OS to iOS or iPadOS 26.3. |
+| Windows | Use the releases page for downloadable versions. See the [Windows guide](https://github.com/Hapi-Products/stati/wiki/Windows) for the service and ProPresenter workflows. |
+| macOS | Local Apple silicon previews are under development. |
+| Android | The Android package uses the shared web experience. Dedicated tablet editions are planned. |
+
+[Home](https://github.com/Hapi-Products/stati/wiki)
