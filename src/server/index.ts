@@ -59,6 +59,14 @@ async function routes(r:Request,env:Env,ctx:ExecutionContext):Promise<Response>{
  if(p==='/api/mobile/session')return mobileSession(r,env,false);
  const fileEdit=p.match(/^\/api\/file-edits\/(group|task)\/([0-9a-f-]{36})$/i);if(fileEdit){const kind=fileEdit[1].toLowerCase() as 'group'|'task',response=await fileEditRoute(r,env,kind,fileEdit[2]);if(kind==='task'&&m==='PUT'&&response.ok)ctx.waitUntil(notifyTaskChange(env));return response;}
  if(p==='/api/recents/availability'&&m==='POST')return recentAvailability(r,env);
+ const teamPage=p.match(/^\/api\/station\/team\/(tasks|groups|files)(?:\/([0-9a-f-]{36}))?$/i);
+ if(teamPage&&m==='GET'){
+  const station=await device(r,env),page=teamPage[1].toLowerCase(),id=teamPage[2];
+  if(page==='tasks')return readFeedbackTasks(r,env,id,station.id);
+  if(page==='groups')return worshipGroupsRoute(r,env,id,station.id);
+  if(!id&&!url.searchParams.has('computerId')&&!url.searchParams.has('songId')&&url.searchParams.has('groupId'))return listGroupMaterials(r,env,station.id);
+  throw new HttpError(400,'Choose a worship group.');
+ }
  if(p==='/api/worship-groups/candidates')return worshipGroupCandidates(r,env);
  if(p==='/api/worship-groups')return worshipGroupsRoute(r,env);
  const worshipGroup=p.match(/^\/api\/worship-groups\/([0-9a-f-]{36})$/i);if(worshipGroup)return worshipGroupsRoute(r,env,worshipGroup[1]);

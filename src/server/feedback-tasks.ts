@@ -1,6 +1,7 @@
 import {listTaskImages} from './task-images';
 import {z} from 'zod';
 import {body,hash,HttpError,json,now} from './core';
+import {requireStationMinistry,stationMinistryGuard} from './station-catalog';
 import {ministryAuthorityGuard,requireMinistryCapability,type MinistryAuthority} from './ministry-roles';
 import type {FeedbackTask,TaskNote,TaskStatus} from '../shared/feedback-tasks-types';
 
@@ -21,8 +22,8 @@ const joins='FROM feedback_tasks task JOIN users author ON author.id=task.author
 const staff=(authority:MinistryAuthority)=>authority.user.role==='admin'||['worship_leader','choir_director','pastor'].includes(authority.ministryRole||'');
 const administrator=(authority:MinistryAuthority)=>authority.user.role==='admin';
 function present(row:Row,authority:MinistryAuthority):FeedbackTask{return{id:row.id,title:row.title,body:row.body,status:row.status,urgent:!!row.urgent,revision:row.revision,authorId:row.author_id,authorName:row.author_first+' '+row.author_last+'.',...(row.author_photo?{authorPhotoUrl:'/api/members/'+row.author_id+'/photo'}:{}),createdAt:row.created_at,updatedAt:row.updated_at,noteCount:row.note_count,canManage:row.author_id===authority.user.id||staff(authority),canDelete:row.author_id===authority.user.id||administrator(authority)};}
-async function detail(env:Env,authority:MinistryAuthority,id:string){
- const guard=ministryAuthorityGuard(authority,'sendFiles');
+async function detail(env:Env,authority:MinistryAuthority,id:string,deviceId?:string){
+ const guard=deviceId?stationMinistryGuard(authority,deviceId,'sendFiles'):ministryAuthorityGuard(authority,'sendFiles');
  const [tasks,notes,count]=await env.DB.batch([
   env.DB.prepare(`SELECT ${columns} ${joins} WHERE task.id=? AND task.deleted_at IS NULL AND ${guard.sql}`).bind(id,...guard.params),
   env.DB.prepare(`SELECT note.id,note.author_id AS authorId,note.body,note.created_at AS createdAt,author.first_name||' '||author.last_initial||'.' AS authorName,author.photo_key AS authorPhotoKey FROM feedback_task_notes note JOIN users author ON author.id=note.author_id WHERE note.task_id=? AND note.deleted_at IS NULL AND EXISTS(SELECT 1 FROM feedback_tasks WHERE id=note.task_id AND deleted_at IS NULL) AND ${guard.sql} ORDER BY note.created_at DESC,note.id DESC LIMIT 100`).bind(id,...guard.params),
@@ -30,13 +31,13 @@ async function detail(env:Env,authority:MinistryAuthority,id:string){
  ]);
  const task=tasks.results[0] as Row|undefined;if(!task)throw new HttpError(404,'This task is unavailable. Refresh the board.');
  const items=notes.results.map(raw=>{const row=raw as {id:string;authorId:string;body:string;createdAt:number;authorName:string;authorPhotoKey:string|null};const {authorPhotoKey,...note}=row;return{...note,...(authorPhotoKey?{authorPhotoUrl:'/api/members/'+row.authorId+'/photo'}:{}),canDelete:row.authorId===authority.user.id||administrator(authority)} satisfies TaskNote;});
- return{task:present(task,authority),images:await listTaskImages(env,authority,id),notes:items.reverse(),noteTotal:Number((count.results[0] as {total:number}).total)};
+ return{task:present(task,authority),images:deviceId?[]:await listTaskImages(env,authority,id),notes:items.reverse(),noteTotal:Number((count.results[0] as {total:number}).total)};
 }
-export async function readFeedbackTasks(request:Request,env:Env,id?:string){
- const authority=await requireMinistryCapability(request,env,'sendFiles');
- if(id){if(!uuid.safeParse(id).success)throw new HttpError(400,'Choose a task.');return json(await detail(env,authority,id));}
+export async function readFeedbackTasks(request:Request,env:Env,id?:string,deviceId?:string){
+ const authority=deviceId?await requireStationMinistry(request,env,deviceId,'sendFiles',true):await requireMinistryCapability(request,env,'sendFiles');
+ if(id){if(!uuid.safeParse(id).success)throw new HttpError(400,'Choose a task.');return json(await detail(env,authority,id,deviceId));}
  const input=z.coerce.number().int().min(0).max(1000000).safeParse(new URL(request.url).searchParams.get('offset')||0);if(!input.success)throw new HttpError(400,'Choose a valid board page.');
- const guard=ministryAuthorityGuard(authority,'sendFiles'),offset=input.data;
+ const guard=deviceId?stationMinistryGuard(authority,deviceId,'sendFiles'):ministryAuthorityGuard(authority,'sendFiles'),offset=input.data;
  const [tasks,counts]=await env.DB.batch([
   env.DB.prepare(`SELECT ${columns} ${joins} WHERE task.deleted_at IS NULL AND ${guard.sql} ORDER BY CASE task.status WHEN 'new' THEN 0 WHEN 'in-progress' THEN 1 ELSE 2 END,task.urgent DESC,task.updated_at DESC,task.id LIMIT 150 OFFSET ?`).bind(...guard.params,offset),
   env.DB.prepare(`SELECT status,COUNT(*) AS total FROM feedback_tasks WHERE deleted_at IS NULL AND ${guard.sql} GROUP BY status`).bind(...guard.params),

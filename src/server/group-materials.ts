@@ -21,12 +21,13 @@ function material(row:MaterialRow,authority:MinistryAuthority):GroupMaterial{
 }
 async function cancel(body:ReadableStream<Uint8Array>|null){if(body&&!body.locked)await body.cancel().catch(()=>{});}
 
-export async function listGroupMaterials(request:Request,env:Env){
+export async function listGroupMaterials(request:Request,env:Env,deviceId?:string){
  const query=new URL(request.url).searchParams,computerId=query.get('computerId'),songId=query.get('songId');
  if((computerId===null)!==(songId===null)||computerId!==null&&(!identifier.safeParse(computerId).success||!songId||!/^[a-f0-9]{64}$/.test(songId)))throw new HttpError(400,'Choose a saved song and its computer.');
  const linkContext=computerId&&songId?{computerId,songId}:null;
- const authority=linkContext?await requireStationMinistry(request,env,linkContext.computerId,'readSongs'):await requireMaterialAuthority(request,env);
- const guard=linkContext?stationMinistryGuard(authority,linkContext.computerId,'readSongs'):ministryAuthorityGuard(authority,'readSongs');
+ const authority=linkContext?await requireStationMinistry(request,env,linkContext.computerId,'readSongs'):await requireMaterialAuthority(request,env,deviceId);
+ const stationId=linkContext?.computerId??deviceId;
+ const guard=stationId?stationMinistryGuard(authority,stationId,'readSongs'):ministryAuthorityGuard(authority,'readSongs');
  const linkedSQL=linkContext?' AND EXISTS(SELECT 1 FROM group_material_song_links song_link WHERE song_link.material_id=material.id AND song_link.device_id=? AND song_link.song_id=?)':'',linkedParams=linkContext?[linkContext.computerId,linkContext.songId]:[];
  const privateAccess=groupMaterialAccess(authority),groupId=query.get('groupId');
  if(groupId!==null&&!identifier.safeParse(groupId).success)throw new HttpError(400,'Choose a saved worship group.');
@@ -190,4 +191,4 @@ export async function assignGroupMaterial(request:Request,env:Env,id:string){
  return json({ok:true,id,groupId:data.groupId});
 }
 
-async function requireMaterialAuthority(request:Request,env:Env){const authority=await requireMinistryCapability(request,env,'readSongs');if(!authority.capabilities.sendFiles)throw new HttpError(403,'Your role does not allow group files.');return authority;}
+async function requireMaterialAuthority(request:Request,env:Env,deviceId?:string){const authority=deviceId?await requireStationMinistry(request,env,deviceId,'readSongs',true):await requireMinistryCapability(request,env,'readSongs');if(!authority.capabilities.sendFiles)throw new HttpError(403,'Your role does not allow group files.');return authority;}
