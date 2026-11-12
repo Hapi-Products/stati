@@ -11,7 +11,7 @@ Stați Worship gives iPad users **Recents**, **Groups**, **Songs**, and **Servic
 3. Open the page counter to pick from slide previews. Use the song selector to jump to another song.
 4. Return to **Service** to see the running order again. Use **Songs** when you need to search by title or lyrics.
 
-**Groups** gives you access to shared files. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**. **Recents** is a quick way back to a song or file you already opened. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
+**Groups** gives you access to shared files. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**. **Recents** is a quick way back to a song or file you already opened. For search, use **Songs** or **Groups**. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
 
 ## Refresh or lead a service
 
@@ -23,6 +23,6 @@ Open **Account → Worship → Groups**. If you own the group or are an administ
 
 ## Change the iPad settings
 
-Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. The account header shows your name and photo. **Settings → Apps → Stați Worship** shows the beta opt-in and version. To see or share recent errors, open **Account → Diagnostics** inside Stați. [Siri commands](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) · [Report a problem](https://github.com/Hapi-Products/stati/wiki/Troubleshooting#report-a-problem-on-iphone-or-ipad)
+Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. The account header shows your name and photo. Find the app version in **Settings → Apps → Stazi Beta** on the development build or **Settings → Apps → Stați Worship** on the regular build. To see or share recent errors, open **Account → Diagnostics** inside Stați. [Siri commands](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) · [Report a problem](https://github.com/Hapi-Products/stati/wiki/Troubleshooting#report-a-problem-on-iphone-or-ipad)
 
 [Song reader tips](https://github.com/Hapi-Products/stati/wiki/Song-Reader) · [Worship settings walkthrough](https://github.com/Hapi-Products/stati/wiki/Worship-Settings) · [Tablet apps](https://github.com/Hapi-Products/stati/wiki/Tablet-Apps)

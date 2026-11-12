@@ -6,6 +6,8 @@ The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where 
 
 Find the current build’s highlights and earlier updates in **Profile → What’s New**.
 
+The development build appears as **Stazi Beta** with a fixed blue icon and accent. The regular app offers the icon picker in Profile.
+
 ## Send a file or song text
 
 1. Open **Send** and select the intended computer under the heading.
