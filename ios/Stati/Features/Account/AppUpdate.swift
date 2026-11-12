@@ -11,11 +11,15 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 49, title: "Put a song in the running order", highlights: [
-        Highlight(title: "Save a song to a service", detail: "Use Siri or the song menu, choose a service, drag the song into place and tap Done.", icon: "text.badge.plus"),
-        Highlight(title: "Check Siri AI availability", detail: "Diagnostics explains which device requirements are met.", icon: "stethoscope")
+    static let current = AppUpdate(id: 50, title: "Developer Mode and Diagnostics", highlights: [
+        Highlight(title: "Try Siri in Stazi Beta", detail: "Enable Developer Mode in Features on iOS or iPadOS 27.3 or later.", icon: "hammer"),
+        Highlight(title: "Review recent errors", detail: "Diagnostics keeps 24 hours of errors. Use the copy button at the top to copy the log.", icon: "stethoscope")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 49, title: "Put a song in the running order", highlights: [
+        Highlight(title: "Save a song to a service", detail: "Use Siri or the song menu, choose a service, drag the song into place and tap Done.", icon: "text.badge.plus"),
+        Highlight(title: "Check Siri AI availability", detail: "Diagnostics explains which device requirements are met.", icon: "stethoscope")
+    ], details: []),
         AppUpdate(id: 48, title: "Simpler page controls", highlights: [
         Highlight(title: "Move through songs", detail: "The arrows and page counter share one glass control.", icon: "arrow.left.and.right"),
         Highlight(title: "Set the slide text size", detail: "Tap the slider track or drag the thumb to adjust the size.", icon: "textformat.size"),

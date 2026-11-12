@@ -1,44 +1,45 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DiagnosticsView: View {
+    @Environment(AppStore.self) private var store
     @State private var entries = DiagnosticsLog.entries
     @State private var showsReport = false
-    @State private var includeDiagnostics = false
-    @State private var copied = false
+    @State private var confirmsSend = false
+    @State private var reporting = false
+    @State private var description = ""
+    @State private var reportError: String?
+    @State private var notice: String?
 
     private var version: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
         return "\(version) (\(build))"
     }
+
     private var platform: String { UIDevice.current.userInterfaceIdiom == .pad ? "iPadOS" : "iOS" }
-    private var appInfo: String { "Stați \(version) · \(platform) \(UIDevice.current.systemVersion)\nSiri AI preview — \(SiriPreviewAvailability.current.detail)" }
-    private var report: String {
-        ([appInfo, ""] + (entries.isEmpty ? ["No recent errors."] : entries)).joined(separator: "\n")
-    }
+    private var systemVersion: String { UIDevice.current.systemVersion }
+    private var siriStatus: String { SiriPreviewAvailability.current.detail }
+    private var appInfo: String { "Stați \(version) · \(platform) \(systemVersion)\nSiri AI preview — \(siriStatus)" }
 
     var body: some View {
         Form {
             Section("App Information") {
-                LabeledContent("Version", value: version)
-                LabeledContent(platform, value: UIDevice.current.systemVersion)
+                LabeledContent { Text(version) } label: { Label("Version", systemImage: "app") }
+                LabeledContent { Text(systemVersion) } label: { Label(platform, systemImage: platform == "iPadOS" ? "ipad" : "iphone") }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Siri AI preview")
-                    Text(SiriPreviewAvailability.current.detail).foregroundStyle(.secondary)
+                    Label("Siri AI preview", systemImage: "sparkles")
+                    Text(siriStatus).foregroundStyle(.secondary)
                 }
             }
             Section {
-                Button("Copy diagnostics", systemImage: "document.on.document") {
-                    UIPasteboard.general.string = report
-                    copied = true
-                }
-                ShareLink(item: report) { Label("Share diagnostics", systemImage: "square.and.arrow.up") }
                 Button("Report a problem", systemImage: "exclamationmark.bubble") {
-                    includeDiagnostics = false
+                    reportError = nil
+                    description = ""
                     showsReport = true
                 }
             } footer: {
-                Text("GitHub issues are public. You can review your report before posting.")
+                Text("Reports go to the Stați support team and include recent errors.")
             }
             Section {
                 if entries.isEmpty {
@@ -50,44 +51,101 @@ struct DiagnosticsView: View {
             } header: {
                 Text("Recent errors")
             } footer: {
-                Text("Stați keeps up to 50 connection and server errors on this device. Entries contain the time, app area and error type.")
+                Text("Entries expire after 24 hours. Each shows the time, app area and type of error.")
             }
         }
         .navigationTitle("Diagnostics")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Diagnostics copied", isPresented: $copied) { Button("OK", role: .cancel) {} }
-        .sheet(isPresented: $showsReport) {
-            NavigationStack {
-                Form {
-                    Section {
-                        Toggle("Include recent errors", isOn: $includeDiagnostics)
-                        Text(includeDiagnostics ? publicLog : appInfo)
-                            .font(.footnote.monospaced())
-                            .textSelection(.enabled)
-                    } footer: {
-                        Text("GitHub opens a draft you can edit. Add the steps to reproduce the problem there.")
-                    }
-                    if let issueURL {
-                        Section { Link("Continue to GitHub", destination: issueURL) }
-                    }
-                }
-                .navigationTitle("Report a Problem")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close", systemImage: "xmark") { showsReport = false }
-                            .labelStyle(.iconOnly)
-                    }
-                }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Copy diagnostics", systemImage: "doc.on.doc", action: copyDiagnostics)
+                    .labelStyle(.iconOnly)
             }
         }
+        .onAppear { entries = DiagnosticsLog.entries }
+        .alert(notice ?? "", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button("OK", role: .cancel) {}
+        }
+        .sheet(isPresented: $showsReport) { reportSheet }
     }
 
-    private var publicLog: String { ([appInfo] + entries.prefix(10)).joined(separator: "\n") }
-    private var issueURL: URL? {
-        var url = URLComponents(string: "https://github.com/Hapi-Products/stati/issues/new")
-        let details = includeDiagnostics ? publicLog : appInfo
-        url?.queryItems = [URLQueryItem(name: "body", value: "### What happened?\n\n\n### Steps to reproduce\n\n\n### App information\n\n```\n\(details)\n```")]
-        return url?.url
+    private var reportSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("What happened? (optional)", text: $description, axis: .vertical)
+                        .lineLimit(3...8)
+                        .onChange(of: description) { _, value in
+                            if value.count > 2_000 { description = String(value.prefix(2_000)) }
+                        }
+                } footer: {
+                    Text("Add what you were doing when the problem happened.")
+                }
+                Section {
+                    Label("Recent errors included", systemImage: "checkmark.shield")
+                } footer: {
+                    Text("Stați sends your description, app information and up to 200 recent errors privately to the support team.")
+                }
+                if reporting { ProgressView("Sending report…") }
+                if let reportError { Text(reportError).foregroundStyle(.secondary) }
+            }
+            .navigationTitle("Report a Problem")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", systemImage: "xmark") { showsReport = false }
+                        .labelStyle(.iconOnly)
+                        .disabled(reporting)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Review and send", systemImage: "checkmark") { confirmsSend = true }
+                        .labelStyle(.iconOnly)
+                        .disabled(reporting)
+                }
+            }
+            .alert("Send this report?", isPresented: $confirmsSend) {
+                Button("No", role: .cancel) {}
+                Button("Yes, Send") { Task { await sendReport() } }
+            } message: {
+                Text("The Stați support team will receive your report and recent errors.")
+            }
+        }
+        .interactiveDismissDisabled(reporting)
+    }
+
+    private func copyDiagnostics() {
+        entries = DiagnosticsLog.entries
+        let errors = entries.isEmpty ? ["No recent errors."] : entries
+        UIPasteboard.general.setItems([[UTType.plainText.identifier: ([appInfo, ""] + errors).joined(separator: "\n")]],
+                                     options: [.localOnly: true, .expirationDate: Date.now.addingTimeInterval(600)])
+        notice = "Diagnostics copied"
+    }
+
+    private func sendReport() async {
+        guard !reporting else { return }
+        reporting = true
+        reportError = nil
+        defer { reporting = false }
+        entries = DiagnosticsLog.entries
+        let report: JSONValue = .object([
+            "description": .string(description),
+            "version": .string(version),
+            "platform": .string(platform),
+            "systemVersion": .string(systemVersion),
+            "siriStatus": .string(SiriPreviewAvailability.current.rawValue),
+            "recentErrors": .array(entries.prefix(200).map(JSONValue.string)),
+            "errorCount": .number(Double(entries.count)),
+        ])
+        do {
+            let response = try await store.api.request("/support/reports", method: "POST", body: report)
+            guard response["ok"].flag else { throw APIError(status: 0, message: "Stați could not confirm that the report was received.") }
+            showsReport = false
+            description = ""
+            notice = "Report sent"
+        } catch is CancellationError {
+            return
+        } catch {
+            reportError = error.localizedDescription
+        }
     }
 }

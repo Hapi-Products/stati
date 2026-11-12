@@ -15,6 +15,6 @@ struct UpdateHistoryView: View {
                 }
             }
         }.navigationTitle("Previous updates").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Close previous updates", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close previous updates", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) } }
     }
 }

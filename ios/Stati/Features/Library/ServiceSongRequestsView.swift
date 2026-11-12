@@ -82,7 +82,7 @@ struct ServiceSongRequestsView: View {
             .navigationTitle("Song Requests")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly).disabled(submitting) }
+                ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly).disabled(submitting) }
             }
             .refreshable { await refresh() }
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.data]) { result in

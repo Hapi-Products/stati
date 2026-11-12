@@ -14,11 +14,11 @@ struct IPadAccountView: View {
         NavigationStack(path: $path) {
             Form {
                 DefaultComputerPicker()
-                Section { NavigationLink("Worship") { worshipSettings }.navigationDestination(isPresented: $reviewWorship) { worshipSettings } }
-                Section { NavigationLink("Features") { IPadFeaturesView(ownerID: preferences.ownerID) }.navigationDestination(isPresented: $reviewFeatures) { IPadFeaturesView(ownerID: preferences.ownerID) } }
+                Section { NavigationLink { worshipSettings } label: { Label("Worship", systemImage: "music.note") }.navigationDestination(isPresented: $reviewWorship) { worshipSettings } }
+                Section { NavigationLink { IPadFeaturesView(ownerID: preferences.ownerID) } label: { Label("Features", systemImage: "slider.horizontal.3") }.navigationDestination(isPresented: $reviewFeatures) { IPadFeaturesView(ownerID: preferences.ownerID) } }
                 Section { NavigationLink { DiagnosticsView() } label: { Label("Diagnostics", systemImage: "stethoscope") } }
-                Section { NavigationLink("What’s New", value: MoreRoute.whatsNew); NavigationLink("Privacy", value: MoreRoute.privacy) }
-                Section { Button("Sign out", role: .destructive) { signingOut = true; Task { await store.signOut(); dismiss() } }.disabled(signingOut) }
+                Section { NavigationLink(value: MoreRoute.whatsNew) { Label("What’s New", systemImage: "sparkles") }; NavigationLink(value: MoreRoute.privacy) { Label("Privacy", systemImage: "hand.raised") } }
+                Section { Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { signingOut = true; Task { await store.signOut(); dismiss() } }.disabled(signingOut) }
             }.navigationTitle("Account").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .principal) {
@@ -29,7 +29,7 @@ struct IPadAccountView: View {
                             }.accessibilityElement(children: .combine)
                         }
                     }
-                    ToolbarItem(placement: .confirmationAction) {
+                    ToolbarItem(placement: .cancellationAction) {
                         Button("Close account", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()).disabled(signingOut)
                     }
                 }
@@ -49,18 +49,18 @@ struct IPadAccountView: View {
         Form {
             if store.canReadSongs {
                 Section {
-                        Picker("Default group", selection: $preferences.selection) {
+                        Picker(selection: $preferences.selection) {
                             Text("Automatic").tag(GroupSelection.automatic)
                             Text("Original songs").tag(GroupSelection.originalSongs)
                             Text("All groups").tag(GroupSelection.allGroups)
                             if !namedGroups.groups.isEmpty { Section("Worship groups") { ForEach(namedGroups.groups) { Text($0.name).tag(GroupSelection.named($0.id)) } } }
                             if !groups.isEmpty { Section("Folders") { ForEach(groups, id: \.self) { Text($0).tag(GroupSelection.legacy($0)) } } }
-                        }
-                        if namedGroups.canCreate || !namedGroups.groups.isEmpty { NavigationLink("Groups") { WorshipGroupsManagementView(store: store, groups: namedGroups) } }
+                        } label: { Label("Default group", systemImage: "person.2") }
+                        if namedGroups.canCreate || !namedGroups.groups.isEmpty { NavigationLink { WorshipGroupsManagementView(store: store, groups: namedGroups) } label: { Label("Groups", systemImage: "person.2") } }
                     NoticeView(text: preferences.message)
                 }
             }
-            Section { NavigationLink("Team members") { IPadTeamView() } }
+            Section { NavigationLink { IPadTeamView() } label: { Label("Team members", systemImage: "person.crop.circle") } }
         }.navigationTitle("Worship").navigationBarTitleDisplayMode(.inline)
     }
 

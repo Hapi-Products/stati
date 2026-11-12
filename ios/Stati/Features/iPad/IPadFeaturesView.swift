@@ -34,19 +34,19 @@ struct IPadFeaturesView: View {
                 }
             }
             Section("Controls") {
-                Toggle("Clicker", isOn: $preferences.settings.clickerEnabled)
-                Toggle("Live song on Lock Screen", isOn: $liveSong)
+                Toggle(isOn: $preferences.settings.clickerEnabled) { Label("Clicker", systemImage: "cursorarrow.click") }
+                Toggle(isOn: $liveSong) { Label("Live song on Lock Screen", systemImage: "waveform") }
             }
             SiriFeaturesSection()
             Section("Recents") {
-                Picker("Remove from Recents", selection: $preferences.settings.retention) {
+                Picker(selection: $preferences.settings.retention) {
                     ForEach(RecentRetention.allCases) { Text($0.title).tag($0) }
-                }
+                } label: { Label("Remove from Recents", systemImage: "clock") }
             }
             Section("App") {
                 AppIconPickerButton()
-                Toggle("Show What’s New after updates", isOn: $automaticUpdates)
-                NavigationLink("What’s New") { WhatsNewView() }
+                Toggle(isOn: $automaticUpdates) { Label("Show What’s New after updates", systemImage: "sparkles") }
+                NavigationLink { WhatsNewView() } label: { Label("What’s New", systemImage: "sparkles") }
             }
         }
         .navigationDestination(isPresented: $opensPDFLayout) { pdfSettings }
@@ -108,7 +108,7 @@ struct IPadFeaturesView: View {
 
     private var readingFormat: some View {
         @Bindable var preferences = preferences
-        return option("Open songs as") {
+        return option("Open songs as", icon: "music.note") {
             Picker("Open songs as", selection: $preferences.settings.mode) {
                 ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) }
             }.pickerStyle(.menu).labelsHidden().buttonStyle(.borderless)
@@ -118,7 +118,7 @@ struct IPadFeaturesView: View {
 
     private var selector: some View {
         @Bindable var preferences = preferences
-        return option("Song selector") {
+        return option("Song selector", icon: "music.note.list") {
             Picker("Song selector", selection: $preferences.settings.selectorSource) {
                 ForEach(SongSelectorSource.allCases) { Text($0.title).tag($0) }
             }.pickerStyle(.menu).labelsHidden().buttonStyle(.borderless)
@@ -127,7 +127,7 @@ struct IPadFeaturesView: View {
     }
 
     private var slideSize: some View {
-        option("Slide text size") {
+        option("Slide text size", icon: "textformat.size") {
             SlideTextSizeSlider(size: preferences.settings.slideSize) {
                 preferences.settings.slideSize = $0
             }
@@ -138,7 +138,7 @@ struct IPadFeaturesView: View {
 
     private var previews: some View {
         @Bindable var preferences = preferences
-        return option("Larger previews") {
+        return option("Larger previews", icon: "rectangle.grid.2x2") {
             Toggle("Larger previews", isOn: $preferences.settings.largePreviews)
                 .labelsHidden()
                 .accessibilityLabel("Larger previews")
@@ -146,7 +146,7 @@ struct IPadFeaturesView: View {
     }
 
     private var layout: some View {
-        option("Song library layout") {
+        option("Song library layout", icon: "square.grid.2x2") {
             Picker("Song library layout", selection: $libraryLayout) {
                 Text("Grid").tag("grid")
                 Text("List").tag("list")
@@ -155,7 +155,7 @@ struct IPadFeaturesView: View {
     }
 
     private var pdfOptions: some View {
-        option("PDF layout") {
+        option("PDF layout", icon: "doc.richtext") {
             Button("Open PDF layout", systemImage: "chevron.right") { opensPDFLayout = true }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -181,9 +181,9 @@ struct IPadFeaturesView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func option<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
+    private func option<Control: View>(_ title: String, icon: String, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 12) {
-            Text(title).foregroundStyle(.primary).accessibilityHidden(true)
+            Label(title, systemImage: icon).foregroundStyle(.primary).accessibilityHidden(true)
             Spacer(minLength: 0)
             control()
                 .frame(maxWidth: title == "Slide text size" ? 140 : nil, alignment: .trailing)

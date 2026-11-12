@@ -22,6 +22,7 @@ struct StatiApp: App {
                 .tint(AppIconAppearance.shared.accent)
                 .task(id: phase) {
                     guard phase == .active else { return }
+                    DiagnosticsLog.prune()
                     AppIconAppearance.shared.synchronize()
                     do { try await AppIconAppearance.shared.applyIPadPreference() }
                     catch { iconError = error.localizedDescription }

@@ -27,7 +27,7 @@ struct ComputerInviteView: View {
                 } else { ContentUnavailableView("Administrator access required", systemImage: "lock") }
             }.padding(24).frame(maxWidth: 460).frame(maxWidth: .infinity)
         }.navigationTitle("Invite members").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Close invite", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close invite", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) } }
             .task(id: phase) {
                 guard phase == .active else { image = nil; return }
                 while !Task.isCancelled && store.isAdmin {

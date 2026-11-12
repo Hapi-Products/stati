@@ -25,7 +25,10 @@ enum StatiShortcutError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .disabled: "Turn on Siri Shortcuts in Stați’s Features page to use this action."
+        case .disabled:
+            StatiDeveloperMode.isBeta
+                ? "Turn on Developer Mode in Features on a supported device to use Stați shortcuts."
+                : "Turn on Siri Shortcuts in Stați’s Features page to use this action."
         case .siriSearchDisabled: "Turn on Siri AI Song Search in Stați’s Features page."
         case .previewUnavailable(let reason): reason
         case .missingSong: "Give Siri a song title or part of the lyrics."
@@ -33,7 +36,7 @@ enum StatiShortcutError: LocalizedError {
     }
 
     @MainActor static func open(_ request: SongShortcutRequest) throws {
-        guard UserDefaults.standard.object(forKey: "stati.shortcuts.enabled") as? Bool ?? true else { throw Self.disabled }
+        guard StatiDeveloperMode.allowsShortcuts else { throw Self.disabled }
         SongShortcutNavigation.shared.request = request
     }
 }
@@ -73,7 +76,7 @@ struct SearchStatiLibrary: ShowInAppSearchResultsIntent {
         }
         let query = criteria.term.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { throw StatiShortcutError.missingSong }
-        SongShortcutNavigation.shared.request = SongShortcutRequest(query: String(query.prefix(200)))
+        try StatiShortcutError.open(SongShortcutRequest(query: String(query.prefix(200))))
         return .result()
     }
 }
@@ -126,7 +129,7 @@ struct PlaceStatiSongInService: AppIntent {
 
     @MainActor func perform() async throws -> some IntentResult {
         let term = (query ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard UserDefaults.standard.object(forKey: "stati.shortcuts.enabled") as? Bool ?? true else {
+        guard StatiDeveloperMode.allowsShortcuts else {
             throw StatiShortcutError.disabled
         }
         let navigation = SongShortcutNavigation.shared

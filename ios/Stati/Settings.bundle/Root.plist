@@ -10,7 +10,7 @@
 			<key>Title</key>
 			<string>App Information</string>
 			<key>FooterText</key>
-			<string>To view logs or send diagnostics, open Diagnostics in Stați. Stați profiles use passkeys and do not have an email address.</string>
+			<string>Open Diagnostics in Stați to view recent errors or report a problem. Stați profiles use passkeys and do not have an email address.</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -20,7 +20,7 @@
 			<key>Key</key>
 			<string>stati.settings.appVersion</string>
 			<key>DefaultValue</key>
-			<string>0.1.0 (49)</string>
+			<string>0.1.0 (50)</string>
 		</dict>
 	</array>
 </dict>

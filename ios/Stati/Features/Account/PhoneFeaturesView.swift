@@ -7,7 +7,7 @@ struct PhoneFeaturesView: View {
         Form {
             SiriFeaturesSection()
             Section("Service") {
-                Toggle("Live song on Lock Screen", isOn: $liveSong)
+                Toggle(isOn: $liveSong) { Label("Live song on Lock Screen", systemImage: "waveform") }
             }
         }
         .navigationTitle("Features")

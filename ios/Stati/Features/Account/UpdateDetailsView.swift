@@ -30,7 +30,7 @@ struct UpdateDetailsView: View {
                 }
             }
         }.navigationTitle("Update details").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Close details", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close details", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()) } }
     }
     private func detailIcon(_ index: Int) -> String {
         let currentIcons = ["app", "arrow.down.doc", "sidebar.right", "sidebar.left", "iphone"]
