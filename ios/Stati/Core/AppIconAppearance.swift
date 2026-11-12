@@ -3,19 +3,24 @@ import Observation
 
 @MainActor @Observable final class AppIconAppearance {
     static let shared = AppIconAppearance()
+    #if STATI_BETA
+    static let allowsCustomization = false
+    #else
+    static let allowsCustomization = true
+    #endif
     static let iconNames = ["Blue", "Gold", "Green", "Greyscale", "Red"]
     private static let iPadPreferenceKey = "stati.worship.appIcon"
     @ObservationIgnored private var applying = false
     private(set) var name = "Blue"
     private init() { synchronize() }
     func synchronize() {
-        let applied = UIApplication.shared.alternateIconName?.replacingOccurrences(of: "AppIcon", with: "") ?? "Blue"
+        let applied = Self.allowsCustomization ? UIApplication.shared.alternateIconName?.replacingOccurrences(of: "AppIcon", with: "") ?? "Blue" : "Blue"
         name = Self.iconNames.contains(applied) ? applied : "Blue"
         UINavigationBar.appearance().tintColor = UIColor(accent)
         UIBarButtonItem.appearance().tintColor = UIColor(accent)
     }
     func apply(_ selection: String, updatePreference: Bool = true) async throws {
-        guard !applying, Self.iconNames.contains(selection), UIApplication.shared.supportsAlternateIcons else { return }
+        guard Self.allowsCustomization, !applying, Self.iconNames.contains(selection), UIApplication.shared.supportsAlternateIcons else { return }
         applying = true
         defer { applying = false }
         let icon = selection == "Blue" ? nil : "AppIcon" + selection
@@ -27,7 +32,7 @@ import Observation
     }
 
     func applyIPadPreference() async throws {
-        guard UIDevice.current.userInterfaceIdiom == .pad, !applying else { return }
+        guard Self.allowsCustomization, UIDevice.current.userInterfaceIdiom == .pad, !applying else { return }
         let defaults = UserDefaults.standard
         let key = Self.iPadPreferenceKey
         guard let selected = defaults.string(forKey: key), Self.iconNames.contains(selected) else {

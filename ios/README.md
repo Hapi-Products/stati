@@ -5,3 +5,6 @@ This tree contains native build 34 source. The iPhone app is Stați. The iPad op
 Run `swift test --package-path ios` from the repository root for the Foundation core tests. The project can be regenerated with `python3 ios/scripts/generate-project.py`; update its signing-team setting when building a fork. No private key or provisioning profile is included.
 
 See the [root README](../README.md) and [development notes](../docs/development.md) for build commands, backend configuration, review-only simulator fixtures and verification boundaries. Nearby reader following, Share extensions and Live Activities remain future work; they are not shipped by this snapshot.
+
+
+Use the shared **Stazi Beta** scheme for a beta-branded build. It uses the same bundle identifier as the **Stati** scheme, so installing it updates the existing app and retains its data. The beta build uses a fixed blue icon and accent. Build the **Stati** scheme for the regular app with the icon picker.

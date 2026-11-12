@@ -56,8 +56,7 @@ struct ReaderPagingBar<Previews: View>: View {
                 .contentShape(.rect)
         }
         .accessibilityLabel(title)
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
+        .foregroundStyle(inactive || disabled ? .tertiary : .primary)
         .disabled(inactive || disabled)
     }
 

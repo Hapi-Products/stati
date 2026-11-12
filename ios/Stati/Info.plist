@@ -5,9 +5,9 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Stați</string>
+	<string>$(STATI_DISPLAY_NAME)</string>
 	<key>CFBundleDisplayName~ipad</key>
-	<string>Stați Worship</string>
+	<string>$(STATI_IPAD_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

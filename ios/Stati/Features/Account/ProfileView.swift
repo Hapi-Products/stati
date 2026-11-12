@@ -30,8 +30,10 @@ struct ProfileView: View {
                 VStack(spacing: 0) {
                     NavigationLink(value: MoreRoute.account) { ProfileDestinationRow(title: "Account", icon: "person.crop.circle") }
                     Divider().padding(.leading, 56)
-                    AppIconPickerButton(profileRow: true).buttonStyle(.plain)
-                    Divider().padding(.leading, 56)
+                    if AppIconAppearance.allowsCustomization {
+                        AppIconPickerButton(profileRow: true).buttonStyle(.plain)
+                        Divider().padding(.leading, 56)
+                    }
                     Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
                         ProfileDestinationRow(title: "Settings", icon: "gearshape")
                     }.buttonStyle(.plain)

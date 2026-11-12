@@ -8,21 +8,20 @@ struct IPadRecentsView: View {
     @State private var preferences: ReaderPreferences?
     @State private var message = ""
     @State private var confirmsClear = false
-    @State private var query = ""
     @State private var preview: FilePreviewRequest?
     @State private var songs: SongGalleryRequest?
-    private var matching: [DeviceRecent] { store.recents.items.filter { query.isEmpty || $0.title.localizedStandardContains(query) } }
     private var largePreviews: Bool { preferences?.settings.largePreviews == true }
     var body: some View {
+        let recentItems = store.recents.items
         ScrollView {
-            if matching.isEmpty { ContentUnavailableView("No recent items", systemImage: "clock", description: Text("Songs and files you open on this device appear here.")) }
+            if recentItems.isEmpty { ContentUnavailableView("No recent items", systemImage: "clock", description: Text("Songs and files you open on this device appear here.")) }
             else {
                 LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews, accessibility: dynamicTypeSize.isAccessibilitySize), spacing: WorshipPreviewGrid.spacing) {
-                    ForEach(matching) { item in
+                    ForEach(recentItems) { item in
                         if item.kind == .song {
-                            Button { songs = SongGalleryRequest(computerID: item.computerID, items: matching.filter { $0.kind == .song && $0.computerID == item.computerID }.map { SongGalleryItem(id: $0.id, songID: $0.itemID, title: $0.title) }, selectedID: item.id) } label: { IPadSongTile(song: APIRecord(raw: ["id": .string(item.itemID), "title": .string(item.title), "firstSlide": .string(item.firstSlide), "groupName": .string(item.groupName)]), large: largePreviews) }.buttonStyle(.plain).accessibilityLabel(item.title)
+                            Button { songs = SongGalleryRequest(computerID: item.computerID, items: recentItems.filter { $0.kind == .song && $0.computerID == item.computerID }.map { SongGalleryItem(id: $0.id, songID: $0.itemID, title: $0.title) }, selectedID: item.id) } label: { IPadSongTile(song: APIRecord(raw: ["id": .string(item.itemID), "title": .string(item.title), "firstSlide": .string(item.firstSlide), "groupName": .string(item.groupName)]), large: largePreviews) }.buttonStyle(.plain).accessibilityLabel(item.title)
                         } else if let file = item.previewItem {
-                            Button { preview = FilePreviewRequest(items: matching.compactMap(\.previewItem), selectedID: file.id) } label: { IPadSharedFileTile(store: store, file: APIRecord(raw: ["id": .string(item.itemID), "title": .string(item.title), "filename": .string(item.title), "fileUrl": .string(item.filePath), "contentVersion": .string(String(item.openedAt.timeIntervalSince1970)), "groupName": .string(item.openedAt.formatted(date: .abbreviated, time: .omitted))]), large: largePreviews) }.buttonStyle(.plain)
+                            Button { preview = FilePreviewRequest(items: recentItems.compactMap(\.previewItem), selectedID: file.id) } label: { IPadSharedFileTile(store: store, file: APIRecord(raw: ["id": .string(item.itemID), "title": .string(item.title), "filename": .string(item.title), "fileUrl": .string(item.filePath), "contentVersion": .string(String(item.openedAt.timeIntervalSince1970)), "groupName": .string(item.openedAt.formatted(date: .abbreviated, time: .omitted))]), large: largePreviews) }.buttonStyle(.plain)
                         }
                     }
                 }.padding(24)
@@ -41,12 +40,6 @@ struct IPadRecentsView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Songs and files will stay on this device.")
-            }
-            .searchable(text: $query, placement: .toolbar, prompt: "Search recent items").searchToolbarBehavior(.minimize)
-            .onAppear {
-                #if DEBUG && targetEnvironment(simulator)
-                if NativeReview.route == "ipad-search" { query = "Choir" }
-                #endif
             }
             .task(id: store.accountEpoch.uuidString + String(store.fileChangeRevision) + String(store.catalogChangeRevision) + String(scenePhase == .active) + String(active)) {
                 guard active && scenePhase == .active else { return }

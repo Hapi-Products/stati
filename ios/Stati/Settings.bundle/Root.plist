@@ -8,24 +8,6 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Beta</string>
-			<key>FooterText</key>
-			<string>Opt in to future previews. This switch does not install a beta.</string>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
-			<key>Title</key>
-			<string>Beta Features</string>
-			<key>Key</key>
-			<string>stati.beta.enabled</string>
-			<key>DefaultValue</key>
-			<false/>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
-			<key>Title</key>
 			<string>App Information</string>
 			<key>FooterText</key>
 			<string>To view logs or send diagnostics, open Diagnostics in Stați. Stați profiles use passkeys and do not have an email address.</string>
@@ -38,7 +20,7 @@
 			<key>Key</key>
 			<string>stati.settings.appVersion</string>
 			<key>DefaultValue</key>
-			<string>0.1.0 (46)</string>
+			<string>0.1.0 (48)</string>
 		</dict>
 	</array>
 </dict>

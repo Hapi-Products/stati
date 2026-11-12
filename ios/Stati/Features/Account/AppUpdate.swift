@@ -11,12 +11,18 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 46, title: "Simpler settings and support", highlights: [
+    static let current = AppUpdate(id: 48, title: "Simpler page controls", highlights: [
+        Highlight(title: "Move through songs", detail: "The arrows and page counter share one glass control.", icon: "arrow.left.and.right"),
+        Highlight(title: "Set the slide text size", detail: "Tap the slider track or drag the thumb to adjust the size.", icon: "textformat.size"),
+        Highlight(title: "See recent songs and files", detail: "Recents has one toolbar action to clear your history.", icon: "clock")
+    ], details: ["The beta is identified by its app name and uses a fixed icon and accent."])
+    static let previous: [AppUpdate] = [
+        AppUpdate(id: 47, title: "Stazi Beta", highlights: [], details: ["The development app uses a fixed icon and accent. Recents shows your history without a search bar."]),
+        AppUpdate(id: 46, title: "Simpler settings and support", highlights: [
         Highlight(title: "Find Siri in Features", detail: "Open Features in Stați for Siri and reading controls. Apple Settings keeps the beta preference and app information.", icon: "gearshape"),
         Highlight(title: "Start fresh in Recents", detail: "Clear your iPad’s history while keeping your songs and files.", icon: "trash"),
         Highlight(title: "Review diagnostics", detail: "See recent errors, copy a report, or open a draft on GitHub.", icon: "stethoscope")
-    ], details: ["Switch worship groups inside Groups.", "PDF Layout has its own controls.", "The account header shows your photo and name."])
-    static let previous: [AppUpdate] = [
+    ], details: ["Switch worship groups inside Groups.", "PDF Layout has its own controls.", "The account header shows your photo and name."]),
         AppUpdate(id: 45, title: "Clearer controls on iPad", highlights: [
         Highlight(title: "Find the right control", detail: "Help opens beside the control you need, with arrows to move through the guide.", icon: "questionmark.circle"),
         Highlight(title: "Adjust reading size smoothly", detail: "Features puts six song controls in two columns. The slide text slider moves continuously.", icon: "textformat.size"),

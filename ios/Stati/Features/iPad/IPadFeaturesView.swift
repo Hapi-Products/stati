@@ -7,7 +7,6 @@ struct IPadFeaturesView: View {
     @State private var preferences: ReaderPreferences
     @State private var guide = WorshipGuide()
     @State private var opensPDFLayout = false
-    @State private var sizeWhileDragging: Double?
     @AppStorage("stati.liveSong.enabled") private var liveSong = false
     @AppStorage("stati.reader.libraryLayout") private var libraryLayout = "grid"
     @AppStorage("nativeReleaseNotes.automaticOnIPad") private var automaticUpdates = true
@@ -128,25 +127,11 @@ struct IPadFeaturesView: View {
     }
 
     private var slideSize: some View {
-        let position = sizeWhileDragging ?? preferences.settings.slideSize.sliderPosition
-        let points = SlideTextSize(sliderPosition: position)?.points ?? SlideTextSize.large.points
-        return option("Slide text size") {
-            Slider(value: Binding(
-                get: { sizeWhileDragging ?? preferences.settings.slideSize.sliderPosition },
-                set: { position in
-                    if sizeWhileDragging != nil { sizeWhileDragging = position }
-                    else if let size = SlideTextSize(sliderPosition: position) { preferences.settings.slideSize = size }
-                }
-            ), in: 0...3) { editing in
-                if editing {
-                    sizeWhileDragging = preferences.settings.slideSize.sliderPosition
-                } else if let position = sizeWhileDragging {
-                    sizeWhileDragging = nil
-                    if let size = SlideTextSize(sliderPosition: position) { preferences.settings.slideSize = size }
-                }
+        option("Slide text size") {
+            SlideTextSizeSlider(size: preferences.settings.slideSize) {
+                preferences.settings.slideSize = $0
             }
-            .accessibilityLabel("Slide text size")
-            .accessibilityValue("\(Int(points.rounded())) points")
+            .frame(height: 44)
             .worshipGuide(guide, at: .textSize)
         }
     }
