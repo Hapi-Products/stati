@@ -15,6 +15,6 @@ Stați Worship gives iPad users **Recents**, **Groups**, **Songs**, and **Servic
 
 ## Change the iPad settings
 
-Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. Development build 41 also mirrors these preferences in **Settings → Apps → Stați**. The system page lists fixed choices for the default group. Pick a particular named group or computer inside Stați.
+Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. In development build 43, Apple’s Settings organizes these preferences under **Settings → Apps → Stați → Features**. The system page lists fixed choices for the default group. Pick a particular named group or computer inside Stați.
 
 [Song reader tips](https://github.com/Hapi-Products/stati/wiki/Song-Reader) · [Worship settings walkthrough](https://github.com/Hapi-Products/stati/wiki/Worship-Settings) · [Tablet apps](https://github.com/Hapi-Products/stati/wiki/Tablet-Apps)
