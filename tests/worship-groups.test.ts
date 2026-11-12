@@ -180,3 +180,19 @@ it('Recents availability rejects duplicate identities and unrelated file URLs',a
  const valid={kind:'file',id:'file::/api/group-materials/'+crypto.randomUUID()+'/file',filePath:''};valid.filePath=valid.id.slice(6);
  expect((await call('/recents/availability',leader,'POST',{items:[valid,valid]})).status).toBe(400);
 });
+it('archives a group only for an authorized manager at the current revision and keeps its membership records',async()=>{
+ const leader=await person('worship_leader'),member=await person(),other=await person('worship_leader'),admin=await person(null,'admin');
+ const {id,response}=await create(leader,[member.id]);expect(response.status).toBe(201);
+ const path='/worship-groups/'+id;
+ expect((await call(path,member,'DELETE',{revision:1})).status).toBe(403);
+ expect((await call(path,other,'DELETE',{revision:1})).status).toBe(409);
+ expect((await call(path,admin,'DELETE',{revision:2})).status).toBe(409);
+ expect((await call(path,admin,'DELETE',{revision:1})).status).toBe(200);
+ expect((await call(path,member)).status).toBe(404);
+ expect((await call(path,admin)).status).toBe(404);
+ expect((await(await call('/worship-groups',admin)).json() as{groups:{id:string}[]}).groups.some(group=>group.id===id)).toBe(false);
+ const stored=await env.DB.prepare('SELECT archived_at,revision FROM worship_groups WHERE id=?').bind(id).first<{archived_at:number;revision:number}>();
+ expect(stored?.archived_at).toBeGreaterThan(0);
+ expect(stored?.revision).toBe(2);
+ expect(await env.DB.prepare('SELECT COUNT(*) FROM worship_group_members WHERE group_id=?').bind(id).first<number>('COUNT(*)')).toBe(2);
+});
