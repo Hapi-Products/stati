@@ -2,14 +2,14 @@
 
 **Updated on** November 11, 2026 · **Updated by** Codex for Stați
 
-These steps describe development build 43. Edit Worship preferences in **Stați → Account → Features** or under **Settings → Apps → Stați → Features** on iPad. Reopen Stați after making a change in Apple’s Settings. Your saved reader choices carry forward when you open the new build.
+These steps describe development build 45. Edit Worship preferences in **Stați → Account → Features** or under **Settings → Apps → Stați → Features** on iPad. Reopen Stați after making a change in Apple’s Settings. Your saved reader choices carry forward when you open the new build.
 
-Development build 42 adds a lightbulb button in Features. Tap it for the native guide, then choose **Step-by-step guide** to work through the instructions one at a time.
+The Songs controls use two columns when there’s room. Tap the lightbulb beside Songs to start a guide. Each pop-up points to the control it describes. The arrow buttons move through the guide, and the book icon opens this wiki page. Use the gear at the top of Features to open Apple Settings.
 
 ## Make songs easier to read
 
 1. Open **Open songs as** and choose Slides, PDF document, or Text.
-2. For Slides, drag the **Slide text size** slider. Open a longer song to check readability.
+2. For Slides, drag the **Slide text size** slider. It adjusts between the old size presets and saves when you let go. Open a longer song to check readability.
 3. Open **PDF options** to set columns and the page effect. Choose one column for a wider page.
 4. Turn **Larger previews** on for bigger thumbnails. Use **Song library layout** to choose Grid or List.
 

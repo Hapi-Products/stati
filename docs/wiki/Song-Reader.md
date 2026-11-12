@@ -13,6 +13,6 @@
 
 In **Account → Features**, choose the reading format, size, and song selector. On iPad, open **Settings → Apps → Stați → Features** for these preferences in development build 43.
 
-In development build 42, open the reader’s options menu and choose **Reader tips** to view the walkthrough in Stați. The guide includes a link back to this page.
+In development build 45, tap the question mark in the song reader toolbar. The first pop-up points to Song Selector. For songs with multiple slides, the next pop-up points to the page counter. The book icon opens this page.
 
 [Worship settings](https://github.com/Hapi-Products/stati/wiki/Worship-Settings) · [Stați Worship for iPad](https://github.com/Hapi-Products/stati/wiki/iPadOS)
