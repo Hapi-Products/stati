@@ -4,7 +4,7 @@ struct SongPDFPage: UIViewRepresentable {
     let document: PDFDocument
     let index: Int
     func makeUIView(context: Context) -> PDFView {
-        let view = PDFView(); view.autoScales = true; view.displayMode = .singlePage; view.displaysPageBreaks = false; view.backgroundColor = .white
+        let view = PDFView(); view.autoScales = true; view.displayMode = .singlePage; view.displaysPageBreaks = false; view.backgroundColor = .systemBackground
         view.document = document
         if let page = document.page(at: index) { view.go(to: page) }
         return view

@@ -49,6 +49,7 @@ struct IPadFeaturesView: View {
                 NavigationLink { WhatsNewView() } label: { Label("What’s New", systemImage: "sparkles") }
             }
         }
+        .worshipGuide(guide, at: .fallback)
         .navigationDestination(isPresented: $opensPDFLayout) { pdfSettings }
         .navigationTitle("Features")
         .navigationBarTitleDisplayMode(.inline)

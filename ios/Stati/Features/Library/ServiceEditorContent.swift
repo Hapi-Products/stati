@@ -61,6 +61,7 @@ struct ServiceEditorContent: View {
                 if !iPad && editor.plan["leadership"]["canAcknowledge"].flag { Button("Acknowledge running order") { Task { await editor.leadership("acknowledge-order") } } }
             }
         }
+        .worshipGuide(iPad ? guide : nil, at: .fallback)
         .environment(\.editMode, .constant(canEdit ? .active : .inactive))
         .toolbar {
             if iPad {
@@ -105,7 +106,7 @@ struct ServiceEditorContent: View {
             }
         }
         #endif
-        .onDisappear { if !editor.failed { Task { await editor.save() } } }
+        .onDisappear { guide.stop(); if !editor.failed { Task { await editor.save() } } }
     }
 
     private var leadershipConfirmation: String {

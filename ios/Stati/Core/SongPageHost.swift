@@ -8,11 +8,12 @@ struct SongPageHost: UIViewControllerRepresentable {
     let effect: ReaderTransition
     let clickerEnabled: Bool
     var slideSize: SlideTextSize = .large
+    var allowsNavigation = true
     var count: Int { document?.pageCount ?? pages.count }
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     func makeUIViewController(context: Context) -> SongPageController {
         let controller = SongPageController(transitionStyle: effect == .pageTurn ? .pageCurl : .scroll, navigationOrientation: .horizontal, options: effect == .pageTurn ? [.spineLocation: UIPageViewController.SpineLocation.min.rawValue] : nil)
-        controller.view.backgroundColor = document == nil ? .black : .white; controller.isDoubleSided = false; controller.delegate = context.coordinator
+        controller.view.backgroundColor = document == nil ? .black : .systemBackground; controller.isDoubleSided = false; controller.delegate = context.coordinator
         context.coordinator.controller = controller; context.coordinator.configure()
         return controller
     }
@@ -27,19 +28,19 @@ struct SongPageHost: UIViewControllerRepresentable {
         init(parent: SongPageHost) { self.parent = parent }
         func configure() {
             guard let controller else { return }
-            controller.view.backgroundColor = parent.document == nil ? .black : .white
-            controller.dataSource = [.slide, .pageTurn].contains(parent.effect) ? self : nil
-            controller.keysEnabled = parent.clickerEnabled && UIDevice.current.userInterfaceIdiom == .pad
+            controller.view.backgroundColor = parent.document == nil ? .black : .systemBackground
+            controller.dataSource = parent.allowsNavigation && [.slide, .pageTurn].contains(parent.effect) ? self : nil
+            controller.keysEnabled = parent.allowsNavigation && parent.clickerEnabled && UIDevice.current.userInterfaceIdiom == .pad
             controller.navigate = { [weak self] in self?.step($0) }
             if controller.keysEnabled && controller.view.window != nil { controller.becomeFirstResponder() }
             if edgeTap.view == nil { controller.view.addGestureRecognizer(edgeTap) }
-            edgeTap.isEnabled = parent.count > 1
+            edgeTap.isEnabled = parent.allowsNavigation && parent.count > 1
             if controller.view.gestureRecognizers?.contains(where: { $0 is UISwipeGestureRecognizer }) != true {
                 let left = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:))); left.direction = .left
                 let right = UISwipeGestureRecognizer(target: self, action: #selector(swiped(_:))); right.direction = .right
                 controller.view.addGestureRecognizer(left); controller.view.addGestureRecognizer(right)
             }
-            for gesture in controller.view.gestureRecognizers ?? [] where gesture is UISwipeGestureRecognizer { gesture.isEnabled = [.fade, .instant].contains(parent.effect) }
+            for gesture in controller.view.gestureRecognizers ?? [] where gesture is UISwipeGestureRecognizer { gesture.isEnabled = parent.allowsNavigation && [.fade, .instant].contains(parent.effect) }
             showSelection()
         }
         private func page(_ index: Int) -> UIViewController? {
@@ -52,7 +53,7 @@ struct SongPageHost: UIViewControllerRepresentable {
                 let ending = (text.components(separatedBy: "\n").last ?? "").trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)).lowercased()
                 child = UIHostingController(rootView: SongSlidePage(text: text, size: parent.slideSize, isEnding: index == parent.count - 1 && ["amen", "amin"].contains(ending)))
             }
-            child.view.tag = index; child.view.backgroundColor = parent.document == nil ? .black : .white; children[index] = child
+            child.view.tag = index; child.view.backgroundColor = parent.document == nil ? .black : .systemBackground; children[index] = child
             return child
         }
         private func showSelection() {

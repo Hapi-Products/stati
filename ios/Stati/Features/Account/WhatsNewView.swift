@@ -38,7 +38,7 @@ struct WhatsNewView: View {
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 12) {
                     Button("Previous updates") { history = true }.font(.subheadline).frame(minHeight: 44)
-                    Button { dismiss() } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(AppIconAppearance.shared.fill).foregroundStyle(.white).buttonBorderShape(.capsule).controlSize(.large).frame(maxWidth: .infinity)
+                    Button { dismiss() } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.glassProminent).tint(AppIconAppearance.shared.accent).buttonBorderShape(.capsule).controlSize(.large).frame(maxWidth: .infinity)
                 }.frame(maxWidth: 560).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.bottom, 20).background(Color(.systemGroupedBackground))
             }
             .navigationTitle("").navigationBarTitleDisplayMode(.inline)

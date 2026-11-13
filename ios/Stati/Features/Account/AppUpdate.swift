@@ -11,10 +11,19 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 51, title: "Wiki guides match Stați", highlights: [
-        Highlight(title: "Help that matches the app", detail: "Wiki pop-ups use neutral controls by default and follow your chosen accent when you change the app color.", icon: "book")
+    static let current = AppUpdate(id: 53, title: "Follow a live worship reader", highlights: [
+        Highlight(title: "Lead a live service", detail: "Open a song from the active service or use the live indicator in Browse.", icon: "person.wave.2"),
+        Highlight(title: "Follow songs and page turns", detail: "Tablets in your worship group can open the same song and follow the leader’s page turns.", icon: "rectangle.on.rectangle")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 52, title: "Reader colors and controls", highlights: [
+        Highlight(title: "Stați blue in previews and guides", detail: "Reader controls, guides and the What’s New button use the app’s accent.", icon: "paintbrush"),
+        Highlight(title: "Focus on the song", detail: "Use the button at the lower right. The PDF background follows the app and Text is easier to read.", icon: "arrow.up.left.and.arrow.down.right"),
+        Highlight(title: "Confirm Developer Mode", detail: "Stați asks before turning on preview actions.", icon: "hammer")
+    ], details: ["Open Browse to see the computer’s song catalog. Group file thumbnails are smaller. You can copy the app version from Diagnostics."]),
+        AppUpdate(id: 51, title: "Wiki guides match Stați", highlights: [
+        Highlight(title: "Help that matches the app", detail: "Wiki pop-ups use neutral controls by default and follow your chosen accent when you change the app color.", icon: "book")
+    ], details: []),
         AppUpdate(id: 50, title: "Developer Mode and Diagnostics", highlights: [
         Highlight(title: "Try Siri in Stazi Beta", detail: "Enable Developer Mode in Features on iOS or iPadOS 27.3 or later.", icon: "hammer"),
         Highlight(title: "Review recent errors", detail: "Diagnostics keeps 24 hours of errors. Use the copy button at the top to copy the log.", icon: "stethoscope")

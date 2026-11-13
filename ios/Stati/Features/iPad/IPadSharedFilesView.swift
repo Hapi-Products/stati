@@ -43,7 +43,7 @@ struct IPadSharedFilesView: View {
         VStack(spacing: 0) {
             ScrollView {
                 if listMode || dynamicTypeSize.isAccessibilitySize { fileList }
-                else { LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews), alignment: .leading, spacing: WorshipPreviewGrid.spacing) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: false) } } }.padding(24) }
+                else { LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews), alignment: .leading, spacing: WorshipPreviewGrid.spacing) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: false) } } }.padding(.top, 16).padding(.leading, 20).padding(.trailing, 36).padding(.bottom, 24) }
                 if loading { ProgressView("Loading shared files…").padding() }
                 if !loading && matching.isEmpty && message.isEmpty { ContentUnavailableView(query.isEmpty ? "No shared group files" : "No matches in loaded files", systemImage: "doc.on.doc", description: Text(query.isEmpty ? "Shared song notes and scanned documents appear here." : "Load older files to include them in your search.")) }
                 NoticeView(text: scanMessage).padding(.horizontal, 24)
@@ -52,7 +52,10 @@ struct IPadSharedFilesView: View {
                 if !nextCursor.isEmpty { Button("Load older files", systemImage: "arrow.down") { Task { await load(more: true) } }.disabled(loading).padding() }
             }
             if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.padding(.vertical, 8) }
-        }.navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
+        }
+        .worshipGuide(guide, at: .fallback)
+        .onDisappear { guide.stop() }
+        .navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if let switchGroup, let groups, !groups.groups.isEmpty, groups.groups.count > 1 || store.isAdmin {
                     ToolbarItemGroup(placement: .topBarLeading) {

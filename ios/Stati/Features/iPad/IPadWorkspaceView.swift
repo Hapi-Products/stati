@@ -8,6 +8,23 @@ struct IPadWorkspaceView: View {
     @State private var groups: WorshipGroupsModel
     @State private var navigation = IPadWorkspaceSelection(tab: "browse")
     @State private var account = false
+    @State private var liveReader = LiveWorshipReader()
+    @State private var liveSong: SongGalleryRequest?
+    @State private var liveError = ""
+    @State private var mutedService: String?
+    @State private var chosenLiveGroup: String?
+    @State private var wasFollowing = false
+
+    private var livePlan: APIRecord? { overview.services.first { $0["active"].flag } }
+    private var liveGroup: String? {
+        if let chosenLiveGroup, groups.groups.contains(where: { $0.id == chosenLiveGroup }) { return chosenLiveGroup }
+        if case .named(let id) = preferences.selection, groups.groups.contains(where: { $0.id == id }) { return id }
+        if groupSelection == .automatic, groups.groups.count == 1 { return groups.groups.first?.id }
+        return nil
+    }
+    private var liveScope: String {
+        [store.accountEpoch.uuidString, store.selectedComputer, liveGroup ?? "", livePlan?.id ?? "", String(scenePhase == .active)].joined(separator: "|")
+    }
     #if DEBUG && targetEnvironment(simulator)
     @State private var reviewGroup: GroupEditDraft?
     #endif
@@ -41,6 +58,35 @@ struct IPadWorkspaceView: View {
     }
     private var legacyFileGroup: String { if case .legacy(let name) = groupSelection { return name }; return "__generic__" }
     var body: some View {
+        workspace
+            .environment(\.worshipLiveContext, liveContext)
+            .task(id: liveScope) {
+                guard scenePhase == .active else { liveReader.stop(store: store); return }
+                await liveReader.listen(store: store, group: liveGroup ?? "", service: livePlan?.id ?? "")
+            }
+            .onChange(of: liveGroup) { resetLiveScope() }
+            .onChange(of: livePlan?.id) { resetLiveScope() }
+            .onChange(of: store.accountEpoch) { resetLiveScope() }
+            .onChange(of: liveReader.position) { updateFollowedReader() }
+            .onChange(of: account) { if !account { updateFollowedReader() } }
+            .fullScreenCover(item: $liveSong, onDismiss: {
+                if wasFollowing && liveReader.following { mutedService = liveReader.serviceID }
+                wasFollowing = false
+            }) { request in
+                SongGalleryView(store: store, request: request)
+                    .environment(\.worshipLiveContext, liveContext)
+            }
+    }
+
+    private var workspace: some View {
+        tabs
+            .alert("Live reader unavailable", isPresented: Binding(get: { !liveError.isEmpty }, set: { if !$0 { liveError = "" } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(liveError) }
+            .onChange(of: liveReader.message) { _, message in if !message.isEmpty { liveError = message } }
+    }
+
+    private var tabs: some View {
         TabView(selection: Binding(get: { navigation.tab }, set: { navigation.select($0) })) {
             if store.canReadSongs {
                 Tab("Recents", systemImage: "clock", value: "groups") { IPadNavigation(store: store) { IPadRecentsView(active: navigation.tab == "groups") } }
@@ -51,14 +97,16 @@ struct IPadWorkspaceView: View {
                                                groupTitle: groups.groups.first(where: { $0.id == selectedGroupID })?.name,
                                                groups: groups, switchGroup: { id in
                                 navigation.groupSelection = id.isEmpty ? .allGroups : .named(id)
+                                if !id.isEmpty { chosenLiveGroup = id }
                             })
                             .id(selectedGroupID ?? legacyFileGroup)
                         }
                     }
                 }
-                Tab("Songs", systemImage: "music.note.list", value: "browse") {
+                Tab("Browse", systemImage: "music.note.list", value: "browse") {
                     IPadNavigation(store: store, path: $navigation.path) {
-                        IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Songs", group: preferences.selection == .originalSongs ? "__generic__" : "")
+                        IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Browse", group: preferences.selection == .originalSongs ? "__generic__" : "")
+                            .toolbar { ToolbarItem(placement: .topBarTrailing) { liveControls } }
                             .navigationDestination(for: IPadSidebarRoute.self) { page in
                                 switch page {
                                 case .service(let id): ServiceRouteView(computerID: store.selectedComputer, serviceID: id).id(store.accountEpoch.uuidString + store.selectedComputer + id)
@@ -115,6 +163,95 @@ struct IPadWorkspaceView: View {
             }
             .onAppear { if !store.canReadSongs { navigation.select("account") } }
     }
+    private func resetLiveScope() {
+        liveReader.stop(store: store)
+        liveSong = nil
+        mutedService = nil
+        wasFollowing = false
+    }
+
+    private func updateFollowedReader() {
+        if liveReader.following, mutedService != liveReader.serviceID, !account, liveSong == nil,
+           let position = liveReader.position {
+            openLive(position, follower: true)
+        }
+        if !liveReader.following && wasFollowing { liveSong = nil; wasFollowing = false }
+    }
+
+    private var liveContext: WorshipLiveContext? {
+        guard let plan = livePlan, liveGroup != nil else { return nil }
+        return WorshipLiveContext(reader: liveReader, items: plan["songs"].records, shouldOffer: {
+            let leadership = plan["leadership"]
+            guard leadership["isLeader"].flag || leadership["canClaim"].flag,
+                  !liveReader.following, liveReader.shouldOfferLeading(service: plan.id) else { return false }
+            return true
+        }, lead: { startLive($0, open: false) })
+    }
+
+    private var liveControls: some View {
+        Menu {
+            Text(liveReader.status.title)
+            if groups.groups.count > 1 {
+                Menu("Worship group", systemImage: "person.2") {
+                    ForEach(groups.groups) { group in
+                        Button(group.name, systemImage: group.id == liveGroup ? "checkmark" : "person.2") {
+                            chosenLiveGroup = group.id
+                        }
+                    }
+                }
+            }
+            if liveReader.starting {
+                Text("Connecting…")
+            } else if liveReader.leading {
+                Button("Stop leading live", systemImage: "stop.circle") { liveReader.stop(store: store) }
+            } else if liveReader.following, let position = liveReader.position {
+                Button("Open live song", systemImage: "music.note") { mutedService = nil; openLive(position, follower: true) }
+            } else if let plan = livePlan, liveGroup != nil, let first = plan["songs"].records.first,
+                      plan["leadership"]["isLeader"].flag || plan["leadership"]["canClaim"].flag {
+                Button("Lead service", systemImage: "person.badge.plus") {
+                    let settings = ReaderPreferences(ownerID: store.me?.id ?? "").settings
+                    let position = LiveWorshipReader.Position(item: first.id, page: 0, mode: settings.mode,
+                        transition: settings.transition, columns: settings.pdfColumns, size: settings.slideSize)
+                    startLive(position, open: true)
+                }
+            } else if livePlan != nil && liveGroup == nil {
+                Text("Choose a worship group to follow.")
+            }
+        } label: {
+            Label(liveReader.status.title, systemImage: "circle.fill")
+                .labelStyle(.iconOnly)
+                .foregroundStyle(liveReader.status.color)
+        }
+    }
+
+    private func startLive(_ position: LiveWorshipReader.Position, open: Bool) {
+        guard let group = liveGroup, let plan = livePlan, !liveReader.starting, !liveReader.leading else { return }
+        let computer = store.selectedComputer
+        let epoch = store.accountEpoch
+        Task {
+            if !plan["leadership"]["isLeader"].flag {
+                let editor = ServiceEditor(store: store, computerID: computer, plan: plan)
+                await editor.leadership("claim-leadership")
+                guard editor.plan["leadership"]["isLeader"].flag else {
+                    liveError = editor.message.isEmpty ? "This service already has a leader." : editor.message
+                    return
+                }
+            }
+            guard epoch == store.accountEpoch, computer == store.selectedComputer, group == liveGroup, plan.id == livePlan?.id else { return }
+            liveReader.start(store: store, group: group, service: plan.id, position: position)
+            if open { openLive(position, follower: false) }
+        }
+    }
+
+    private func openLive(_ position: LiveWorshipReader.Position, follower: Bool) {
+        guard let plan = livePlan else { return }
+        let request = SongGalleryRequest(computerID: store.selectedComputer, songs: plan["songs"].records,
+                                         selectedID: position.item, service: true)
+        guard let request else { return }
+        wasFollowing = follower
+        liveSong = request
+    }
+
     @ViewBuilder private var services: some View {
         if let id = navigation.serviceID {
             ServiceRouteView(computerID: store.selectedComputer, serviceID: id, showServices: {

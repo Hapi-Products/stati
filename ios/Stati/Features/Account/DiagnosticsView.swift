@@ -25,7 +25,14 @@ struct DiagnosticsView: View {
     var body: some View {
         Form {
             Section("App Information") {
-                LabeledContent { Text(version) } label: { Label("Version", systemImage: "app") }
+                LabeledContent {
+                    Text(version).textSelection(.enabled)
+                } label: {
+                    Label("Version", systemImage: "app")
+                }
+                .contextMenu {
+                    Button("Copy version", systemImage: "doc.on.doc") { UIPasteboard.general.string = version }
+                }
                 LabeledContent { Text(systemVersion) } label: { Label(platform, systemImage: platform == "iPadOS" ? "ipad" : "iphone") }
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Siri AI preview", systemImage: "sparkles")

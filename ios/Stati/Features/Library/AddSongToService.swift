@@ -49,7 +49,7 @@ struct AddSongToService: View {
                                 open(plan)
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(plan.title)
+                                    Text(plan.title).foregroundStyle(canPlace(in: plan) ? .primary : .secondary)
                                     Text(ServiceSchedule.read(date: plan["date"].text, time: plan["time"].text)
                                         .formatted(date: .abbreviated, time: .shortened))
                                         .font(.subheadline)

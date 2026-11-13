@@ -2,16 +2,25 @@
 
 **Updated on** November 12, 2026 · **Updated by** Codex for Stați
 
-Stați Worship gives iPad users **Recents**, **Groups**, **Songs**, and **Service**. The computer you select and your church role determine the material you can open.
+Stați Worship gives iPad users **Recents**, **Groups**, **Browse**, and **Service**. The computer you select and your church role determine the material you can open.
 
 ## Read songs during a service
 
 1. Open **Service** and choose the plan for the service.
 2. Tap a song to open it in the reader. Use the page controls to move through the song.
 3. Open the page counter to pick from slide previews. Use the song selector to jump to another song.
-4. Return to **Service** to see the running order again. Use **Songs** when you need to search by title or lyrics.
+4. Return to **Service** to see the running order again. Use **Browse** when you need to search by title or lyrics.
 
-**Groups** gives you access to shared files. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**. **Recents** is a quick way back to a song or file you already opened. For search, use **Songs** or **Groups**. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
+**Groups** gives you access to shared files. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**. **Recents** is a quick way back to a song or file you already opened. For search, use **Browse** or **Groups**. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
+
+## Follow a live service in build 53
+
+1. Select the same presentation computer and worship group as the leader. The service must be active on that computer.
+2. As the leader, open a song in the active running order. Confirm **Yes, Lead** when Stați asks the first time. The live indicator in **Browse** also offers **Lead service**.
+3. On another iPad in the group, open Stați. It opens the current song and follows page changes. Close the live reader to browse on your own. To rejoin, tap the indicator in **Browse** and select **Open live song**.
+4. The indicator is green when connected, red when the active service is waiting for a leader or the connection is unavailable, and gray when there is no active service for the selected group.
+
+Stați sends the song, page and reader format. Each iPad renders it locally. PDF page turns use the leader’s selected transition, subject to Reduce Motion. Keep the leader’s app open during the service.
 
 ## Add a song in order
 
@@ -27,6 +36,6 @@ Open **Account → Worship → Groups**. If you own the group or are an administ
 
 ## Change the iPad settings
 
-Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. The account header shows your name and photo. Find the app version in **Settings → Apps → Stazi Beta** on the development build or **Settings → Apps → Stați Worship** on the regular build. To see or share recent errors, open **Account → Diagnostics** inside Stați. [Siri commands](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) · [Report a problem](https://github.com/Hapi-Products/stati/wiki/Troubleshooting#report-a-problem-on-iphone-or-ipad)
+Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. The account header shows your name and photo. Find the app version in **Settings → Apps → Stazi Beta** on the development build or **Settings → Apps → Stați Worship** on the regular build. In Stazi Beta, turn on **Developer Mode** in Features to use Stați shortcuts on iPadOS 27.3 or later. Open **Account → Diagnostics** inside Stați to review or copy the last 24 hours of errors. [Siri commands](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) · [Report a problem](https://github.com/Hapi-Products/stati/wiki/Troubleshooting#report-a-problem-on-iphone-or-ipad)
 
 [Song reader tips](https://github.com/Hapi-Products/stati/wiki/Song-Reader) · [Worship settings walkthrough](https://github.com/Hapi-Products/stati/wiki/Worship-Settings) · [Tablet apps](https://github.com/Hapi-Products/stati/wiki/Tablet-Apps)

@@ -18,9 +18,9 @@ struct IPadSharedFileTile: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: WorshipPreviewGrid.height(large: large))
+            .frame(height: WorshipPreviewGrid.height(large: large) - 32)
             .accessibilityHidden(true)
-            Text(file.title).font(.subheadline).foregroundStyle(.primary).lineLimit(2).multilineTextAlignment(.center)
+            Text(file.title).font(.footnote).foregroundStyle(.primary).lineLimit(2).multilineTextAlignment(.center)
             if showsGroupName && !file["groupName"].text.isEmpty { Text(file["groupName"].text).font(.caption).foregroundStyle(Color.statiSecondary).lineLimit(2) }
         }.frame(maxWidth: .infinity, alignment: .top).contentShape(.rect)
             .task(id: file["fileUrl"].text + file["contentVersion"].text + store.accountEpoch.uuidString) {

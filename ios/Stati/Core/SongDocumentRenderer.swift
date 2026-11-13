@@ -2,16 +2,16 @@ import UIKit
 import CoreText
 
 @MainActor enum SongDocumentRenderer {
-    static func document(text: String, columns: PDFColumnCount = .one) throws -> Data {
+    static func document(text: String, columns: PDFColumnCount = .one, foreground: UIColor = .black, background: UIColor = .white) throws -> Data {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw failure() }
         let bounds = CGRect(x: 0, y: 0, width: 612, height: 792), paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = 6
-        let attributed = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 18), .foregroundColor: UIColor.black, .paragraphStyle: paragraph])
+        let attributed = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 18), .foregroundColor: foreground, .paragraphStyle: paragraph])
         let framesetter = CTFramesetterCreateWithAttributedString(attributed as CFAttributedString)
         var start = 0, failed = false
         let data = UIGraphicsPDFRenderer(bounds: bounds).pdfData { context in
             while start < attributed.length && !failed {
-                context.beginPage(); UIColor.white.setFill(); context.cgContext.fill(bounds)
+                context.beginPage(); background.setFill(); context.cgContext.fill(bounds)
                 context.cgContext.saveGState(); context.cgContext.translateBy(x: 0, y: bounds.height); context.cgContext.scaleBy(x: 1, y: -1)
                 let area = bounds.insetBy(dx: 36, dy: 36), gutter: CGFloat = 24
                 let width = (area.width - CGFloat(columns.rawValue - 1) * gutter) / CGFloat(columns.rawValue)

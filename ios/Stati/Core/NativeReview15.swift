@@ -2,6 +2,7 @@
 import SwiftUI
 
 @MainActor enum NativeReview15 {
+    private static let followStarted = Date.now
     static let groupID = "a1111111-1111-4111-8111-111111111111"
     static let memberID = "a2222222-2222-4222-8222-222222222222"
     static var emptyGroups: Bool { ["ipad-groups-none", "ipad-original"].contains(NativeReview.route ?? "") }
@@ -22,6 +23,31 @@ import SwiftUI
     }
     static func response(_ request: URLRequest) -> JSONValue? {
         guard NativeReview.route != nil, request.httpMethod == "GET", let path = request.url?.path else { return nil }
+        if NativeReview.route == "ipad-live-follow" {
+            let itemID = "87130dc6-42f2-4872-a1aa-f2e51623f8cf"
+            let serviceID = NativeReview.plan["id"].text
+            if path.hasSuffix("/services") {
+                var plan = NativeReview.plan.fields
+                var item = NativeReview.plan["songs"].items[0].fields
+                item["id"] = .string(itemID)
+                plan["songs"] = .array([.object(item)])
+                plan["active"] = .bool(true)
+                return .object(["plans": .array([.object(plan)])])
+            }
+            if path.hasSuffix("/songs/" + NativeReview.songID) {
+                var song = NativeReview.song.fields
+                song["text"] = .string((1...90).map { "Sample line \($0) for the live reader preview" }.joined(separator: "\n"))
+                return .object(song)
+            }
+            if path.contains("/worship-live/") {
+                let elapsed = Date.now.timeIntervalSince(followStarted)
+                return .object(["state": .string("live"), "isLeader": .bool(false), "position": .object([
+                    "serviceId": .string(serviceID), "sessionId": .string("6b615af0-4355-4f3b-9a78-b6042a4784ab"),
+                    "itemId": .string(itemID), "page": .number(elapsed < 5 ? 0 : 1),
+                    "mode": .string("document"), "transition": .string("pageTurn"), "columns": .number(1), "slideSize": .number(2),
+                ])])
+            }
+        }
         if NativeReview.route == "ipad-live-activity", path == "/api/computers/" + NativeReview.computerID + "/live-song" {
             return .object(["live": .object([
                 "serviceId": NativeReview.plan["id"], "serviceTitle": NativeReview.plan["title"],

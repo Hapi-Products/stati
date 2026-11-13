@@ -12,6 +12,7 @@ struct ReaderPagingBar<Previews: View>: View {
     var guide: WorshipGuide?
     var previewPresented: Binding<Bool>
     @ViewBuilder var previews: () -> Previews
+    private var activeColor: Color { pageLabels ? AppIconAppearance.shared.accent : .primary }
     var body: some View {
         HStack(spacing: 12) {
             if !actions.isEmpty {
@@ -56,12 +57,13 @@ struct ReaderPagingBar<Previews: View>: View {
                 .contentShape(.rect)
         }
         .accessibilityLabel(title)
-        .foregroundStyle(inactive || disabled ? .tertiary : .primary)
+        .foregroundStyle(inactive || disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(activeColor))
         .disabled(inactive || disabled)
     }
 
     private var pageCount: some View {
         Text("\(index + 1) of \(count)")
+            .foregroundStyle(activeColor)
             .font(.callout)
             .monospacedDigit()
             .frame(minWidth: 70)

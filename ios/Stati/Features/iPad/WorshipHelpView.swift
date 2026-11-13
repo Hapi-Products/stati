@@ -2,11 +2,11 @@ import SwiftUI
 import UIKit
 
 enum WorshipGuideTarget: Hashable {
-    case readingFormat, textSize, selectorSetting, songSelector, pageCounter, groupSwitcher, serviceRefresh
+    case fallback, readingFormat, textSize, selectorSetting, songSelector, pageCounter, groupSwitcher, serviceRefresh
 }
 
 enum WorshipHelpTopic {
-    case settings, reader(hasPages: Bool), groups, service
+    case settings, reader(hasPages: Bool), browse, groups, service
 
     struct Step {
         let target: WorshipGuideTarget
@@ -19,7 +19,7 @@ enum WorshipHelpTopic {
         switch self {
         case .settings: page = "Worship-Settings"
         case .reader: page = "Song-Reader"
-        case .groups, .service: page = "iPadOS"
+        case .browse, .groups, .service: page = "iPadOS"
         }
         return URL(string: "https://github.com/Hapi-Products/stati/wiki/" + page)!
     }
@@ -35,6 +35,8 @@ enum WorshipHelpTopic {
         case .reader(let hasPages):
             [Step(target: .songSelector, title: "Switch songs", instruction: "Tap this icon to open the list of recent songs or the current service’s running order.")]
             + (hasPages ? [Step(target: .pageCounter, title: "Jump to a slide", instruction: "Tap or touch and hold the page counter to open the previews. Tap an image to jump to that slide.")] : [])
+        case .browse:
+            [Step(target: .fallback, title: "Browse your song library", instruction: "Open a first-slide preview to read a song. Search by title or lyrics to narrow the library.")]
         case .groups:
             [Step(target: .groupSwitcher, title: "Switch worship groups", instruction: "Tap the people icon and choose a group. Your default group is set in Account → Worship.")]
         case .service:
@@ -86,8 +88,11 @@ enum WorshipHelpTopic {
     }
 
     private func present(step position: Int) {
-        guard let topic, topic.steps.indices.contains(position),
-              let source = anchors[topic.steps[position].target]?.view,
+        guard let topic, topic.steps.indices.contains(position) else { return }
+        let stepTarget = topic.steps[position].target
+        let candidate = stepTarget == .fallback ? nil : anchors[stepTarget]?.view
+        let target = candidate.flatMap { $0.window != nil && !$0.bounds.isEmpty ? $0 : nil }
+        guard let source = target ?? anchors[.fallback]?.view,
               let window = source.window,
               var presenter = window.rootViewController else { return }
 
@@ -103,14 +108,19 @@ enum WorshipHelpTopic {
         controller.preferredContentSize = CGSize(width: width, height: size.height)
         guard let presentation = controller.popoverPresentationController else { return }
         presentation.sourceView = source
-        presentation.sourceRect = source.bounds
+        if target != nil {
+            presentation.sourceRect = source.bounds
+        } else {
+            presentation.sourceRect = CGRect(x: source.bounds.midX, y: source.bounds.minY + 12, width: 1, height: 1)
+            presentation.permittedArrowDirections = []
+        }
         presentation.delegate = self
         popover = controller
-        let appearance = AppIconAppearance.shared
-        let outlineColor = appearance.name == "Blue" ? UIColor.label : UIColor(appearance.accent)
-        let highlight = WorshipGuideSpotlight(source: source, frame: presenter.view.bounds, outlineColor: outlineColor)
-        spotlight = highlight
-        presenter.view.addSubview(highlight)
+        if let target {
+            let highlight = WorshipGuideSpotlight(source: target, frame: presenter.view.bounds, outlineColor: UIColor(AppIconAppearance.shared.accent))
+            spotlight = highlight
+            presenter.view.addSubview(highlight)
+        }
         presenter.present(controller, animated: true)
     }
 
@@ -212,10 +222,7 @@ private struct WorshipGuidePopover: View {
     let position: Int
     let width: CGFloat
 
-    private var tint: Color {
-        let appearance = AppIconAppearance.shared
-        return appearance.name == "Blue" ? .primary : appearance.accent
-    }
+    private var tint: Color { AppIconAppearance.shared.accent }
 
     var body: some View {
         let step = topic.steps[position]

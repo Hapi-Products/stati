@@ -3,6 +3,7 @@ import SwiftUI
 struct SongGalleryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppStore.self) private var store
+    @Environment(\.worshipLiveContext) private var live
     private let openingRequest: SongGalleryRequest
     private let selectionChanged: (String) -> Void
     @State private var model: SongGalleryModel
@@ -18,6 +19,22 @@ struct SongGalleryView: View {
     @State private var commenting = false
     @State private var exportError = ""
     @State private var focused = false
+    @State private var pageIndex = 0
+    @State private var leadPosition: LiveWorshipReader.Position?
+    @State private var didFollow = false
+
+    private var following: Bool {
+        guard let live, live.reader.following, model.request.isService,
+              let position = live.reader.position else { return false }
+        return model.request.items.contains { $0.id == position.item }
+    }
+    private var livePosition: LiveWorshipReader.Position? {
+        guard model.request.isService else { return nil }
+        let settings = preferences.settings
+        return .init(item: model.selected.id, page: pageIndex, mode: readerMode,
+                     transition: settings.transition, columns: settings.pdfColumns, size: settings.slideSize)
+    }
+
     @State private var shortcutNavigation = SongShortcutNavigation.shared
     @State private var shortcutReaderID = UUID()
     @State private var songToPlace: APIRecord?
@@ -36,7 +53,7 @@ struct SongGalleryView: View {
     private var iPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     var body: some View {
         NavigationStack { reader }
-        .preferredColorScheme(iPad && readerMode == .document ? .light : iPad && readerMode == .slides ? .dark : nil)
+        .preferredColorScheme(iPad && readerMode == .slides ? .dark : nil)
         .task {
             if model.song == nil { await model.load() }
             #if DEBUG && targetEnvironment(simulator)
@@ -60,12 +77,33 @@ struct SongGalleryView: View {
         .onChange(of: model.files) { if NativeReview.route == "reader-unlink" { unlinking = model.files.first(where: { $0["canDelete"].flag }) } }
         #endif
         .onChange(of: model.selected.id) {
+            if !following { pageIndex = 0 }
             if model.request.isService, openingRequest.isService, openingRequest.items.contains(where: { $0.id == model.selected.id }) {
                 selectionChanged(model.selected.id)
             }
         }
 
-        .onAppear { shortcutNavigation.readerID = shortcutReaderID }
+        .onAppear {
+            shortcutNavigation.readerID = shortcutReaderID
+            followLivePage()
+        }
+        .onChange(of: live?.reader.position) { followLivePage() }
+        .onChange(of: livePosition) {
+            guard let live, let position = livePosition, !following else { return }
+            guard live.items.contains(where: { $0.id == position.item }) else { return }
+            live.reader.update(position, store: store)
+        }
+        .onChange(of: model.song?.id, initial: true) {
+            guard iPad, model.song != nil, let live, let position = livePosition,
+                  live.items.contains(where: { $0.id == position.item }), live.shouldOffer() else { return }
+            leadPosition = position
+        }
+        .alert("Start leading this service?", isPresented: Binding(get: { leadPosition != nil }, set: { if !$0 { leadPosition = nil } })) {
+            Button("No", role: .cancel) { leadPosition = nil }
+            Button("Yes, Lead") { if let position = livePosition { live?.lead(position) }; leadPosition = nil }
+        } message: {
+            Text("Tablets in your worship group will follow your song and page turns.")
+        }
         .onDisappear {
             if shortcutNavigation.readerID == shortcutReaderID { shortcutNavigation.readerID = nil }
         }
@@ -81,7 +119,7 @@ struct SongGalleryView: View {
         .sheet(item: $songToPlace) { song in
             AddSongToService(computerID: model.request.computerID, song: song) { songToPlace = nil }
         }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); modeOverride = nil } }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); if !following { modeOverride = nil } } }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
         .fullScreenCover(item: $preview) { StatiFileViewer(request: $0) }
@@ -90,8 +128,10 @@ struct SongGalleryView: View {
                 choosingSong = false
                 if request.items.map(\.id) == model.request.items.map(\.id), request.isService == model.request.isService {
                     if request.position.index == model.position.index { return }
+                    pageIndex = 0
                     model.selectSong(request.items[request.position.index].id)
                 } else {
+                    pageIndex = 0
                     model = SongGalleryModel(store: store, request: request)
                 }
                 Task { await model.load() }
@@ -110,28 +150,38 @@ struct SongGalleryView: View {
         if NativeReaderReview.active { Text("Sample data · Simulator review").font(.caption).dynamicTypeSize(.large).foregroundStyle(Color.statiSecondary).padding(8) }
         #endif
         if let song = model.song {
-            SongReaderContent(song: song, mode: iPad ? readerMode : .text, transition: preferences.settings.transition, clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad), pdfColumns: preferences.settings.pdfColumns, slideSize: preferences.settings.slideSize, showsPagingControls: !focused, guide: iPad ? guide : nil).id(song.id + song["contentHash"].text)
+            let synced = following ? live?.reader.position : nil
+            SongReaderContent(song: song, mode: iPad ? readerMode : .text,
+                              transition: synced?.transition ?? preferences.settings.transition,
+                              clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad),
+                              pdfColumns: synced?.columns ?? preferences.settings.pdfColumns,
+                              slideSize: synced?.size ?? preferences.settings.slideSize,
+                              showsPagingControls: !focused, guide: iPad ? guide : nil,
+                              pageIndex: $pageIndex, followsLeader: following).id(song.id + song["contentHash"].text)
         } else if model.loading { ProgressView("Opening song…").frame(maxWidth: .infinity, maxHeight: .infinity) }
         else { ContentUnavailableView("Song unavailable", systemImage: "music.note", description: Text(model.message)) }
         if !model.message.isEmpty, model.song != nil { NoticeView(text: model.message).padding(.horizontal, 16) }
         if model.song == nil && !model.loading { Button("Try again", systemImage: "arrow.clockwise") { Task { await model.load() } }.padding() }
-    }.background(iPad && readerMode == .document ? Color.white.ignoresSafeArea() : iPad && readerMode == .slides ? Color.black.ignoresSafeArea() : Color(.systemBackground).ignoresSafeArea()).safeAreaInset(edge: .bottom) { if !iPad, let song = model.song { phoneActions(song) } }
+    }.background(iPad && readerMode == .slides ? Color.black.ignoresSafeArea() : Color(.systemBackground).ignoresSafeArea()).safeAreaInset(edge: .bottom) { if !iPad, let song = model.song { phoneActions(song) } }
         .overlay(alignment: .topTrailing) {
             if iPad { SongReaderShareSource(anchor: shareAnchor).frame(width: 1, height: 1).padding(.trailing, 40).allowsHitTesting(false).accessibilityHidden(true) }
         }
+        .worshipGuide(iPad ? guide : nil, at: .fallback)
         .navigationTitle(model.song?.title ?? model.selected.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(focused ? .hidden : .visible, for: .navigationBar)
-        .safeAreaInset(edge: .bottom) {
-            if focused {
-                HStack {
-                    Spacer()
-                    Button("Show reader controls", systemImage: "arrow.down.right.and.arrow.up.left") { focused = false }
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.glass)
-                        .controlSize(.large)
+        .overlay(alignment: .bottomTrailing) {
+            if iPad && model.song != nil {
+                Button(focused ? "Show reader controls" : "Focus on song",
+                       systemImage: focused ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") {
+                    guide.stop()
+                    focused.toggle()
                 }
-                .padding([.horizontal, .bottom], 12)
+                .labelStyle(.iconOnly)
+                .buttonStyle(.glass)
+                .tint(AppIconAppearance.shared.accent)
+                .controlSize(.large)
+                .padding([.trailing, .bottom], 12)
             }
         }
         .toolbar {
@@ -147,6 +197,7 @@ struct SongGalleryView: View {
                     }
                     .labelStyle(.iconOnly)
                     .worshipGuide(guide, at: .songSelector)
+                    .disabled(following)
                 }
             }
             if iPad, let song = model.song {
@@ -156,8 +207,7 @@ struct SongGalleryView: View {
                         guide.start(.reader(hasPages: hasPages))
                     }.labelStyle(.iconOnly)
                     Menu {
-                        Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }
-                        Button("Focus on song", systemImage: "arrow.up.left.and.arrow.down.right") { focused = true }
+                        Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0; pageIndex = 0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }.disabled(following)
                         Menu("Notes", systemImage: "note.text") { notesActions }
                         if store.canPlan {
                             Button("Add to service", systemImage: "text.badge.plus") { songToPlace = song }
@@ -173,6 +223,20 @@ struct SongGalleryView: View {
             }
         }
     }
+    private func followLivePage() {
+        guard let position = live?.reader.position, following else {
+            if didFollow { didFollow = false; modeOverride = nil; pageIndex = 0 }
+            return
+        }
+        didFollow = true
+        modeOverride = position.mode
+        pageIndex = position.page
+        if model.selected.id != position.item, model.request.items.contains(where: { $0.id == position.item }) {
+            model.selectSong(position.item)
+            Task { await model.load() }
+        }
+    }
+
     private var notesMenu: some View {
         Menu { notesActions } label: { actionIcon("note.text") }.accessibilityLabel("Song notes")
     }

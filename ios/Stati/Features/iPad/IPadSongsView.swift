@@ -11,6 +11,7 @@ struct IPadSongsView: View {
     @State private var preview: SongGalleryRequest?
     @State private var query = ""
     @State private var searching = false
+    @State private var guide = WorshipGuide()
     @AppStorage("stati.reader.libraryLayout") private var libraryLayout = "saved"
     @AppStorage("stati.worship.songListAfterGridRestore") private var listMode = false
     private var songs: [APIRecord] { library?.items ?? [] }
@@ -37,6 +38,14 @@ struct IPadSongsView: View {
             }
         }
         .background(Color(.systemBackground))
+        .worshipGuide(guide, at: .fallback)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Browse help", systemImage: "questionmark.circle") { guide.start(.browse) }
+                    .labelStyle(.iconOnly)
+            }
+        }
+        .onDisappear { guide.stop() }
         .navigationTitle(title).navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, isPresented: $searching, placement: .toolbar, prompt: "Search songs and lyrics").searchToolbarBehavior(.minimize)
         .task(id: requestKey) { do { try await Task.sleep(for: .milliseconds(200)); await load()
