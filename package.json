@@ -16,7 +16,7 @@
     "test": "vitest run",
     "desktop": "npm run build:desktop-ui && electron desktop/main.cjs",
     "desktop:pack": "npm run build:desktop-ui && electron-builder --config desktop/builder.json --win --x64 --dir",
-    "deploy": "npm run build:web && wrangler deploy --env production --keep-vars",
+    "deploy": "npm run build:web && node scripts/check-build-release.mjs && wrangler deploy --env production --keep-vars",
     "build:desktop-ui": "node scripts/prepare-desktop-assets.mjs && vite build --config vite.desktop.config.ts",
     "test:desktop": "node --test tests/*.test.cjs",
     "android:apk:test": "node scripts/build-android.mjs",

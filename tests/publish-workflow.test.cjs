@@ -44,8 +44,27 @@ function githubAdapter({hashArtifact},{corrupt=false,corruptReadback=false,exist
 }
 function guards() {
   const checked=[];
-  return {checked,verifyWindows:async()=>{checked.push('windows');},verifyAndroid:async()=>{checked.push('android');}};
+  return {checked,checkBuilds:async()=>{},verifyWindows:async()=>{checked.push('windows');},verifyAndroid:async()=>{checked.push('android');}};
 }
+test('a service starting during upload leaves the GitHub release a draft',async t=>{
+ const [utils,preview]=await modules,cwd=await fixture(t,{android:false}),adapter=githubAdapter(utils);
+ let checks=0;
+ await assert.rejects(preview.publishPreview({cwd,argv:['--preview=23','--platform=windows'],...guards(),run:adapter.run,
+  checkBuilds:async()=>{if(++checks===2)throw Error('Builds are paused.');}
+ }),/Builds are paused/);
+ assert.equal(checks,2);
+ assert.equal(adapter.draft,true);
+ assert.equal(adapter.calls.some(args=>args.includes('PATCH')),false);
+});
+test('a paused build cannot upload files or change the website downloads',async t=>{
+ const [,,downloads]=await modules,cwd=await fixture(t,{android:false});
+ let writes=0;
+ await assert.rejects(downloads.publishTestBuilds({cwd,argv:['--platform=windows'],...guards(),
+  checkBuilds:async()=>{throw Error('Builds are paused.');},
+  run:async()=>{writes++;throw Error('Unexpected publish command');}
+ }),/Builds are paused/);
+ assert.equal(writes,0);
+});
 function metadataRows(sql) {
   return [...sql.matchAll(/VALUES\('([^']+)','((?:''|[^'])*)'\)/g)].map(match=>({key:match[1],value:match[2].replaceAll("''","'")}));
 }

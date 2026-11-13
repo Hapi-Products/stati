@@ -4,6 +4,7 @@
 - Keep Windows, web, iPhone/iPad and Android verification scopes distinct. A local test or cross-platform build is not physical-device acceptance or proof of production signing.
 - MacBook companion development is authorized again as of November 3, 2026. Prioritize Windows fixes, reuse the shared desktop interface, and distinguish local ad-hoc previews from notarized releases.
 - Run checks appropriate to the changed component before publishing. Do not overwrite existing release artifacts.
+- Before releasing builds, deploying to production, or installing on a physical device, run `node scripts/check-build-release.mjs`. Stop if service is active, builds are manually paused, or the status is unavailable. Use `node scripts/install-apple-preview.mjs <device> <signed.app>` for physical Apple previews. Use the guarded release scripts; never bypass them with direct upload or install commands. Local builds, simulator testing, and source or wiki edits may continue.
 - Never commit credentials, private keys, enrollment codes, account data or personal screenshots. Use synthetic fixtures.
 - Keep service song hashes, ownership checks, authorization and idempotent delivery receipts intact when fixing bugs.
 - Use Wrangler for this Cloudflare project because it has `wrangler.jsonc`.

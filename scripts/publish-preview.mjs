@@ -5,6 +5,7 @@ import {join,resolve,basename} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
 import {publicationPlatform,publicationArtifacts,hashArtifact,mapUploads,runCommand,verifyReleaseAssets} from './publish-utils.mjs';
+import buildGuard from '../desktop/build-release-guard.cjs';
 
 export async function verifyWindowsPreview({cwd,preview}) {
   const source=join(cwd,'desktop/powerpoint.ps1'),unpacked=join(cwd,'release/win-unpacked/resources/app.asar.unpacked/desktop/powerpoint.ps1');
@@ -39,7 +40,7 @@ function verifyReleaseIdentity(release,{tag,id,draft}) {
   return release.id;
 }
 
-export async function publishPreview({argv=process.argv.slice(2),cwd=process.cwd(),env=process.env,run=runCommand,verifyWindows=verifyWindowsPreview,verifyAndroid=verifyAndroidPreview}={}) {
+export async function publishPreview({argv=process.argv.slice(2),cwd=process.cwd(),env=process.env,run=runCommand,verifyWindows=verifyWindowsPreview,verifyAndroid=verifyAndroidPreview,checkBuilds=buildGuard.requireBuildsAllowed}={}) {
   const platform=publicationPlatform(argv),version=JSON.parse(await readFile(join(cwd,'package.json'),'utf8')).version;
   if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('Use a stable app version.');
   const preview=argv.find(arg=>arg.startsWith('--preview='))?.slice(10)||'1';
@@ -72,6 +73,7 @@ export async function publishPreview({argv=process.argv.slice(2),cwd=process.cwd
     await writeFile(creationFile,JSON.stringify({tag_name:tag,target_commitish:'main',draft:true,prerelease:true,name:`Stați ${version} preview ${preview}`,body:await readFile(notes,'utf8')})+'\n');
     // Capture the ID from the creation response. Newly created drafts can be
     // temporarily missing from the list endpoint even for an authenticated writer.
+    await checkBuilds();
     created=true;
     const creation=await run('gh',['api',`repos/${repository}/releases`,'--method','POST','--input',creationFile],{cwd,env});
     if(creation.status!==0)throw Error('Could not confirm preview draft creation.');
@@ -90,6 +92,7 @@ export async function publishPreview({argv=process.argv.slice(2),cwd=process.cwd
     verifyReleaseIdentity(draft,{tag,id:releaseId,draft:true});
     verifyReleaseAssets(draft,expected,{draft:true});
     const publicationFile=join(directory,'publish-release.json');await writeFile(publicationFile,JSON.stringify({draft:false})+'\n');
+    await checkBuilds();
     const publication=await run('gh',['api',draftEndpoint,'--method','PATCH','--input',publicationFile],{cwd,env});
     if(publication.status!==0)throw Error('Preview assets verified, but publishing the draft did not finish.');
     const published=await run('gh',['api',endpoint],{cwd,env});

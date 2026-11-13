@@ -4,6 +4,7 @@ import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {publicationPlatform,publicationArtifacts,hashArtifact,mapUploads,runCommand} from './publish-utils.mjs';
 import {verifyWindowsPreview,verifyAndroidPreview} from './publish-preview.mjs';
+import buildGuard from '../desktop/build-release-guard.cjs';
 
 export function verifyDownloadMetadata(response,records) {
   if(!Array.isArray(response)||response.length!==1||response[0].success!==true||!Array.isArray(response[0].results))throw Error('Test download metadata readback returned an invalid result.');
@@ -20,7 +21,7 @@ export function verifyDownloadMetadata(response,records) {
   return records;
 }
 
-export async function publishTestBuilds({argv=process.argv.slice(2),cwd=process.cwd(),env=process.env,run=runCommand,verifyWindows=verifyWindowsPreview,verifyAndroid=verifyAndroidPreview}={}) {
+export async function publishTestBuilds({argv=process.argv.slice(2),cwd=process.cwd(),env=process.env,run=runCommand,verifyWindows=verifyWindowsPreview,verifyAndroid=verifyAndroidPreview,checkBuilds=buildGuard.requireBuildsAllowed}={}) {
   const platform=publicationPlatform(argv),version=JSON.parse(await readFile(join(cwd,'package.json'),'utf8')).version;
   if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('Use a stable numeric version.');
   const files=publicationArtifacts(version,platform);
@@ -33,6 +34,7 @@ export async function publishTestBuilds({argv=process.argv.slice(2),cwd=process.
     await verifyWindows({cwd,version,preview,env,run});
   }
   if(platform!=='windows')await verifyAndroid({cwd,version,env,run});
+  await checkBuilds();
   await mapUploads(files,async (artifact,index)=>{
     const result=await run(process.execPath,['node_modules/wrangler/bin/wrangler.js','r2','object','put','stati-files/'+records[index].objectKey,'--remote','--env','production','--file',artifact.path,'--content-type',artifact.contentType],{cwd,env,inherit:true});
     if(result.status!==0)throw Error('Test artifact upload failed; published metadata was preserved.');
@@ -44,6 +46,7 @@ export async function publishTestBuilds({argv=process.argv.slice(2),cwd=process.
     const file=join(directory,'releases.sql');
     const sql=records.map(record=>`INSERT INTO settings(key,value) VALUES('release_${record.id}','${JSON.stringify(record).replaceAll("'","''")}') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`).join('\n');
     await writeFile(file,sql,{mode:0o600});
+    await checkBuilds();
     const result=await run(process.execPath,['node_modules/wrangler/bin/wrangler.js','d1','execute','stati','--remote','--env','production','--file',file],{cwd,env,inherit:true});
     if(result.status!==0)throw Error('Test artifacts uploaded, but metadata update failed. Retry without deleting artifacts.');
     const query="SELECT key,value FROM settings WHERE key IN ("+records.map(record=>"'release_"+record.id+"'").join(',')+")";

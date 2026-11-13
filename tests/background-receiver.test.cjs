@@ -94,6 +94,7 @@ function fixture({platform='win32',startup=true,mode='off',paired=true,route,tra
    async completeDelivery(options){calls.push(['complete',options.id]);await hooks.completeDelivery?.(options);checkpoints.delete(options.id);},
   };
   if(name==='./updates.cjs')return{createUpdates:options=>{updates.options=options;return updates;}};
+  if(name==='./build-release-guard.cjs')return{requireBuildsAllowed:async()=>{}};
   return localRequire(name);
  }
  const context=vm.createContext({console,Buffer,URL,Headers,Response,AbortSignal,AbortController,
@@ -244,6 +245,17 @@ test('Exit during update preparation cannot bypass its pending receiver barrier;
  const installing=f.invoke('update-install',main);const rejected=assert.rejects(installing,/installer launch failed/);
  f.trays[0].menu[2].click();assert.equal(f.app.lastQuitPrevented,true);assert.equal(f.api.getState().finalQuitAllowed,false);assert.equal(f.app.completedQuits,0);
  release();await rejected;await settle();assert.equal(f.api.getState().quitting,false);assert.equal(f.api.getState().finalQuitAllowed,false);assert.equal(f.app.completedQuits,0);assert.ok(f.api.getState().receiver);
+});
+
+test('a service build hold leaves the current receiver running',async()=>{
+ const f=fixture({modules:{'./build-release-guard.cjs':{requireBuildsAllowed:async()=>{throw Error('Builds are paused.');}}}});
+ await f.start();const main=f.api.showMain();f.api.setState({privacyUnlocked:true});await settle();
+ const receiver=f.api.getState().receiver;
+ assert.ok(receiver);
+ await assert.rejects(f.invoke('update-install',main),/Builds are paused/);await settle();
+ assert.equal(f.api.getState().quitting,false);
+ assert.equal(f.api.getState().receiver,receiver);
+ assert.equal(f.http().some(call=>call[2]==='/station/receiver'&&call[1]==='DELETE'),false);
 });
 
 test('failed installer launch restores background polling and receiver after its shutdown preparation',async()=>{

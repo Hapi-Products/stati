@@ -16,6 +16,16 @@ The development build appears as **Stazi Beta** with a fixed blue icon and accen
 4. Review the items in the queue and tap **Send**. Check the status for each item.
 5. For eligible song submissions, **Save for Today** gives you a copy for the day while the computer reviews the submission.
 
+## Pause builds during service
+
+The build pause control is prepared for Stazi Beta build 57. It requires the updated Stați server. It has not been rolled out to phones yet.
+
+1. Sign in as a Stați administrator and open **Send**.
+2. Tap the pause icon at the top, then **Pause Builds**. This holds Stați releases while you continue sending files.
+3. After service, open the same menu and tap **Resume Builds**. This clears your manual pause. A scheduled or selected service still keeps releases on hold.
+
+Scheduled services are protected automatically. A service selected on the computer also keeps builds paused until the selection is cleared. After an unscheduled service, choose **None · Lyrics only** on the computer if it is still selected. A held build can be retried after all holds clear.
+
 ## Find songs and use Shortcuts
 
 Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. Turn on Siri Shortcuts in **Profile → Features**.
