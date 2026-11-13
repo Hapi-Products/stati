@@ -11,12 +11,15 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 56, title: "Song links and reader help", highlights: [
-        Highlight(title: "Link notes from the reader", detail: "Use the link icon at the top of an open song on iPad to choose a shared file.", icon: "link"),
-        Highlight(title: "More help where you need it", detail: "Guides cover more reader and library controls. They open near the control or in the middle of the page.", icon: "questionmark.circle"),
-        Highlight(title: "Gray when there’s no active service", detail: "The dot in Browse keeps its status color when you change the app accent or return from a song.", icon: "circle.fill")
+    static let current = AppUpdate(id: 57, title: "Keep updates out of services", highlights: [
+        Highlight(title: "Pause builds from Send", detail: "Administrators can use the pause icon at the top of Send on iPhone. Resuming clears the manual pause; service protection still applies.", icon: "pause.circle")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 56, title: "Song links and reader help", highlights: [
+            Highlight(title: "Link notes from the reader", detail: "Use the link icon at the top of an open song on iPad to choose a shared file.", icon: "link"),
+            Highlight(title: "More help where you need it", detail: "Guides cover more reader and library controls. They open near the control or in the middle of the page.", icon: "questionmark.circle"),
+            Highlight(title: "Gray when there’s no active service", detail: "The dot in Browse keeps its status color when you change the app accent or return from a song.", icon: "circle.fill")
+        ], details: []),
         AppUpdate(id: 55, title: "Live service status colors", highlights: [
             Highlight(title: "See whether a leader is connected", detail: "The dot in Browse shows green when connected, red when waiting for a leader, and gray when there’s no active service.", icon: "circle.fill")
         ], details: []),

@@ -6,6 +6,7 @@ import SwiftUI
 /// Simulator-only review data. No account, cookie, or production network access.
 @MainActor enum NativeReview {
     static var route: String? { let args = ProcessInfo.processInfo.arguments; guard let i = args.firstIndex(of: "--review-screen"), args.indices.contains(i + 1) else { return nil }; return args[i + 1] }
+    private static var reviewBuildPause = false
     static let computerID = "3ba6dd35-835d-48d7-bfd1-0753c596d8b3"
     static let userID = "eb1e63b6-80e4-448a-a3ec-1cb61a129142"
     static let songID = String(repeating: "a", count: 64)
@@ -22,7 +23,7 @@ import SwiftUI
             value["capabilities"] = .object(["readSongs": .bool(true), "commentSongs": .bool(true), "sendFiles": .bool(false), "planServices": .bool(false), "editLyrics": .bool(false)])
             return .object(value)
         }
-        guard ["team-member", "team-leader", "account-member", "computers-member"].contains(route ?? "") else { return person }
+        guard ["team-member", "team-leader", "account-member", "computers-member", "send-build-pause-member"].contains(route ?? "") else { return person }
         var value = person.fields; value["role"] = .string("member")
         if route == "team-leader" { value["ministryRole"] = .string("worship_leader") }
         return .object(value)
@@ -71,6 +72,15 @@ import SwiftUI
         let renderer = ImageRenderer(content: ZStack { Circle().fill(Color("ActionFill")); Text("S").font(.system(size: 44, weight: .bold)).foregroundStyle(.white) }.frame(width: 80, height: 80))
         renderer.scale = 2
         return renderer.uiImage!.pngData()!
+    }
+    static func buildPauseResponse(_ request: URLRequest) -> (status: Int, body: JSONValue)? {
+        guard route == "send-build-pause", request.url?.path == "/api/admin/build-pause" else { return nil }
+        if request.httpMethod == "PUT" {
+            guard let data = NativeMarkupServer.requestBody(request), let body = try? JSONDecoder().decode(JSONValue.self, from: data),
+                  case let .bool(paused) = body["paused"] else { return (400, .object(["error": .string("Invalid pause.")])); }
+            reviewBuildPause = paused
+        }
+        return (200, .object(["manualPaused": .bool(reviewBuildPause), "activeService": .bool(false), "scheduledUntil": .null]))
     }
     static func response(_ request: URLRequest) -> JSONValue {
         if request.url?.path == "/api/recents/availability", let data = request.httpBody, let body = try? JSONDecoder().decode(JSONValue.self, from: data) {
@@ -150,7 +160,7 @@ nonisolated final class NativeReviewProtocol: URLProtocol, @unchecked Sendable {
                 client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost))
                 return
             }
-            if let result = NativeSendNetworkCheck.response(request) ?? NativeReaderReview.placementResponse(request) {
+            if let result = NativeSendNetworkCheck.response(request) ?? NativeReaderReview.placementResponse(request) ?? NativeReview.buildPauseResponse(request) {
                 let response = HTTPURLResponse(url: request.url!, statusCode: result.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 if let data = try? JSONEncoder().encode(result.body) { client?.urlProtocol(self, didLoad: data) }

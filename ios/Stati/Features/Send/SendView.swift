@@ -103,7 +103,8 @@ struct SendView: View {
             ToolbarItem(placement: .principal) {
                 SendComputerPicker(receivers: receivers, statusKnown: receiversKnown) { connectingComputer = true }
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if store.isAdmin { BuildPauseControl(active: active) }
                 Menu("Add material", systemImage: "plus") {
                     Button("Files", systemImage: "folder") { importingSong = false; importing = true }
                     Button("Song File", systemImage: "music.note") { importingSong = true; importing = true }
