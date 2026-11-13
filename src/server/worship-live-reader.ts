@@ -52,6 +52,17 @@ const click = z.strictObject({
  direction:z.union([z.literal(-1),z.literal(1)]),
 });
 
+const clickerPresenceSeconds = 12;
+const preserveClickerPresence = `CASE WHEN worship_live_reader.session_id=excluded.session_id
+ AND json_extract(worship_live_reader.position_json,'$.clickerUntil') IS NOT NULL
+ THEN json_set(excluded.position_json,'$.clickerUntil',json_extract(worship_live_reader.position_json,'$.clickerUntil'))
+ ELSE excluded.position_json END`;
+
+function publicPosition(value:string){
+ const {clickerUntil,...position}=JSON.parse(value) as Record<string,unknown>;
+ return {position,clickerConnected:typeof clickerUntil==='number'&&clickerUntil>now()};
+}
+
 export async function worshipClicker(request:Request, env:Env, deviceId:string) {
  const authority = await requireSongStation(request,env,deviceId);
  const time = now(), userId = authority.user.id;
@@ -72,20 +83,29 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
    LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash
    WHERE ${scope} ORDER BY live.expires_at DESC, live.session_id LIMIT 1`).bind(...params)
    .first<{position:string;serviceTitle:string;songTitle:string;songId:string;contentHash:string}>();
-  return json({live:live ? {...live,position:JSON.parse(live.position)} : null});
+  return json({live:live ? {...live,position:publicPosition(live.position).position} : null});
+ }
+ if (request.method === 'PATCH') {
+  const {sessionId} = await body(request,sessionInput,128);
+  const result = await env.DB.prepare(`UPDATE worship_live_reader AS live
+   SET position_json=json_set(position_json,'$.clickerUntil',?)
+   WHERE ${scope} AND live.session_id=? AND json_extract(position_json,'$.pageCount') IS NOT NULL
+   AND json_extract(position_json,'$.mode')<>'text'`).bind(time+clickerPresenceSeconds,...params,sessionId).run();
+  if (!result.meta.changes) throw new HttpError(409,'The live reader is no longer available.');
+  return json({ok:true});
  }
  const input = await body(request,click,512), page = input.page + input.direction;
  const turn = crypto.randomUUID();
  const updated = await env.DB.prepare(`UPDATE worship_live_reader AS live
-  SET position_json=json_set(position_json,'$.page',?,'$.clickerTurn',?)
+  SET position_json=json_set(position_json,'$.page',?,'$.clickerTurn',?,'$.clickerUntil',?)
   WHERE ${scope} AND live.session_id=? AND live.item_id=? AND live.sequence=?
     AND json_extract(position_json,'$.page')=? AND json_extract(position_json,'$.clickerTurn') IS ?
     AND json_extract(position_json,'$.mode')<>'text'
     AND ? >=0 AND ? < json_extract(position_json,'$.pageCount')
-  RETURNING position_json AS position`).bind(page,turn,...params,input.sessionId,input.itemId,input.sequence,
+  RETURNING position_json AS position`).bind(page,turn,time+clickerPresenceSeconds,...params,input.sessionId,input.itemId,input.sequence,
    input.page,input.turn,page,page).first<{position:string}>();
  if (!updated) throw new HttpError(409,'The live page changed or is unavailable. Try again after it refreshes.');
- return json({position:JSON.parse(updated.position)});
+ return json({position:publicPosition(updated.position).position});
 }
 
 export async function worshipLiveReader(request: Request, env: Env, deviceId: string, groupId: string) {
@@ -111,7 +131,10 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
    `).bind(deviceId,groupId,userId,...guard.params).first();
    return json({ state: active ? 'waiting' : 'idle' });
   }
-  return json({ state: 'live', isLeader: row.leader===userId, position: JSON.parse(row.position),
+  const {position,clickerConnected} = publicPosition(row.position);
+  const canTurn = typeof position.pageCount === 'number' && position.mode !== 'text';
+  return json({ state: 'live', isLeader: row.leader===userId, position,
+   ...(row.leader===userId&&new URL(request.url).searchParams.get('clicker')==='1' ? {clickerConnected:clickerConnected&&canTurn} : {}),
    ...(row.service===null ? {songTitle:row.songTitle} : {}) });
  }
 
@@ -147,7 +170,7 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
    FROM station_catalog c WHERE c.device_id=? AND c.song_id=? AND c.content_hash=? AND ${readAccess} AND ${guard.sql}
    ON CONFLICT(device_id,group_id) DO UPDATE SET service_id=NULL,service_revision=0,leadership_revision=0,
     leader_id=excluded.leader_id,session_id=excluded.session_id,sequence=excluded.sequence,item_id=excluded.item_id,
-    position_json=excluded.position_json,expires_at=excluded.expires_at,song_id=excluded.song_id,song_hash=excluded.song_hash
+    position_json=${preserveClickerPresence},expires_at=excluded.expires_at,song_id=excluded.song_id,song_hash=excluded.song_hash
    WHERE (worship_live_reader.session_id=excluded.session_id AND worship_live_reader.leader_id=excluded.leader_id
     AND worship_live_reader.service_id IS NULL AND worship_live_reader.expires_at>? AND worship_live_reader.sequence<excluded.sequence)
     OR (excluded.sequence=1 AND worship_live_reader.expires_at<=?)
@@ -171,7 +194,7 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
     AND ${readAccess} AND ${guard.sql}
   ON CONFLICT(device_id,group_id) DO UPDATE SET service_id=excluded.service_id,service_revision=excluded.service_revision,
    leadership_revision=excluded.leadership_revision,leader_id=excluded.leader_id,session_id=excluded.session_id,
-   sequence=excluded.sequence,item_id=excluded.item_id,position_json=excluded.position_json,expires_at=excluded.expires_at,
+   sequence=excluded.sequence,item_id=excluded.item_id,position_json=${preserveClickerPresence},expires_at=excluded.expires_at,
    song_id=NULL,song_hash=NULL
   WHERE (worship_live_reader.session_id=excluded.session_id AND worship_live_reader.expires_at>?
      AND worship_live_reader.sequence<excluded.sequence)

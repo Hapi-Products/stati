@@ -24,8 +24,8 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  for (const id of [f.user,member]) {
   await env.DB.prepare('INSERT INTO worship_group_members VALUES(?,?,?,?)').bind(group,id,f.user,f.timestamp).run();
  }
- const request = (session: string, method='GET', payload?: object) => SELF.fetch(
-  'http://localhost:8787/api/computers/'+f.deviceId+'/worship-live/'+group,
+ const request = (session: string, method='GET', payload?: object, query='') => SELF.fetch(
+  'http://localhost:8787/api/computers/'+f.deviceId+'/worship-live/'+group+query,
   {method,headers:{Origin:'http://localhost:8787',Cookie:'stati_session='+session},body:payload ? JSON.stringify(payload) : undefined},
  );
  const update = {
@@ -79,6 +79,20 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:3}});
  const ready = {...update,sequence:3,page:1,pageCount:3};
  expect((await request(f.session,'PUT',ready)).status).toBe(200);
+ const presence = (session:string, sessionId=ready.sessionId) => SELF.fetch(
+  'http://localhost:8787/api/computers/'+f.deviceId+'/live-clicker',
+  {method:'PATCH',headers:{Origin:'http://localhost:8787',Cookie:'stati_session='+session},
+   body:JSON.stringify({sessionId})},
+ );
+ const hostStatus = async () => (await request(f.session,'GET',undefined,'?clicker=1')).json();
+ expect(await hostStatus()).toMatchObject({clickerConnected:false});
+ expect((await presence(memberCookie)).status).toBe(409);
+ expect((await presence(f.session,crypto.randomUUID())).status).toBe(409);
+ expect((await presence(f.session)).status).toBe(200);
+ expect(await hostStatus()).toMatchObject({clickerConnected:true,position:ready});
+ expect(await (await request(memberCookie,'GET',undefined,'?clicker=1')).json())
+  .toEqual({state:'live',isLeader:false,position:ready});
+
  expect(await (await clicker(f.session)).json()).toMatchObject({live:{
   position:ready,songTitle:'Împreună cântăm',songId:f.songId,contentHash:f.contentHash
  }});
@@ -114,6 +128,12 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await clicker(f.session,{...move,page:2,turn:moved.position.clickerTurn,direction:-1})).status).toBe(200);
  expect((await clicker(f.session,{...move,page:1})).status).toBe(409);
  expect((await request(f.session,'PUT',{...ready,sequence:4,page:0})).status).toBe(200);
+ expect(await hostStatus()).toMatchObject({clickerConnected:true});
+ vi.setSystemTime(new Date((f.timestamp+13)*1000));
+ expect(await hostStatus()).toMatchObject({state:'live',clickerConnected:false});
+ expect((await presence(f.session)).status).toBe(200);
+ expect(await hostStatus()).toMatchObject({state:'live',clickerConnected:true});
+
  expect((await clicker(f.session,{...move,page:0,direction:1})).status).toBe(409);
  expect((await request(memberCookie,'DELETE',{sessionId:update.sessionId})).status).toBe(200);
  expect(await (await request(memberCookie)).json()).toMatchObject({state:'live'});

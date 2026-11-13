@@ -45,6 +45,8 @@ With build 60 and the updated server, Stați tells connected devices as soon as 
 
 In development build 62, the clicker uses the confirmed page from each tap so you can press the next arrow as soon as Stați accepts the previous turn.
 
+With development build 63 and the accompanying server update, keeping the clicker open lets the leader’s iPad show **Phone clicker connected** in the Service ready check.
+
 ## Find songs and use Shortcuts
 
 Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. Turn on Siri Shortcuts in **Profile → Features**.

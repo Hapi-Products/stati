@@ -11,7 +11,7 @@
 
 ## Link a shared file
 
-1. Open the song on iPad. If your role allows linking notes, tap the **chain link** icon at the top of the reader.
+1. Open the song on iPad. If your role allows linking notes, open **Reader options (•••) → Link shared notes**.
 2. Select a file you shared or a file you manage as an administrator. Tap **Load older files** if the file is on another page.
 3. Open **Reader options (•••) → Notes** to view the linked file. Repeat for any other files you want to attach to this song.
 
@@ -19,7 +19,7 @@ Linking leaves the original file in **Groups** and preserves its permissions. If
 
 ## Get help in portrait or landscape
 
-Tap the **question mark** in the song reader toolbar. The guide starts with the reading formats, then covers Song Selector, page previews when available, shared notes if you can link them, and Focus. If you’re following a live leader, the guide explains why manual song and page controls are unavailable.
+Tap the **question mark** in the song reader toolbar. The guide starts with the reading formats, then covers Song Selector, page previews when available, linking notes from Reader options, and Focus. If you’re following a live leader, the guide explains why manual song and page controls are unavailable.
 
 Use the arrow buttons to go forward or back. A step points to its control when possible; overview steps and steps without an on-screen anchor open in the middle. Tap the **book** icon on any step to open this page.
 

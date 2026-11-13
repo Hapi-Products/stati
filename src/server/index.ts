@@ -65,7 +65,7 @@ async function signedInSongRoute(r:Request,env:Env,ctx:ExecutionContext,p:string
   return response;
  }
  const clickerRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/live-clicker$/i);
- if(clickerRoute&&['GET','POST'].includes(m)){
+ if(clickerRoute&&['GET','POST','PATCH'].includes(m)){
   const response=await worshipClicker(r,env,clickerRoute[1]);
   if(response.ok&&m==='POST')ctx.waitUntil(notifyWorkspaceChange(env,'live-reader-changed'));
   return response;
