@@ -10,4 +10,10 @@ nonisolated struct ServiceActivityAttributes: ActivityAttributes {
     let computerID: String
     let serviceID: String
     let service: String
+    var clickerSessionID: String? = nil
+
+    var clickerURL: URL? {
+        guard let clickerSessionID else { return nil }
+        return URL(string: "stati-ios://live-clicker/" + clickerSessionID)
+    }
 }

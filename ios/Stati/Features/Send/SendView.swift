@@ -7,6 +7,7 @@ struct SendView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     let active: Bool
+    let openClicker: (() -> Void)?
     @State private var importing = false
     @State private var pickingPhotos = false
     @State private var photos: [PhotosPickerItem] = []
@@ -25,8 +26,9 @@ struct SendView: View {
     @State private var connectingComputer = false
     @State private var preparing = false
     @State private var error = ""
-    init(active: Bool) {
+    init(active: Bool, openClicker: (() -> Void)? = nil) {
         self.active = active
+        self.openClicker = openClicker
         #if DEBUG && targetEnvironment(simulator)
         if NativeReview.route == "send-photos" { _pickingPhotos = State(initialValue: true) }
         if NativeReview.route == "send-text" { _textMode = State(initialValue: true) }
@@ -112,6 +114,11 @@ struct SendView: View {
                     Button("Song text", systemImage: "text.alignleft") { textMode = true }
                 }.labelStyle(ActionIconLabelStyle())
                     .disabled(store.selectedComputer.isEmpty || preparing || store.uploads.busy || store.uploads.availableSlots == 0)
+            }
+            if let openClicker {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Live Clicker", systemImage: "cursorarrow.click", action: openClicker).labelStyle(.iconOnly)
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {

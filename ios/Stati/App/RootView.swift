@@ -10,6 +10,9 @@ struct RootView: View {
     @State private var tab = "send"
     @State private var shortcuts = SongShortcutNavigation.shared
     @State private var liveActivities = ServiceLiveActivities()
+    @State private var liveClicker = LiveClicker()
+    @State private var showingClicker = false
+    @State private var clickerSession: String?
     @AppStorage("stati.liveSong.enabled") private var liveSongEnabled = false
     @State private var shortcutRequest: SongShortcutRequest?
     #if DEBUG && targetEnvironment(simulator)
@@ -126,6 +129,27 @@ struct RootView: View {
             .task(id: taskEventScope + store.selectedComputer + String(liveSongEnabled) + String(store.canReadSongs)) {
                 await liveActivities.follow(store: store, enabled: liveSongEnabled, foreground: scenePhase == .active)
             }
+            .task(id: taskEventScope + store.selectedComputer + String(showingClicker) + (clickerSession ?? "") + String(canUseClicker)) {
+                guard UIDevice.current.userInterfaceIdiom == .phone, scenePhase == .active,
+                      canUseClicker, store.api.signedIn, !store.selectedComputer.isEmpty else { return }
+                while !Task.isCancelled {
+                    await liveClicker.refresh(store: store, showActivity: showingClicker, expectedSession: clickerSession)
+                    do { try await Task.sleep(for: showingClicker ? .seconds(1) : liveClicker.connection == nil ? .seconds(15) : .seconds(5)) }
+                    catch { return }
+                }
+            }
+            .sheet(isPresented: $showingClicker) { LiveClickerView(clicker: liveClicker, session: $clickerSession) }
+            .onOpenURL { url in
+                guard UIDevice.current.userInterfaceIdiom == .phone,
+                      url.scheme == "stati-ios", url.host == "live-clicker",
+                      url.pathComponents.count == 2, let session = url.pathComponents.last,
+                      UUID(uuidString: session) != nil else { return }
+                clickerSession = session
+                showingClicker = true
+            }
+            .onChange(of: store.accountEpoch) { closeClicker(preserveLink: true) }
+            .onChange(of: store.selectedComputer) { previous, _ in closeClicker(preserveLink: previous.isEmpty) }
+            .onChange(of: canUseClicker) { _, allowed in if !allowed { closeClicker() } }
             .task(id: taskEventScope) {
                 #if DEBUG && targetEnvironment(simulator)
                 if NativeReview.route != nil { return }
@@ -135,6 +159,7 @@ struct RootView: View {
                 await TaskEventFeed(api: store.api).run(isCurrent: { store.me?.id == owner && store.accountEpoch == epoch && store.api.signedIn && scenePhase == .active }, invalidate: { store.workspaceInvalidated($0) }, connected: { live in if store.me?.id == owner && store.accountEpoch == epoch { store.workspaceLive = live } })
             }
             .onChange(of: store.me?.id) { previous, current in
+                if previous != nil && previous != current { closeClicker() }
                 if previous != nil && previous != current { shortcuts.request = nil; shortcuts.readerID = nil; shortcuts.placementReaderID = nil; shortcutRequest = nil; profileImage = nil; libraryQuery = ""; libraryPath = []; taskPath = []; morePath = []; libraryArea = "songs"; tab = "send" }
             }
             .onChange(of: store.canReadSongs) { _, allowed in if !allowed && tab == "songs" { tab = "send"; libraryQuery = ""; libraryPath = [] } }
@@ -147,6 +172,13 @@ struct RootView: View {
             }
             .onChange(of: scenePhase) { _, phase in if phase == .active && !store.authenticating { Task { await store.refresh() } } }
     }
+    private func closeClicker(preserveLink: Bool = false) {
+        liveClicker.reset()
+        if preserveLink && clickerSession != nil { return }
+        showingClicker = false
+        clickerSession = nil
+        Task { await liveClicker.endActivities() }
+    }
     private func checkReleaseNotes() {
         let isPad = UIDevice.current.userInterfaceIdiom == .pad
         guard !IPadRoleAccess.isBlocked(ministryRole: store.me?["ministryRole"].text ?? "", isPad: isPad) else { return }
@@ -155,6 +187,9 @@ struct RootView: View {
         if !showingWhatsNew { lastSeenBuild = build }
     }
     private var taskEventScope: String { store.accountEpoch.uuidString + (store.me?.id ?? "") + (scenePhase == .active ? "active" : "inactive") }
+    private var canUseClicker: Bool {
+        store.canReadSongs && (store.canPlan || store.me?["ministryRole"].text == "pastor")
+    }
     private var normalContent: some View {
         Group {
             if store.loading && store.me == nil { ProgressView(UIDevice.current.userInterfaceIdiom == .pad ? "Opening Stați Worship…" : "Opening Stați…") }
@@ -173,7 +208,14 @@ struct RootView: View {
     private var searchPrompt: String { libraryArea == "services" ? "Search services" : libraryArea == "groups" ? "Search shared files" : "Search songs or lyrics" }
     private var mainTabs: some View {
         TabView(selection: $tab) {
-            Tab(value: "send") { NavigationStack { SendView(active: tab == "send") } } label: { ActionTabSymbol(name: tab == "send" ? "square.and.arrow.up.fill" : "square.and.arrow.up") }.accessibilityLabel("Send")
+            Tab(value: "send") {
+                NavigationStack {
+                    SendView(active: tab == "send", openClicker: canUseClicker ? {
+                        clickerSession = nil
+                        showingClicker = true
+                    } : nil)
+                }
+            } label: { ActionTabSymbol(name: tab == "send" ? "square.and.arrow.up.fill" : "square.and.arrow.up") }.accessibilityLabel("Send")
             Tab(value: "tasks") { NavigationStack(path: $taskPath) { TasksView(active: tab == "tasks") } } label: { ActionTabSymbol(name: TaskTabImage.symbolName(selected: tab == "tasks", hasTasks: store.taskCount > 0), weight: .medium) }.accessibilityLabel("Tasks")
             Tab(value: "more") { NavigationStack(path: $morePath) { ProfileView() } } label: {
                 if let profileImage { Image(uiImage: profileImage).renderingMode(.original) }

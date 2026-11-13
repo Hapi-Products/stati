@@ -15,6 +15,7 @@ struct SongReaderContent: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var pageIndex: Int
     var followsLeader = false
+    var pageCountChanged: (Int) -> Void = { _ in }
     private var index: Int { min(max(0, pageIndex), max(0, count - 1)) }
     private var pageSelection: Binding<Int> { Binding(get: { index }, set: { pageIndex = $0 }) }
     @State private var showsPagePreviews = false
@@ -66,6 +67,7 @@ struct SongReaderContent: View {
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(mode == .slides ? Color.black : Color(.systemBackground))
             .task(id: song.id + song["contentHash"].text + String(pdfColumns.rawValue) + mode.rawValue + String(colorScheme == .dark)) { if mode == .document { prepareDocument() } }
             .onChange(of: mode) { showsPagePreviews = false }
+            .onChange(of: mode == .text ? 0 : count, initial: true) { _, count in pageCountChanged(count) }
             #if DEBUG && targetEnvironment(simulator)
             .onAppear {
                 if NativeReview.route == "reader-slides-last" { pageIndex = max(0, count - 1) }

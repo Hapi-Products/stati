@@ -9,7 +9,8 @@ import Foundation
         let authorized = enabled && system.areActivitiesEnabled && store.canReadSongs && store.api.signedIn
             && !owner.isEmpty && !computer.isEmpty
         for activity in Activity<ServiceActivityAttributes>.activities
-        where !authorized || activity.attributes.accountID != owner || activity.attributes.computerID != computer {
+        where activity.attributes.clickerSessionID == nil &&
+            (!authorized || activity.attributes.accountID != owner || activity.attributes.computerID != computer) {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
         guard foreground, authorized else { return }
@@ -44,7 +45,7 @@ import Foundation
             return
         }
         let content = ActivityContent(state: ServiceActivityAttributes.ContentState(song: String(song.prefix(300))), staleDate: deadline)
-        let matches = Activity<ServiceActivityAttributes>.activities.filter { $0.attributes.accountID == owner && $0.attributes.computerID == computer }
+        let matches = Activity<ServiceActivityAttributes>.activities.filter { $0.attributes.clickerSessionID == nil && $0.attributes.accountID == owner && $0.attributes.computerID == computer }
         if let current = matches.first, current.attributes.serviceID == serviceID, current.attributes.service == displayedService {
             if current.content.state != content.state || current.content.staleDate != deadline {
                 await Self.update(id: current.id, song: content.state.song, deadline: deadline)
@@ -64,7 +65,7 @@ import Foundation
 
     private func end(owner: String, computer: String) async {
         for activity in Activity<ServiceActivityAttributes>.activities
-        where activity.attributes.accountID == owner && activity.attributes.computerID == computer {
+        where activity.attributes.clickerSessionID == nil && activity.attributes.accountID == owner && activity.attributes.computerID == computer {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
     }

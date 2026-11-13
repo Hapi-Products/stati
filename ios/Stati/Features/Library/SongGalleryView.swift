@@ -20,6 +20,8 @@ struct SongGalleryView: View {
     @State private var exportError = ""
     @State private var focused = false
     @State private var pageIndex = 0
+    @State private var livePageCount = 0
+    @State private var pageCountScope = ""
     @State private var leadPosition: LiveWorshipReader.Position?
     @State private var didFollow = false
 
@@ -31,9 +33,14 @@ struct SongGalleryView: View {
     private var livePosition: LiveWorshipReader.Position? {
         guard model.request.isService else { return nil }
         let settings = preferences.settings
-        return .init(item: model.selected.id, page: pageIndex, mode: readerMode,
-                     transition: settings.transition, columns: settings.pdfColumns, size: settings.slideSize)
+        var position = LiveWorshipReader.Position(item: model.selected.id, page: pageIndex, mode: readerMode,
+                                                  transition: settings.transition, columns: settings.pdfColumns, size: settings.slideSize)
+        if pageCountScope == readerPageScope, readerMode != .text, (0..<livePageCount).contains(pageIndex), livePageCount <= 10_001 {
+            position.pageCount = livePageCount
+        }
+        return position
     }
+    private var readerPageScope: String { model.selected.id + readerMode.rawValue + String(preferences.settings.pdfColumns.rawValue) }
 
     @State private var shortcutNavigation = SongShortcutNavigation.shared
     @State private var shortcutReaderID = UUID()
@@ -88,6 +95,11 @@ struct SongGalleryView: View {
             followLivePage()
         }
         .onChange(of: live?.reader.position) { followLivePage() }
+        .onChange(of: live?.reader.clickerTurn) { _, turn in
+            guard live?.reader.leading == true, let position = turn?.position, position.item == model.selected.id,
+                  position.mode == readerMode, position.pageCount == livePosition?.pageCount else { return }
+            pageIndex = position.page
+        }
         .onChange(of: livePosition) {
             guard let live, let position = livePosition, !following else { return }
             guard live.items.contains(where: { $0.id == position.item }) else { return }
@@ -106,6 +118,7 @@ struct SongGalleryView: View {
         }
         .onDisappear {
             if shortcutNavigation.readerID == shortcutReaderID { shortcutNavigation.readerID = nil }
+            if model.request.isService, live?.reader.leading == true { live?.reader.readerClosed(store: store) }
         }
         .onChange(of: shortcutNavigation.placementReaderID) { _, readerID in
             guard readerID == shortcutReaderID else { return }
@@ -151,13 +164,17 @@ struct SongGalleryView: View {
         #endif
         if let song = model.song {
             let synced = following ? live?.reader.position : nil
+            let pageScope = readerPageScope
             SongReaderContent(song: song, mode: iPad ? readerMode : .text,
                               transition: synced?.transition ?? preferences.settings.transition,
                               clickerEnabled: preferences.settings.clickerAllowed(onIPad: iPad),
                               pdfColumns: synced?.columns ?? preferences.settings.pdfColumns,
                               slideSize: synced?.size ?? preferences.settings.slideSize,
                               showsPagingControls: !focused, guide: iPad ? guide : nil,
-                              pageIndex: $pageIndex, followsLeader: following).id(song.id + song["contentHash"].text)
+                              pageIndex: $pageIndex, followsLeader: following, pageCountChanged: { count in
+                                  pageCountScope = pageScope
+                                  livePageCount = count
+                              }).id(song.id + song["contentHash"].text + pageScope)
         } else if model.loading { ProgressView("Opening song…").frame(maxWidth: .infinity, maxHeight: .infinity) }
         else { ContentUnavailableView("Song unavailable", systemImage: "music.note", description: Text(model.message)) }
         if !model.message.isEmpty, model.song != nil { NoticeView(text: model.message).padding(.horizontal, 16) }

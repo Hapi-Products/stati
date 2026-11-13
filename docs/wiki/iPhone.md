@@ -1,6 +1,6 @@
 # Stați for iPhone
 
-**Updated on** November 12, 2026 · **Updated by** Codex for Stați
+**Updated on** November 13, 2026 · **Updated by** Codex for Stați
 
 The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where your role allows it. The current development builds target iOS 26.3 or later. Check [Updates](https://github.com/Hapi-Products/stati/wiki/Updates) for the status of a specific build.
 
@@ -18,13 +18,24 @@ The development build appears as **Stazi Beta** with a fixed blue icon and accen
 
 ## Pause builds during service
 
-The build pause control is prepared for Stazi Beta build 57. It requires the updated Stați server. It has not been rolled out to phones yet.
+The build pause control requires Stazi Beta build 57 or later. The server now enforces the release hold.
 
 1. Sign in as a Stați administrator and open **Send**.
 2. Tap the pause icon at the top, then **Pause Builds**. This holds Stați releases while you continue sending files.
 3. After service, open the same menu and tap **Resume Builds**. This clears your manual pause. A scheduled or selected service still keeps releases on hold.
 
 Scheduled services are protected automatically. A service selected on the computer also keeps builds paused until the selection is cleared. After an unscheduled service, choose **None · Lyrics only** on the computer if it is still selected. A held build can be retried after all holds clear.
+
+## Use iPhone as a live clicker
+
+This feature requires build 58 on the iPhone and the leader’s iPad and the updated Stați server.
+
+1. On iPad, start leading the active service for your worship group and open a song as **Slides** or a **PDF**.
+2. On iPhone, sign in with the same leader profile and select the same computer in **Send**.
+3. Tap the clicker icon at the top of **Send**. The screen shows the live song and page. Use the arrows to turn pages on the leader’s iPad and the tablets following it.
+4. Tap **×** to leave the clicker. The service continues. If iOS Live Activities are enabled, tap the activity on the Lock Screen or Dynamic Island to reopen the clicker. You can also reopen it from **Send**.
+
+The iPad needs to stay in the live reader with an internet connection. If leadership changes or the service ends, the phone can no longer turn its pages.
 
 ## Find songs and use Shortcuts
 

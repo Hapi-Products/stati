@@ -30,6 +30,7 @@ final class LiveWorshipReader {
         var transition: ReaderTransition
         var columns: PDFColumnCount
         var size: SlideTextSize
+        var pageCount: Int? = nil
 
         init(item: String, page: Int, mode: SongReaderMode, transition: ReaderTransition, columns: PDFColumnCount, size: SlideTextSize) {
             self.item = item
@@ -49,6 +50,7 @@ final class LiveWorshipReader {
                   let columns = PDFColumnCount(rawValue: columnValue),
                   let size = SlideTextSize(sliderPosition: value["slideSize"].number) else { return nil }
             self.init(item: item, page: page, mode: mode, transition: transition, columns: columns, size: size)
+            pageCount = Int(exactly: value["pageCount"].number).flatMap { $0 > page ? $0 : nil }
         }
     }
 
@@ -58,6 +60,7 @@ final class LiveWorshipReader {
         let path: String
         let epoch: UUID
         var sequence = 0
+        var canRenewWithoutPosition = true
     }
 
     private(set) var status: Status = .idle
@@ -67,6 +70,15 @@ final class LiveWorshipReader {
     private(set) var leading = false
     private(set) var starting = false
     private(set) var message = ""
+    struct ClickerTurn: Equatable {
+        let id: String
+        let position: Position
+    }
+
+    private(set) var clickerTurn: ClickerTurn?
+    @ObservationIgnored private var receivedTurn = ""
+    @ObservationIgnored private var acknowledgedSequence = 0
+    @ObservationIgnored private var sentRevision = 0
     @ObservationIgnored private var session: Session?
     @ObservationIgnored private var desired: Position?
     @ObservationIgnored private var revision = 0
@@ -94,6 +106,15 @@ final class LiveWorshipReader {
                 status = Status(rawValue: response["state"].text) ?? .offline
                 let payload = response["position"]
                 let next = Position(payload)
+                if let session, session.id == payload["sessionId"].text, let next,
+                   !payload["clickerTurn"].text.isEmpty, payload["clickerTurn"].text != receivedTurn,
+                   Int(exactly: payload["sequence"].number) == acknowledgedSequence,
+                   sentRevision == revision, next.item == desired?.item,
+                   next.mode == desired?.mode, next.pageCount == desired?.pageCount {
+                    receivedTurn = payload["clickerTurn"].text
+                    desired = next
+                    clickerTurn = ClickerTurn(id: receivedTurn, position: next)
+                }
                 following = status == .live && session?.id != payload["sessionId"].text &&
                     payload["serviceId"].text == service && next != nil
                 serviceID = following ? service : ""
@@ -119,41 +140,74 @@ final class LiveWorshipReader {
         heartbeat = Task { [weak self, weak store] in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(8)) } catch { return }
-                guard let self, let store, self.session != nil, let desired = self.desired else { return }
-                self.update(desired, store: store)
+                guard let self, let store, let session = self.session, session.epoch == store.accountEpoch,
+                      let desired = self.desired else { return }
+                if self.sentRevision != self.revision {
+                    self.sendPosition(store: store)
+                    continue
+                }
+                if !session.canRenewWithoutPosition {
+                    self.revision += 1
+                    self.sendPosition(store: store)
+                    continue
+                }
+                do {
+                    _ = try await store.api.request(session.path, method: "PATCH", body: .object(["sessionId": .string(session.id)]))
+                } catch let error as APIError where [404, 405].contains(error.status) {
+                    guard !Task.isCancelled, self.session?.id == session.id else { return }
+                    self.session?.canRenewWithoutPosition = false
+                    self.revision += 1
+                    self.sendPosition(store: store)
+                } catch let error as APIError where [401, 403, 409].contains(error.status) {
+                    guard !Task.isCancelled, self.session?.id == session.id else { return }
+                    self.message = error.localizedDescription
+                    self.stop(store: store)
+                    return
+                } catch { }
             }
         }
     }
 
     func update(_ position: Position, store: AppStore) {
-        guard session?.epoch == store.accountEpoch else { return }
+        guard session?.epoch == store.accountEpoch, position != desired else { return }
         desired = position
         revision += 1
+        sendPosition(store: store)
+    }
+
+    func readerClosed(store: AppStore) {
+        guard var desired else { return }
+        desired.pageCount = nil
+        update(desired, store: store)
+    }
+
+    private func sendPosition(store: AppStore) {
         guard sender == nil else { return }
         sender = Task { [weak self, weak store] in
             guard let self, let store, let started = self.session?.id else { return }
             defer { if self.session?.id == started { self.sender = nil } }
-            var delivered = 0
             while !Task.isCancelled, var session = self.session, session.id == started,
-                  let current = self.desired, self.revision != delivered, session.epoch == store.accountEpoch {
+                  let current = self.desired, self.revision != self.sentRevision, session.epoch == store.accountEpoch {
                 let sending = self.revision
                 session.sequence += 1
                 self.session = session
-                let payload: JSONValue = .object([
+                var payload: [String: JSONValue] = [
                     "serviceId": .string(session.service), "sessionId": .string(session.id),
                     "sequence": .number(Double(session.sequence)), "itemId": .string(current.item),
                     "page": .number(Double(current.page)), "mode": .string(current.mode.rawValue),
                     "transition": .string(current.transition.rawValue), "columns": .number(Double(current.columns.rawValue)),
                     "slideSize": .number(current.size.sliderPosition),
-                ])
+                ]
+                if let count = current.pageCount { payload["pageCount"] = .number(Double(count)) }
                 do {
-                    let result = try await store.api.request(session.path, method: "PUT", body: payload)
+                    let result = try await store.api.request(session.path, method: "PUT", body: .object(payload))
                     guard !Task.isCancelled, self.session?.id == started else { return }
                     guard result["ok"].flag else { throw APIError(status: 502, message: "Stați could not confirm the live connection.") }
                     self.leading = true
                     self.starting = false
                     self.status = .live
-                    delivered = sending
+                    self.sentRevision = sending
+                    self.acknowledgedSequence = session.sequence
                 } catch is CancellationError { return }
                 catch {
                     guard self.session?.id == started else { return }
@@ -169,6 +223,7 @@ final class LiveWorshipReader {
     func stop(store: AppStore) {
         let ending = session
         session = nil; desired = nil; leading = false; starting = false
+        clickerTurn = nil; receivedTurn = ""; acknowledgedSequence = 0
         sender?.cancel(); sender = nil
         heartbeat?.cancel(); heartbeat = nil
         guard let ending, ending.epoch == store.accountEpoch else { return }

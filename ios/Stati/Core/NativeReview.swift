@@ -7,6 +7,9 @@ import SwiftUI
 @MainActor enum NativeReview {
     static var route: String? { let args = ProcessInfo.processInfo.arguments; guard let i = args.firstIndex(of: "--review-screen"), args.indices.contains(i + 1) else { return nil }; return args[i + 1] }
     private static var reviewBuildPause = false
+    private static var clickerPage = 0
+    private static var clickerTurn: JSONValue = .null
+    static let clickerSessionID = "631d4eae-fb26-448f-88e5-76c249650e4a"
     static let computerID = "3ba6dd35-835d-48d7-bfd1-0753c596d8b3"
     static let userID = "eb1e63b6-80e4-448a-a3ec-1cb61a129142"
     static let songID = String(repeating: "a", count: 64)
@@ -81,6 +84,25 @@ import SwiftUI
             reviewBuildPause = paused
         }
         return (200, .object(["manualPaused": .bool(reviewBuildPause), "activeService": .bool(false), "scheduledUntil": .null]))
+    }
+    static func clickerResponse(_ request: URLRequest) -> (status: Int, body: JSONValue)? {
+        guard route == "phone-live-clicker", request.url?.path == "/api/computers/" + computerID + "/live-clicker" else { return nil }
+        if request.httpMethod == "POST" {
+            guard let data = NativeMarkupServer.requestBody(request), let input = try? JSONDecoder().decode(JSONValue.self, from: data),
+                  input["page"].number == Double(clickerPage), input["turn"] == clickerTurn,
+                  let direction = Int(exactly: input["direction"].number), (0..<5).contains(clickerPage + direction) else {
+                return (409, .object(["error": .string("The live page changed.")]))
+            }
+            clickerPage += direction
+            clickerTurn = .string(UUID().uuidString.lowercased())
+        }
+        let position: JSONValue = .object(["sessionId": .string(clickerSessionID), "serviceId": plan["id"],
+                                          "itemId": .string("11d5bc1f-fe6d-4661-8cd8-f3a9569c89c5"),
+                                          "sequence": .number(1), "page": .number(Double(clickerPage)),
+                                          "pageCount": .number(5), "clickerTurn": clickerTurn])
+        if request.httpMethod == "POST" { return (200, .object(["position": position])) }
+        return (200, .object(["live": .object(["position": position, "songTitle": .string("Amazing Grace"),
+                                               "serviceTitle": .string("Sunday evening")])]))
     }
     static func response(_ request: URLRequest) -> JSONValue {
         if request.url?.path == "/api/recents/availability", let data = request.httpBody, let body = try? JSONDecoder().decode(JSONValue.self, from: data) {
@@ -160,7 +182,8 @@ nonisolated final class NativeReviewProtocol: URLProtocol, @unchecked Sendable {
                 client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost))
                 return
             }
-            if let result = NativeSendNetworkCheck.response(request) ?? NativeReaderReview.placementResponse(request) ?? NativeReview.buildPauseResponse(request) {
+            if let result = NativeSendNetworkCheck.response(request) ?? NativeReaderReview.placementResponse(request) ??
+                NativeReview.buildPauseResponse(request) ?? NativeReview.clickerResponse(request) {
                 let response = HTTPURLResponse(url: request.url!, statusCode: result.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 if let data = try? JSONEncoder().encode(result.body) { client?.urlProtocol(self, didLoad: data) }
