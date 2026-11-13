@@ -1,6 +1,6 @@
 # Troubleshooting
 
-**Updated on** November 11, 2026 · **Updated by** Codex for Stați
+**Updated on** November 12, 2026 · **Updated by** Codex for Stați
 
 | What you see | What to check |
 | --- | --- |
@@ -20,6 +20,6 @@ When reporting an issue, include your device, OS version, Stați build, the scre
 ## Report a problem on iPhone or iPad
 
 1. Open **Profile → Diagnostics** on iPhone or **Account → Diagnostics** on iPad.
-2. In build 50, use the copy icon in the top-right corner to copy every error retained from the last 24 hours.
+2. In build 52 or later, touch and hold **Version** and choose **Copy version**. Use the copy icon in the top-right corner to copy every error retained from the last 24 hours.
 3. Choose **Report a problem**, optionally describe what happened, and tap the checkmark. Confirm **Yes, Send** to submit. The report automatically includes your app information and up to 200 recent errors. Each diagnostic entry shows a timestamp, the app area and the type of failure.
 4. Reports use a private GitHub inbox for authorized support staff. Live delivery requires a configured server credential. If sending is unavailable, you can still review and copy diagnostics on your device.
