@@ -11,7 +11,17 @@ Stați Worship gives iPad users **Recents**, **Groups**, **Browse**, and **Servi
 3. Open the page counter to pick from slide previews. Use the song selector to jump to another song.
 4. Return to **Service** to see the running order again. Use **Browse** when you need to search by title or lyrics.
 
-**Groups** gives you access to shared files. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**. **Recents** is a quick way back to a song or file you already opened. For search, use **Browse** or **Groups**. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
+## Browse songs
+
+Tap the first-slide preview to open a song, or use the magnifying glass to search by title or lyrics. For live service details, tap the status dot in the toolbar. The gray dot stays neutral even if your app accent is blue.
+
+**Recents** is a quick way back to a song or file you already opened. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
+
+## Worship groups
+
+**Groups** gives you access to shared files. Tap a preview to open a file. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**.
+
+If you can manage notes, open a song and use the chain link in its toolbar to attach an eligible shared file. [Link a shared file](https://github.com/Hapi-Products/stati/wiki/Song-Reader#link-a-shared-file)
 
 ## Follow a live service in build 53
 
@@ -26,9 +36,13 @@ Stați sends the song, page and reader format. Each iPad renders it locally. PDF
 
 In the song reader, open the menu and choose **Add to service**, or use the Siri shortcut. Pick an active service, drag the song into place and tap **Done**. The selected computer sees the updated order in its shared plan. [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts)
 
-## Refresh or lead a service
+## Services
 
 Open a service to see its running order in the Service tab. Use the refresh icon in the navigation bar for the latest order. The person icon appears when your role allows you to lead, take over, or leave leadership. Use the back arrow to return to the service list. Switching tabs closes the current service detail.
+
+## Get help in the app
+
+Use the question mark in Browse, Groups, a service, or the song reader for steps relevant to that screen. The book icon in each guide opens the matching wiki page or section.
 
 ## Remove a worship group
 

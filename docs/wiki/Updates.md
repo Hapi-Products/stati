@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 56 | On iPad, keeps the idle service dot gray, adds a Link Notes icon to the song toolbar, and expands the in-app wiki guides. See [Song reader help](https://github.com/Hapi-Products/stati/wiki/Song-Reader#get-help-in-portrait-or-landscape). |
 | iPhone and iPad development build 55 | Keeps the live service indicator’s green, red, and gray colors in the iPad toolbar. |
 | iPad development build 53 | Adds a live worship reader for the active service and named group. The server access checks and simulated PDF page following passed. |
 | iPhone and iPad development build 52 | Uses the selected accent in guide and preview controls, puts Focus at the bottom right, matches the PDF reader to the app theme, and asks before enabling Developer Mode. |
