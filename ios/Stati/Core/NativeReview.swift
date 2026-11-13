@@ -89,11 +89,18 @@ import SwiftUI
         guard route == "phone-live-clicker", request.url?.path == "/api/computers/" + computerID + "/live-clicker" else { return nil }
         if request.httpMethod == "POST" {
             guard let data = NativeMarkupServer.requestBody(request), let input = try? JSONDecoder().decode(JSONValue.self, from: data),
-                  input["page"].number == Double(clickerPage), input["turn"] == clickerTurn,
-                  let direction = Int(exactly: input["direction"].number), (0..<5).contains(clickerPage + direction) else {
+                  input["page"].number == Double(clickerPage), input["turn"] == clickerTurn else {
                 return (409, .object(["error": .string("The live page changed.")]))
             }
-            clickerPage += direction
+            let target: Int?
+            if case .number(let page) = input["targetPage"] { target = Int(exactly: page) }
+            else if case .number(let direction) = input["direction"], let offset = Int(exactly: direction), abs(offset) == 1 {
+                target = clickerPage + offset
+            } else { target = nil }
+            guard let target, (0..<5).contains(target), target != clickerPage else {
+                return (409, .object(["error": .string("The live page changed.")]))
+            }
+            clickerPage = target
             clickerTurn = .string(UUID().uuidString.lowercased())
         }
         let position: JSONValue = .object(["sessionId": .string(clickerSessionID), "serviceId": plan["id"],

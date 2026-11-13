@@ -1,4 +1,5 @@
 import SwiftUI
+import PDFKit
 
 struct StatiFileViewer: View {
     @Environment(AppStore.self) private var store
@@ -13,12 +14,38 @@ struct StatiFileViewer: View {
     @State private var prepared = false
     @State private var closing = false
     @State private var usingCurrent = false
+    @State private var reading = false
+    @State private var document: PDFDocument?
+    @State private var image: UIImage?
+    @State private var page = 0
+    @AppStorage("stati.files.invertReadingColors") private var inverted = false
     init(request: FilePreviewRequest, navigation: ReaderNavigation? = nil) { self.request = request; self.navigation = navigation; _selectedID = State(initialValue: request.selectedID) }
     private var index: Int { request.items.firstIndex(where: { $0.id == selectedID }) ?? 0 }
     private var item: FilePreviewItem { request.items[index] }
     var body: some View {
         Group {
-            if prepared, let url = markup?.source ?? session.url {
+            if reading, document != nil || image != nil {
+                NavigationStack {
+                    SharedFileReadingView(document: document, image: image,
+                                          transition: ReaderPreferences(ownerID: store.me?.id ?? "").settings.transition,
+                                          page: $page, inverted: $inverted)
+                        .navigationTitle(item.filename)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Close", systemImage: "xmark") { finish() }.labelStyle(.iconOnly)
+                            }
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button(inverted ? "Restore colors" : "Invert colors", systemImage: "circle.lefthalf.filled") {
+                                    inverted.toggle()
+                                }.labelStyle(.iconOnly)
+                            }
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Open in Quick Look", systemImage: "eye") { reading = false }.labelStyle(.iconOnly)
+                            }
+                        }
+                }
+            } else if prepared, let url = markup?.source ?? session.url {
                 AppleMarkupView(url: url, filename: item.filename, canEdit: markup?.source != nil && markup?.canEdit == true, navigate: { step in if let navigation { navigate(step < 0 ? navigation.previous : navigation.next) } else { change(to: index + step) } }, saved: { markup?.saved($0) }, close: { finish() })
                     .id(selectedID + retry.uuidString).ignoresSafeArea(.container, edges: .top)
             } else {
@@ -40,7 +67,7 @@ struct StatiFileViewer: View {
             } message: { Text("Your earlier Markup stays on this device.") }
     }
     @ViewBuilder private var footer: some View {
-        if navigation != nil || request.items.count > 1 || markup?.message.isEmpty == false || closing || live?.reader.following == true {
+        if navigation != nil || request.items.count > 1 || markup?.message.isEmpty == false || closing || live?.reader.following == true || (!reading && (document != nil || image != nil)) {
             VStack(spacing: 8) {
                 if let markup, !markup.message.isEmpty {
                     Text(markup.message).font(.footnote).foregroundStyle(Color.statiSecondary)
@@ -48,6 +75,10 @@ struct StatiFileViewer: View {
                         HStack { Button("Sync saved changes") { Task { await markup.sync() } }.disabled(markup.busy); if let url = markup.savedFile { ShareLink("Export saved edit", item: url) }; Button("Use current version") { usingCurrent = true }.disabled(markup.busy) }.font(.footnote)
                         if !markup.busy { Button("Close and keep saved edit") { dismiss() }.font(.footnote) }
                     } else if markup.intent?.state == .keptOnDevice, let url = markup.savedFile { ShareLink("Export earlier Markup", item: url).font(.footnote) }
+                }
+                if !reading, document != nil || image != nil {
+                    Button("Reading view", systemImage: "book") { reading = true }
+                        .labelStyle(.iconOnly).buttonStyle(.glass).disabled(closing || markup?.needsSync == true)
                 }
                 if let live, live.reader.following {
                     Button("Back to Live", systemImage: "dot.radiowaves.left.and.right") {
@@ -98,6 +129,7 @@ struct StatiFileViewer: View {
     }
     private func load() async {
         prepared = false
+        reading = false; document = nil; image = nil; page = 0
         let epoch = store.accountEpoch, owner = store.me?.id, selected = selectedID, currentItem = item
         let current = { @MainActor in owner != nil && store.me?.id == owner && store.accountEpoch == epoch && store.api.signedIn && selectedID == selected && !Task.isCancelled }
         await session.load(currentItem, api: store.api, ownerID: owner, resources: store.resources, resourceOwner: epoch.uuidString, decodeContents: false, isCurrent: current)
@@ -115,6 +147,24 @@ struct StatiFileViewer: View {
         }
         guard current(), let url = session.url else { return }
         if controller.canEdit && !controller.needsSync { _ = controller.prepare(item: currentItem, url: url) }
-        guard current() else { return }; store.recents.opened(file: currentItem); prepared = true
+        guard current() else { return }
+        if UIDevice.current.userInterfaceIdiom == .pad, !controller.needsSync {
+            let source = controller.source ?? url
+            switch source.pathExtension.lowercased() {
+            case "pdf":
+                if let pdf = PDFDocument(url: source), !pdf.isLocked, pdf.pageCount > 0 { document = pdf }
+            case "png", "jpg", "jpeg", "webp", "heic", "tif", "tiff", "gif":
+                if let data = try? Data(contentsOf: source, options: .mappedIfSafe) {
+                    image = PreviewImage.decode(data, maximumPixels: 4096)
+                }
+            default: break
+            }
+            reading = document != nil || image != nil
+            #if DEBUG && targetEnvironment(simulator)
+            if NativeReview.route == "ipad-markup" { reading = false }
+            #endif
+        }
+        store.recents.opened(file: currentItem)
+        prepared = true
     }
 }

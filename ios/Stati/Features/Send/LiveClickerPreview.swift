@@ -3,10 +3,13 @@ import SwiftUI
 
 struct LiveClickerPreview: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     let live: LiveClicker.Connection
     let computer: String
     let retry: Int
+    let enabled: Bool
+    let changePage: (Int) -> Void
     @State private var source: Source?
     @State private var render: Render?
     @State private var unavailable = false
@@ -39,16 +42,24 @@ struct LiveClickerPreview: View {
     }
 
     @ViewBuilder private var page: some View {
-        if let render, render.key == renderKey {
-            if let pdf = render.pdf, pdf.page(at: live.page) != nil {
-                SongPDFPage(document: pdf, index: live.page)
-                    .aspectRatio(612.0 / 792, contentMode: .fit)
-                    .allowsHitTesting(false)
-                    .accessibilityLabel("PDF preview, page \(live.page + 1)")
-            } else if render.slides.indices.contains(live.page) {
-                slide(render.slides[live.page], isLast: live.page == render.slides.count - 1)
-            } else {
-                placeholder("Preview unavailable", symbol: "rectangle.slash")
+        if let render, render.key == renderKey, render.pdf != nil || !render.slides.isEmpty {
+            let ratio = render.pdf == nil ? 16.0 / 9 : 612.0 / 792
+            GeometryReader { geometry in
+                let effect = live.transition.effective(for: live.mode, reduceMotion: reduceMotion)
+                SongPageHost(pages: render.slides, document: render.pdf, index: .constant(live.page),
+                             effect: effect, clickerEnabled: false, slideSize: live.size,
+                             allowsNavigation: enabled, previewWidth: geometry.size.width, requestPage: changePage)
+                    .id(render.key + effect.rawValue + String(Double(geometry.size.width)))
+            }
+            .aspectRatio(ratio, contentMode: .fit)
+            .accessibilityLabel("Live page preview")
+            .accessibilityAdjustableAction { direction in
+                guard enabled else { return }
+                switch direction {
+                case .increment: changePage(live.page + 1)
+                case .decrement: changePage(live.page - 1)
+                @unknown default: break
+                }
             }
         } else if unavailable || live.songID.isEmpty {
             placeholder("Preview unavailable", symbol: "rectangle.slash")
@@ -56,19 +67,6 @@ struct LiveClickerPreview: View {
             ProgressView("Loading live page…")
                 .frame(maxWidth: .infinity).frame(height: 190).background(.background)
         }
-    }
-
-    private func slide(_ text: String, isLast: Bool) -> some View {
-        let ending = text.components(separatedBy: "\n").last?
-            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)).lowercased()
-        return GeometryReader { geometry in
-            SongSlidePage(text: text, size: live.size, isEnding: isLast && ["amen", "amin"].contains(ending ?? ""))
-                .frame(width: 1024, height: 576)
-                .scaleEffect(geometry.size.width / 1024, anchor: .topLeading)
-                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-        }
-        .aspectRatio(16.0 / 9, contentMode: .fit)
-        .background(.black)
     }
 
     private func placeholder(_ message: String, symbol: String) -> some View {

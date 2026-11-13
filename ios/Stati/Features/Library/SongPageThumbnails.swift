@@ -6,6 +6,7 @@ struct SongPageThumbnails: View {
     let document: PDFDocument?
     let slideSize: SlideTextSize
     let selectedIndex: Int
+    var inverted = false
     let select: (Int) -> Void
     @AppStorage("reader.thumbnailWidth") private var thumbnailWidth = 220.0
     private var accent: Color { AppIconAppearance.shared.accent }
@@ -56,7 +57,7 @@ struct SongPageThumbnails: View {
     }
 
     private func thumbnail(_ index: Int) -> some View {
-        SongPageThumbnail(image: { render(index) })
+        SongPageThumbnail(image: { render(index) }).colorInverted(inverted)
             .aspectRatio(document == nil ? 16.0 / 9.0 : 1.05, contentMode: .fit)
             .background(.quaternary.opacity(0.55), in: .rect(cornerRadius: 8))
             .overlay {

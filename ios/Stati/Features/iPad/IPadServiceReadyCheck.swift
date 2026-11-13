@@ -11,7 +11,9 @@ struct IPadServiceReadyCheck: View {
     @State private var preparing = false
     @State private var progress = 0
     @State private var savedOrder = false
+    @State private var preparedPlan: APIRecord?
     @State private var message = ""
+    @State private var testing = false
 
     private var songs: [APIRecord] { plan["songs"].records }
     private var missing: [APIRecord] {
@@ -24,6 +26,11 @@ struct IPadServiceReadyCheck: View {
         store.accountEpoch.uuidString + computerID + plan.id + String(plan["revision"].number)
     }
 
+    private var changes: [ServiceSetChange] {
+        guard let preparedPlan else { return [] }
+        return ServiceSetChange.compare(previous: preparedPlan["songs"].records, current: songs)
+    }
+
     var body: some View {
         Section("Ready check") {
             if !checked {
@@ -33,6 +40,15 @@ struct IPadServiceReadyCheck: View {
             } else {
                 Label("\(songs.count - missing.count) of \(songs.count) songs saved on this iPad",
                       systemImage: missing.isEmpty && !songs.isEmpty ? "checkmark.circle" : "arrow.down.circle")
+            }
+            if !changes.isEmpty {
+                DisclosureGroup("Changes since preparation (\(changes.count))") {
+                    ForEach(changes) { change in
+                        Label(change.title, systemImage: change.added ? "plus" : "minus")
+                            .foregroundStyle(change.added ? Color.green : Color.red)
+                            .accessibilityLabel((change.added ? "Added " : "Removed ") + change.title)
+                    }
+                }
             }
             if savedOrder && missing.isEmpty {
                 Label("Running order saved", systemImage: "checkmark.circle")
@@ -53,13 +69,17 @@ struct IPadServiceReadyCheck: View {
                 }
                 Label(status, systemImage: connected ? "cursorarrow.click.2" : "cursorarrow.click")
             }
+            if store.canPlan || store.me?["ministryRole"].text == "pastor" {
+                Button("Clicker Test", systemImage: "stopwatch") { testing = true }
+            }
             if preparing {
                 ProgressView("Preparing songs (\(progress))")
             } else if checked && !songs.isEmpty && (!savedOrder || !missing.isEmpty) {
-                Button("Prepare set for offline use", systemImage: "arrow.down.to.line") { preparing = true }
+                Button(preparedPlan == nil ? "Prepare set for offline use" : "Update saved set", systemImage: "arrow.down.to.line") { preparing = true }
             }
             if !message.isEmpty { Text(message).foregroundStyle(.secondary) }
         }
+        .sheet(isPresented: $testing) { ClickerRehearsalView(receives: true) }
         .task(id: scope) { checkSavedSongs() }
         .task(id: preparing ? scope : "") {
             if preparing { await prepare() }
@@ -68,9 +88,8 @@ struct IPadServiceReadyCheck: View {
 
     private func checkSavedSongs() {
         checked = true
-        savedOrder = (try? store.offlineSongs.services(computer: computerID).contains {
-            $0.id == plan.id && $0["revision"] == plan["revision"] && $0["songs"] == plan["songs"]
-        }) ?? false
+        preparedPlan = try? store.offlineSongs.services(computer: computerID).first { $0.id == plan.id }
+        savedOrder = preparedPlan?["revision"] == plan["revision"] && preparedPlan?["songs"] == plan["songs"]
         saved = (try? store.offlineSongs.rows(computer: computerID)).map { rows in
             Dictionary(rows.filter { $0.raw["text"] != nil }.map { ($0.id, $0["contentHash"].text) },
                        uniquingKeysWith: { _, latest in latest })
@@ -115,6 +134,7 @@ struct IPadServiceReadyCheck: View {
             checkSavedSongs()
             if missing.isEmpty {
                 try store.offlineSongs.saveService(service, computer: computerID)
+                preparedPlan = service
                 savedOrder = true
                 message = "This running order and its songs are ready offline."
             } else {

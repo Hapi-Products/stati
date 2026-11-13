@@ -17,6 +17,7 @@ import SwiftUI
         let mode: SongReaderMode
         let columns: PDFColumnCount
         let size: SlideTextSize
+        let transition: ReaderTransition
 
         init?(_ live: JSONValue) {
             let position = live["position"]
@@ -38,6 +39,7 @@ import SwiftUI
             contentHash = live["contentHash"].text
             mode = SongReaderMode(rawValue: position["mode"].text) ?? .slides
             columns = Int(exactly: position["columns"].number).flatMap(PDFColumnCount.init(rawValue:)) ?? .one
+            transition = ReaderTransition(rawValue: position["transition"].text) ?? .instant
             size = SlideTextSize(sliderPosition: position["slideSize"].number) ?? .large
         }
     }
@@ -100,17 +102,26 @@ import SwiftUI
     }
 
     func move(_ direction: Int, session: String, store: AppStore) async {
+        guard let live = connection else { return }
+        await jump(to: live.page + direction, session: session, store: store)
+    }
+
+    func jump(to page: Int, session: String, store: AppStore) async {
         guard !turning, let live = connection, live.sessionID == session,
-              let count = live.count, (0..<count).contains(live.page + direction) else { return }
+              let count = live.count, (0..<count).contains(page), page != live.page else { return }
         let epoch = store.accountEpoch, computer = store.selectedComputer, operation = UUID()
         mutation = operation
         turning = true
         defer { if mutation == operation { turning = false } }
         do {
-            let response = try await store.api.request(path(computer), method: "POST", body: .object([
+            var command: [String: JSONValue] = [
                 "sessionId": .string(live.sessionID), "itemId": .string(live.itemID), "sequence": .number(Double(live.sequence)),
-                "page": .number(Double(live.page)), "turn": live.turn.map(JSONValue.string) ?? .null, "direction": .number(Double(direction)),
-            ]))
+                "page": .number(Double(live.page)), "turn": live.turn.map(JSONValue.string) ?? .null,
+            ]
+            let offset = page - live.page
+            if abs(offset) == 1 { command["direction"] = .number(Double(offset)) }
+            else { command["targetPage"] = .number(Double(page)) }
+            let response = try await store.api.request(path(computer), method: "POST", body: .object(command))
             guard !Task.isCancelled, mutation == operation, store.accountEpoch == epoch, store.selectedComputer == computer else { return }
             connection = Connection(.object([
                 "position": response["position"], "songTitle": .string(live.song), "serviceTitle": .string(live.service),
@@ -170,6 +181,8 @@ struct LiveClickerView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("stati.clicker.arrowsAtBottom") private var arrowsAtBottom = true
     @State private var previewRetry = 0
+    @State private var showingPages = false
+    @State private var testing = false
     let clicker: LiveClicker
     @Binding var session: String?
 
@@ -182,14 +195,16 @@ struct LiveClickerView: View {
                             Text(live.service).font(.subheadline).foregroundStyle(.secondary)
                             Text(live.song).font(.title2.bold()).accessibilityAddTraits(.isHeader)
                             if let count = live.count {
-                                Text("Page \(live.page + 1) of \(count)").monospacedDigit().foregroundStyle(.secondary)
+                                Button("Page \(live.page + 1) of \(count)") { showingPages = true }
+                                    .monospacedDigit().disabled(clicker.turning)
                             } else {
                                 Text("Open a song in Slides or PDF on the leader’s iPad.").foregroundStyle(.secondary)
                             }
                         }
                         if !arrowsAtBottom { arrows(live) }
                         if live.count != nil {
-                            LiveClickerPreview(live: live, computer: store.selectedComputer, retry: previewRetry)
+                            LiveClickerPreview(live: live, computer: store.selectedComputer, retry: previewRetry,
+                                               enabled: !clicker.turning) { jump(to: $0, in: live) }
                         }
                     } else if !clicker.checked {
                         ProgressView("Connecting to the live reader…")
@@ -208,6 +223,25 @@ struct LiveClickerView: View {
                     arrows(live).frame(maxWidth: 460).padding(.horizontal, 24).padding(.vertical, 10)
                 }
             }
+            .sheet(isPresented: $showingPages) {
+                NavigationStack {
+                    List {
+                        if let live, let count = live.count {
+                            ForEach(0..<count, id: \.self) { page in
+                                Button("Page \(page + 1)", systemImage: page == live.page ? "checkmark" : "doc") {
+                                    showingPages = false
+                                    jump(to: page, in: live)
+                                }
+                            }
+                        }
+                    }
+                    .navigationTitle("Go to page").navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) {
+                        Button("Close", systemImage: "xmark") { showingPages = false }.labelStyle(.iconOnly)
+                    } }
+                }
+            }
+            .sheet(isPresented: $testing) { ClickerRehearsalView(receives: false) }
             .navigationTitle("Live Clicker")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -221,7 +255,8 @@ struct LiveClickerView: View {
                     }.labelStyle(.iconOnly).disabled(clicker.turning)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu("Arrow position", systemImage: "slider.horizontal.3") {
+                    Menu("Clicker options", systemImage: "slider.horizontal.3") {
+                        Button("Clicker Test", systemImage: "stopwatch") { testing = true }
                         Picker("Arrow position", selection: $arrowsAtBottom) {
                             Text("Middle").tag(false)
                             Text("Bottom").tag(true)
@@ -261,6 +296,10 @@ struct LiveClickerView: View {
         }
         if !clicker.message.isEmpty { return clicker.message }
         return "Start leading on the iPad and select the same computer on your iPhone."
+    }
+
+    private func jump(to page: Int, in live: LiveClicker.Connection) {
+        Task { await clicker.jump(to: page, session: live.sessionID, store: store) }
     }
 
     private func arrow(_ direction: Int, label: String, icon: String) -> some View {

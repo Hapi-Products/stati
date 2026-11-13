@@ -9,6 +9,9 @@ struct SongPageHost: UIViewControllerRepresentable {
     let clickerEnabled: Bool
     var slideSize: SlideTextSize = .large
     var allowsNavigation = true
+    var previewWidth: CGFloat? = nil
+    var inverted = false
+    var requestPage: ((Int) -> Void)? = nil
     var count: Int { document?.pageCount ?? pages.count }
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     func makeUIViewController(context: Context) -> SongPageController {
@@ -24,11 +27,12 @@ struct SongPageHost: UIViewControllerRepresentable {
         weak var controller: SongPageController?
         private var children: [Int: UIViewController] = [:]
         private var transitioning = false
+        private var requestedIndex: Int?
         private lazy var edgeTap = UITapGestureRecognizer(target: self, action: #selector(tapped(_:)))
         init(parent: SongPageHost) { self.parent = parent }
         func configure() {
             guard let controller else { return }
-            controller.view.backgroundColor = parent.document == nil ? .black : .systemBackground
+            controller.view.backgroundColor = parent.document == nil || parent.inverted ? .black : .systemBackground
             controller.dataSource = parent.allowsNavigation && [.slide, .pageTurn].contains(parent.effect) ? self : nil
             controller.keysEnabled = parent.allowsNavigation && parent.clickerEnabled && UIDevice.current.userInterfaceIdiom == .pad
             controller.navigate = { [weak self] in self?.step($0) }
@@ -41,19 +45,28 @@ struct SongPageHost: UIViewControllerRepresentable {
                 controller.view.addGestureRecognizer(left); controller.view.addGestureRecognizer(right)
             }
             for gesture in controller.view.gestureRecognizers ?? [] where gesture is UISwipeGestureRecognizer { gesture.isEnabled = parent.allowsNavigation && [.fade, .instant].contains(parent.effect) }
+            if let requestedIndex, requestedIndex != parent.index, !parent.allowsNavigation { return }
+            requestedIndex = nil
             showSelection()
         }
         private func page(_ index: Int) -> UIViewController? {
             guard (0..<parent.count).contains(index) else { return nil }
             if let cached = children[index] { return cached }
             let child: UIViewController
-            if let document = parent.document { child = UIHostingController(rootView: SongPDFPage(document: document, index: index)) }
-            else {
+            if let document = parent.document {
+                child = UIHostingController(rootView: SongPDFPage(document: document, index: index).colorInverted(parent.inverted))
+            } else {
                 let text = parent.pages[index]
                 let ending = (text.components(separatedBy: "\n").last ?? "").trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)).lowercased()
-                child = UIHostingController(rootView: SongSlidePage(text: text, size: parent.slideSize, isEnding: index == parent.count - 1 && ["amen", "amin"].contains(ending)))
+                let slide = SongSlidePage(text: text, size: parent.slideSize, isEnding: index == parent.count - 1 && ["amen", "amin"].contains(ending))
+                if let width = parent.previewWidth {
+                    child = UIHostingController(rootView: slide.frame(width: 1024, height: 576)
+                        .scaleEffect(width / 1024).frame(width: width, height: width * 9 / 16))
+                } else {
+                    child = UIHostingController(rootView: slide)
+                }
             }
-            child.view.tag = index; child.view.backgroundColor = parent.document == nil ? .black : .systemBackground; children[index] = child
+            child.view.tag = index; child.view.backgroundColor = parent.document == nil || parent.inverted ? .black : .systemBackground; children[index] = child
             return child
         }
         private func showSelection() {
@@ -70,7 +83,12 @@ struct SongPageHost: UIViewControllerRepresentable {
                 UIView.transition(with: controller.view, duration: 0.2, options: [.transitionCrossDissolve, .allowAnimatedContent]) { controller.setViewControllers([next], direction: direction, animated: false) } completion: { finish($0) }
             } else { controller.setViewControllers([next], direction: direction, animated: parent.effect != .instant && current != nil, completion: finish) }
         }
-        private func step(_ by: Int) { guard !transitioning, (0..<parent.count).contains(parent.index + by) else { return }; parent.index += by; showSelection() }
+        private func step(_ by: Int) {
+            let next = parent.index + by
+            guard !transitioning, (0..<parent.count).contains(next) else { return }
+            if let request = parent.requestPage { request(next) }
+            else { parent.index = next; showSelection() }
+        }
         @objc private func tapped(_ gesture: UITapGestureRecognizer) {
             guard let view = gesture.view, view.bounds.width > 0 else { return }
             let fraction = gesture.location(in: view).x / view.bounds.width
@@ -83,8 +101,18 @@ struct SongPageHost: UIViewControllerRepresentable {
         func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) { transitioning = true }
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             transitioning = false
-            if completed, let selected = pageViewController.viewControllers?.first?.view.tag { parent.index = selected }
+            if completed, let selected = pageViewController.viewControllers?.first?.view.tag {
+                if let request = parent.requestPage { requestedIndex = selected; request(selected); return }
+                parent.index = selected
+            }
             showSelection()
         }
+    }
+}
+
+extension View {
+    @ViewBuilder func colorInverted(_ inverted: Bool) -> some View {
+        if inverted { colorInvert() }
+        else { self }
     }
 }
