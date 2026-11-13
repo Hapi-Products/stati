@@ -18,7 +18,7 @@ The development build appears as **Stazi Beta** with a fixed blue icon and accen
 
 ## Pause builds during service
 
-The build pause control is prepared for Stazi Beta build 57. It requires the updated Stați server. It has not been rolled out to phones yet.
+The build pause control requires Stazi Beta build 57 or later. The server now enforces the release hold.
 
 1. Sign in as a Stați administrator and open **Send**.
 2. Tap the pause icon at the top, then **Pause Builds**. This holds Stați releases while you continue sending files.

@@ -7,7 +7,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 | Build or platform | Change and status |
 | --- | --- |
 | iPhone and iPad development build 58 | Adds an iPhone clicker for the live worship reader and a Live Activity that reopens it. Requires the updated server. [Live Clicker guide](https://github.com/Hapi-Products/stati/wiki/iPhone#use-iphone-as-a-live-clicker) |
-| Build 57 and release tools (prepared, not deployed) | Adds automatic holds during a scheduled or selected service. On iPhone, administrators can manually pause and resume from [Send](https://github.com/Hapi-Products/stati/wiki/iPhone#pause-builds-during-service). |
+| Build 57 and release tools | The server now holds releases during a scheduled or selected service. On an updated iPhone, administrators can manually pause and resume from [Send](https://github.com/Hapi-Products/stati/wiki/iPhone#pause-builds-during-service). |
 | iPhone and iPad development build 56 | On iPad, keeps the idle service dot gray, adds a Link Notes icon to the song toolbar, and expands the in-app wiki guides. See [Song reader help](https://github.com/Hapi-Products/stati/wiki/Song-Reader#get-help-in-portrait-or-landscape). |
 | iPhone and iPad development build 55 | Keeps the live service indicator’s green, red, and gray colors in the iPad toolbar. |
 | iPad development build 53 | Adds a live worship reader for the active service and named group. The server access checks and simulated PDF page following passed. |
