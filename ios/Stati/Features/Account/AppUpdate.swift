@@ -11,10 +11,13 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 61, title: "Separate song reader controls", highlights: [
-        Highlight(title: "Close and Song Selector", detail: "On iPad, Close sits at the far left with a gap before the Song Selector button.", icon: "music.note.list")
+    static let current = AppUpdate(id: 62, title: "Quicker Live Clicker", highlights: [
+        Highlight(title: "Turn pages from iPhone", detail: "Live Clicker uses the confirmed page to get ready for the next tap.", icon: "cursorarrow.click")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 61, title: "Separate song reader controls", highlights: [
+            Highlight(title: "Close and Song Selector", detail: "On iPad, Close sits at the far left with a gap before the Song Selector button.", icon: "music.note.list")
+        ], details: []),
         AppUpdate(id: 60, title: "Faster live page turns", highlights: [
             Highlight(title: "Quicker clicker sync", detail: "The leader’s iPad and following tablets react as soon as Stați tells them the page changed.", icon: "bolt")
         ], details: []),

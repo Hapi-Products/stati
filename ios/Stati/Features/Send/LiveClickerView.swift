@@ -116,14 +116,17 @@ import SwiftUI
                 "position": response["position"], "songTitle": .string(live.song), "serviceTitle": .string(live.service),
                 "songId": .string(live.songID), "contentHash": .string(live.contentHash)
             ]))
+            guard connection != nil else {
+                throw APIError(status: 502, message: "The page turn could not be confirmed.")
+            }
             message = ""
         } catch {
             guard !Task.isCancelled, mutation == operation, store.accountEpoch == epoch, store.selectedComputer == computer else { return }
             connection = nil
             message = "Couldn’t confirm the page turn. Check the current page before trying again."
+            turning = false
+            await refresh(store: store)
         }
-        turning = false
-        await refresh(store: store)
     }
 
     func endActivities(except session: String? = nil) async {
