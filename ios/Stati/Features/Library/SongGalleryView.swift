@@ -218,10 +218,12 @@ struct SongGalleryView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle())
-            }
             if iPad {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close", systemImage: "xmark") { dismiss() }
+                        .labelStyle(.iconOnly)
+                }
+                ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Song Selector", systemImage: "music.note.list") {
                         preferences.reload()
@@ -231,6 +233,10 @@ struct SongGalleryView: View {
                     .labelStyle(.iconOnly)
                     .worshipGuide(guide, at: .songSelector)
                     .disabled(following)
+                }
+            } else {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle())
                 }
             }
             if iPad, let song = model.song {

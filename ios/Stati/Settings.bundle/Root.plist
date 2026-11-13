@@ -20,7 +20,7 @@
 			<key>Key</key>
 			<string>stati.settings.appVersion</string>
 			<key>DefaultValue</key>
-			<string>0.1.0 (60)</string>
+			<string>0.1.0 (61)</string>
 		</dict>
 	</array>
 </dict>
