@@ -2,11 +2,11 @@ import SwiftUI
 import UIKit
 
 enum WorshipGuideTarget: Hashable {
-    case fallback, readingFormat, textSize, selectorSetting, songSelector, pageCounter, groupSwitcher, serviceRefresh
+    case fallback, readingFormat, textSize, selectorSetting, songSelector, pageCounter, focus, linkNotes, groupSwitcher, serviceRefresh
 }
 
 enum WorshipHelpTopic {
-    case settings, reader(hasPages: Bool), browse, groups, service
+    case settings, reader(hasPages: Bool, following: Bool, canLink: Bool), browse, groups, service
 
     struct Step {
         let target: WorshipGuideTarget
@@ -19,7 +19,9 @@ enum WorshipHelpTopic {
         switch self {
         case .settings: page = "Worship-Settings"
         case .reader: page = "Song-Reader"
-        case .browse, .groups, .service: page = "iPadOS"
+        case .browse: page = "iPadOS#browse-songs"
+        case .groups: page = "iPadOS#worship-groups"
+        case .service: page = "iPadOS#services"
         }
         return URL(string: "https://github.com/Hapi-Products/stati/wiki/" + page)!
     }
@@ -32,16 +34,43 @@ enum WorshipHelpTopic {
                 Step(target: .textSize, title: "Set slide text size", instruction: "Drag the slider to the size you want. The reader uses it for slides."),
                 Step(target: .selectorSetting, title: "Choose where the song selector looks", instruction: "Pick Recents or Current service. If there’s no active service, it shows Recents.")
             ]
-        case .reader(let hasPages):
-            [Step(target: .songSelector, title: "Switch songs", instruction: "Tap this icon to open the list of recent songs or the current service’s running order.")]
-            + (hasPages ? [Step(target: .pageCounter, title: "Jump to a slide", instruction: "Tap or touch and hold the page counter to open the previews. Tap an image to jump to that slide.")] : [])
+        case .reader(let hasPages, let following, let canLink):
+            readerSteps(hasPages: hasPages, following: following, canLink: canLink)
         case .browse:
-            [Step(target: .fallback, title: "Browse your song library", instruction: "Open a first-slide preview to read a song. Search by title or lyrics to narrow the library.")]
+            [
+                Step(target: .fallback, title: "Browse your song library", instruction: "Tap a first-slide preview to open the song. Use the magnifying glass to search by title or lyrics."),
+                Step(target: .fallback, title: "Check live service status", instruction: "The dot is gray with no active service, red when you’re waiting or disconnected, and green when live. Tap it for details.")
+            ]
         case .groups:
-            [Step(target: .groupSwitcher, title: "Switch worship groups", instruction: "Tap the people icon and choose a group. Your default group is set in Account → Worship.")]
+            [
+                Step(target: .fallback, title: "Open a shared file", instruction: "Tap a file preview to open it. To find a file already linked to a song, open the song and look in Reader options → Notes."),
+                Step(target: .groupSwitcher, title: "Switch worship groups", instruction: "If you have access to several groups, tap the people icon to switch. Set your default in Account → Worship.")
+            ]
         case .service:
-            [Step(target: .serviceRefresh, title: "Refresh the running order", instruction: "Tap the refresh icon to fetch the latest service. Use the person icon when it appears to lead or leave the service.")]
+            [
+                Step(target: .fallback, title: "Read from the running order", instruction: "Tap a song in the service to open it. Use Song Selector in the reader to move between songs in the order."),
+                Step(target: .serviceRefresh, title: "Refresh the running order", instruction: "Tap the refresh icon to fetch the latest service. Use the person icon when it appears to lead or leave the service.")
+            ]
         }
+    }
+
+    private func readerSteps(hasPages: Bool, following: Bool, canLink: Bool) -> [Step] {
+        var steps = [
+            Step(target: .fallback, title: "Read the song your way", instruction: "Open Reader options (•••) for Slides, PDF document, or Text. The book icon in this guide opens the full Song Reader wiki.")
+        ]
+        if following {
+            steps.append(Step(target: .fallback, title: "Follow the leader", instruction: "The reader changes songs and pages with your leader. Manual page and song controls are unavailable while you follow."))
+        } else {
+            steps.append(Step(target: .songSelector, title: "Switch songs", instruction: "Tap the music-list icon for Recents or the current service. Set its source in Features."))
+            if hasPages {
+                steps.append(Step(target: .pageCounter, title: "Jump to a page", instruction: "Use the arrows to turn one page at a time. On songs with multiple pages, tap or hold the page counter and pick a preview."))
+            }
+        }
+        if canLink {
+            steps.append(Step(target: .linkNotes, title: "Link shared notes", instruction: "Tap the link icon at the top, then pick a shared file. Open Reader options → Notes to find the file again."))
+        }
+        steps.append(Step(target: .focus, title: "Focus on the song", instruction: "Tap the diagonal arrows at the lower right to hide reader controls. Tap them again to bring the controls back."))
+        return steps
     }
 }
 
@@ -111,7 +140,7 @@ enum WorshipHelpTopic {
         if target != nil {
             presentation.sourceRect = source.bounds
         } else {
-            presentation.sourceRect = CGRect(x: source.bounds.midX, y: source.bounds.minY + 12, width: 1, height: 1)
+            presentation.sourceRect = CGRect(x: source.bounds.midX, y: source.bounds.midY, width: 1, height: 1)
             presentation.permittedArrowDirections = []
         }
         presentation.delegate = self

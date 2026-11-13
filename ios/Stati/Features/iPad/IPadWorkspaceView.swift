@@ -218,9 +218,12 @@ struct IPadWorkspaceView: View {
                 Text("Choose a worship group to follow.")
             }
         } label: {
-            Image(systemName: "circle.fill")
+            Circle()
+                .fill(liveReader.status.color)
+                .frame(width: 12, height: 12)
+                .frame(width: 32, height: 32)
+                .contentShape(.rect)
         }
-        .tint(liveReader.status.color)
         .accessibilityLabel(liveReader.status.title)
     }
 

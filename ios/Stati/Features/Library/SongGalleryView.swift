@@ -181,6 +181,7 @@ struct SongGalleryView: View {
                 .buttonStyle(.glass)
                 .tint(AppIconAppearance.shared.accent)
                 .controlSize(.large)
+                .worshipGuide(guide, at: .focus)
                 .padding([.trailing, .bottom], 12)
             }
         }
@@ -202,9 +203,17 @@ struct SongGalleryView: View {
             }
             if iPad, let song = model.song {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    if store.canPlan {
+                        Button("Link shared notes", systemImage: "link") {
+                            guide.stop()
+                            linking = true
+                        }
+                        .labelStyle(.iconOnly)
+                        .worshipGuide(guide, at: .linkNotes)
+                    }
                     Button("Song controls help", systemImage: "questionmark.circle") {
-                        let hasPages = readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1
-                        guide.start(.reader(hasPages: hasPages))
+                        let hasPages = readerMode == .document || (readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1)
+                        guide.start(.reader(hasPages: hasPages, following: following, canLink: store.canPlan))
                     }.labelStyle(.iconOnly)
                     Menu {
                         Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0; pageIndex = 0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }.disabled(following)
@@ -247,7 +256,7 @@ struct SongGalleryView: View {
             let removable = model.files.filter { $0["canDelete"].flag && !$0["removalPending"].flag }
             if !removable.isEmpty { Menu("Unlink file", systemImage: "link.badge.minus") { ForEach(removable) { file in Button(file.title, role: .destructive) { unlinking = file } } }.disabled(unlinkBusy) }
         }
-        if store.canPlan { Button("Link shared notes", systemImage: "link") { linking = true } }
+        if !iPad && store.canPlan { Button("Link shared notes", systemImage: "link") { linking = true } }
     }
     private func unlink(_ file: APIRecord) async {
         guard !unlinkBusy, store.canPlan else { return }
