@@ -18,13 +18,11 @@ The development build appears as **Stazi Beta** with a fixed blue icon and accen
 
 ## Pause builds during service
 
-The build pause control requires Stazi Beta build 57 or later. The server now enforces the release hold.
+In development build 63, administrators can open **Profile → Features** and turn on **Pause Builds**. Turn it off to clear the manual pause. The toggle updates the release hold for Stați, including preview installs.
 
-1. Sign in as a Stați administrator and open **Send**.
-2. Tap the pause icon at the top, then **Pause Builds**. This holds Stați releases while you continue sending files.
-3. After service, open the same menu and tap **Resume Builds**. This clears your manual pause. A scheduled or selected service still keeps releases on hold.
+Scheduled services, a service selected on the computer, and active live readers also hold releases automatically. If a finished service is still selected, choose **None · Lyrics only** on the computer. A held build can be retried once all holds clear.
 
-Scheduled services are protected automatically. A service selected on the computer also keeps builds paused until the selection is cleared. After an unscheduled service, choose **None · Lyrics only** on the computer if it is still selected. A held build can be retried after all holds clear.
+In builds 57–62, use the pause icon at the top of **Send**.
 
 ## Use iPhone as a live clicker
 

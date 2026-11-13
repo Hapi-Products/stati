@@ -6,7 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
-| iPhone and iPad development build 63 | Adds the iPad Service ready check, offline running orders, Back to Live, and search that prioritizes exact versions from the current service. Moves Recents into Browse and Link Notes into Reader options. Clicker connection status requires the accompanying server update. |
+| iPhone and iPad development build 63 | Adds the iPad Service ready check, offline running orders, Back to Live, and search that prioritizes exact versions from the current service. Moves Recents into Browse, Link Notes into Reader options, and Pause Builds into Profile → Features on iPhone. Clicker connection status requires the accompanying server update. |
 | iPhone and iPad development build 62 | Uses the confirmed page immediately after a clicker tap. The accompanying server update reduces database round trips for live pages and individual songs. |
 | iPhone and iPad development build 61 | Places Close at the far left of the iPad song reader, with a gap before the separate Song Selector button. |
 | iPhone and iPad development build 60 | Delivers live reader changes over Stați’s existing connection, with periodic checks as a fallback. Requires the updated server. |
