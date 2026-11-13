@@ -29,6 +29,6 @@ Use the network API on the same presentation computer as ProPresenter. In Stați
 
 ## Use a synced song library folder
 
-On Windows preview 45, open **Songs** and choose **Choose library folder** with a profile that can edit lyrics. Select the existing **Lyrics** folder or its parent. A folder synced by Google Drive for desktop can be selected when the song files are available on the computer. Supported songs are shared to **Browse** on approved tablets. After changes outside Stați finish syncing to the computer, click **Share library**. Review the new catalog before using it in a service.
+On Windows preview 46, open **Songs** and choose **Choose library folder** with a profile that can edit lyrics. Select the existing **Lyrics** folder or its parent. A folder synced by Google Drive for desktop can be selected when the song files are available on the computer. Supported songs are shared to **Browse** on approved tablets. After changes outside Stați finish syncing to the computer, click **Share library**. Review the new catalog before using it in a service.
 
 [Google Drive for desktop](https://support.google.com/drive/answer/10838124)
