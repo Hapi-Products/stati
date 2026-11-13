@@ -64,13 +64,15 @@ struct IPadWorkspaceView: View {
                 guard scenePhase == .active else { liveReader.stop(store: store); return }
                 await liveReader.listen(store: store, group: liveGroup ?? "", service: livePlan?.id ?? "")
             }
-            .onChange(of: liveGroup) { resetLiveScope() }
-            .onChange(of: livePlan?.id) { resetLiveScope() }
+            .onChange(of: liveGroup) { _, group in
+                if !liveReader.hosts(group: group ?? "", computer: store.selectedComputer) { resetLiveScope() }
+            }
+            .onChange(of: livePlan?.id) { if !liveReader.leadingStandalone { resetLiveScope() } }
             .onChange(of: store.accountEpoch) { resetLiveScope() }
             .onChange(of: liveReader.position) { updateFollowedReader() }
             .onChange(of: account) { if !account { updateFollowedReader() } }
             .fullScreenCover(item: $liveSong, onDismiss: {
-                if wasFollowing && liveReader.following { mutedService = liveReader.serviceID }
+                if wasFollowing && liveReader.following { mutedService = liveReader.followingSession }
                 wasFollowing = false
             }) { request in
                 SongGalleryView(store: store, request: request)
@@ -171,7 +173,7 @@ struct IPadWorkspaceView: View {
     }
 
     private func updateFollowedReader() {
-        if liveReader.following, mutedService != liveReader.serviceID, !account, liveSong == nil,
+        if liveReader.following, mutedService != liveReader.followingSession, !account, liveSong == nil,
            let position = liveReader.position {
             openLive(position, follower: true)
         }
@@ -179,13 +181,27 @@ struct IPadWorkspaceView: View {
     }
 
     private var liveContext: WorshipLiveContext? {
-        guard let plan = livePlan, liveGroup != nil else { return nil }
-        return WorshipLiveContext(reader: liveReader, items: plan["songs"].records, shouldOffer: {
+        let plan = livePlan
+        let role = store.me?["ministryRole"].text
+        let canLeadSong = store.isAdmin || ["worship_leader", "choir_director", "pastor"].contains(role ?? "")
+        return WorshipLiveContext(reader: liveReader, items: plan?["songs"].records ?? [], shouldOffer: {
+            guard let plan, liveGroup != nil else { return false }
             let leadership = plan["leadership"]
             guard leadership["isLeader"].flag || leadership["canClaim"].flag,
                   !liveReader.following, liveReader.shouldOfferLeading(service: plan.id) else { return false }
             return true
-        }, lead: { startLive($0, open: false) })
+        }, lead: { startLive($0, open: false) },
+           canLeadSong: canLeadSong,
+           chooseGroup: { position, group in
+               if liveGroup != group { chosenLiveGroup = group }
+               startStandalone(position, group: group)
+           },
+           availableGroups: groups.groups, selectedGroup: liveGroup)
+    }
+
+    private func startStandalone(_ position: LiveWorshipReader.Position, group: String) {
+        guard groups.groups.contains(where: { $0.id == group }), !liveReader.leading, !liveReader.starting else { return }
+        liveReader.start(store: store, group: group, service: "", position: position)
     }
 
     private var liveControls: some View {
@@ -220,7 +236,7 @@ struct IPadWorkspaceView: View {
         } label: {
             Circle()
                 .fill(liveReader.status.color)
-                .frame(width: 12, height: 12)
+                .frame(width: 20, height: 20)
                 .frame(width: 32, height: 32)
                 .contentShape(.rect)
         }
@@ -247,6 +263,12 @@ struct IPadWorkspaceView: View {
     }
 
     private func openLive(_ position: LiveWorshipReader.Position, follower: Bool) {
+        if position.songHash != nil {
+            let item = SongGalleryItem(id: position.item, songID: position.item, title: liveReader.songTitle)
+            wasFollowing = follower
+            liveSong = SongGalleryRequest(computerID: store.selectedComputer, items: [item], selectedID: item.id)
+            return
+        }
         guard let plan = livePlan else { return }
         let request = SongGalleryRequest(computerID: store.selectedComputer, songs: plan["songs"].records,
                                          selectedID: position.item, service: true)

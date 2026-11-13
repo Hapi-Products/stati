@@ -74,11 +74,12 @@ struct IPadSharedFilesView: View {
                         }
                         .labelStyle(.iconOnly)
                         .worshipGuide(guide, at: .groupSwitcher)
-                        Button("Group switcher help", systemImage: "questionmark.circle") {
-                            guide.start(.groups)
-                        }.labelStyle(.iconOnly)
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Groups help", systemImage: "questionmark") { guide.start(.groups) }.labelStyle(.iconOnly)
+                }
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Grid", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
                 if canUpload || groups?.canCreate == true || canManageGroup {
                     ToolbarItem(placement: .topBarTrailing) {

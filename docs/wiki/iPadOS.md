@@ -23,16 +23,26 @@ Tap the first-slide preview to open a song, or use the magnifying glass to searc
 
 If you can manage notes, open a song and use the chain link in its toolbar to attach an eligible shared file. [Link a shared file](https://github.com/Hapi-Products/stati/wiki/Song-Reader#link-a-shared-file)
 
-## Follow a live service in build 53
+## Lead or follow a live service
 
 1. Select the same presentation computer and worship group as the leader. The service must be active on that computer.
-2. As the leader, open a song in the active running order. Confirm **Yes, Lead** when Stați asks the first time. The live indicator in **Browse** also offers **Lead service**.
+2. As the leader, open **Service**, select the active service, and tap a song in its running order. Confirm **Yes, Lead** when Stați asks. If the prompt does not appear, open **Browse**, tap the live status dot, and choose **Lead service**. If you belong to multiple worship groups, choose the group in that same menu first.
 3. On another iPad in the group, open Stați. It opens the current song and follows page changes. Close the live reader to browse on your own. To rejoin, tap the indicator in **Browse** and select **Open live song**.
 4. The indicator is green when connected, red when the active service is waiting for a leader or the connection is unavailable, and gray when there is no active service for the selected group.
 
 Stați sends the song, page and reader format. Each iPad renders it locally. PDF page turns use the leader’s selected transition, subject to Reduce Motion. Keep the leader’s app open during the service.
 
 With build 58 and the updated server, the leader can turn pages from an iPhone signed in to the same profile. Start leading on the iPad and open the song as Slides or PDF first. [Use iPhone as a live clicker](https://github.com/Hapi-Products/stati/wiki/iPhone#use-iphone-as-a-live-clicker)
+
+Build 59 makes the status dot larger and gives the Help button its own Liquid Glass surface in Browse, Groups, Service and the song reader.
+
+### Lead a song without an active service
+
+In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Use the stop icon or close the iPad reader to end the session.
+
+### Hide the status bar in Focus
+
+Tap the diagonal arrows at the bottom right of a song to enter Focus. It hides the status bar by default. To keep the clock and battery visible, turn off **Hide status bar in Focus** in **Account → Features**.
 
 ## Add a song in order
 

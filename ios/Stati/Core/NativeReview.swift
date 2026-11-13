@@ -99,10 +99,12 @@ import SwiftUI
         let position: JSONValue = .object(["sessionId": .string(clickerSessionID), "serviceId": plan["id"],
                                           "itemId": .string("11d5bc1f-fe6d-4661-8cd8-f3a9569c89c5"),
                                           "sequence": .number(1), "page": .number(Double(clickerPage)),
-                                          "pageCount": .number(5), "clickerTurn": clickerTurn])
+                                          "pageCount": .number(5), "clickerTurn": clickerTurn, "mode": .string("slides"),
+                                          "columns": .number(1), "slideSize": .number(2)])
         if request.httpMethod == "POST" { return (200, .object(["position": position])) }
         return (200, .object(["live": .object(["position": position, "songTitle": .string("Amazing Grace"),
-                                               "serviceTitle": .string("Sunday evening")])]))
+                                               "serviceTitle": .string("Sunday evening"), "songId": .string(songID),
+                                               "contentHash": song["contentHash"]])]))
     }
     static func response(_ request: URLRequest) -> JSONValue {
         if request.url?.path == "/api/recents/availability", let data = request.httpBody, let body = try? JSONDecoder().decode(JSONValue.self, from: data) {
@@ -115,6 +117,11 @@ import SwiftUI
         if let reader = NativeReaderReview.response(request) { return reader }
         if let ipad = NativeReviewIPad.response(request) { return ipad }
         let p = request.url!.path
+        if route == "phone-live-clicker", p.hasSuffix("/songs/" + songID) {
+            var preview = song.fields
+            preview["text"] = .string(song["text"].text + "\n\nThe Lord has promised good to me\nHis word my hope secures\n\nThrough many dangers, toils, and snares\nI have already come\n\n’Tis grace hath brought me safe thus far\nAnd grace will lead me home\n\nWhen we’ve been there ten thousand years\nBright shining as the sun")
+            return .object(preview)
+        }
         if NativeReview.route == "scan-check", p == "/api/group-materials" { return NativeScanChecks.materialList }
         if p.hasPrefix("/api/file-edits/") {
             let data = p.contains("/task/") ? NativeReviewTaskImage.png : NativeReviewMaterial.pdf

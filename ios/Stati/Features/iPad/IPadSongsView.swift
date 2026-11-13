@@ -40,8 +40,9 @@ struct IPadSongsView: View {
         .background(Color(.systemBackground))
         .worshipGuide(guide, at: .fallback)
         .toolbar {
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Browse help", systemImage: "questionmark.circle") { guide.start(.browse) }
+                Button("Browse help", systemImage: "questionmark") { guide.start(.browse) }
                     .labelStyle(.iconOnly)
             }
         }

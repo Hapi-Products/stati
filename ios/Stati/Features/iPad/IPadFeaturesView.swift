@@ -8,6 +8,7 @@ struct IPadFeaturesView: View {
     @State private var guide = WorshipGuide()
     @State private var opensPDFLayout = false
     @AppStorage("stati.liveSong.enabled") private var liveSong = false
+    @AppStorage("stati.reader.hideStatusBarInFocus") private var hideStatusBarInFocus = true
     @AppStorage("stati.reader.libraryLayout") private var libraryLayout = "grid"
     @AppStorage("nativeReleaseNotes.automaticOnIPad") private var automaticUpdates = true
 
@@ -34,6 +35,7 @@ struct IPadFeaturesView: View {
                 }
             }
             Section("Controls") {
+                Toggle(isOn: $hideStatusBarInFocus) { Label("Hide status bar in Focus", systemImage: "rectangle.inset.filled") }
                 Toggle(isOn: $preferences.settings.clickerEnabled) { Label("Clicker", systemImage: "cursorarrow.click") }
                 Toggle(isOn: $liveSong) { Label("Live song on Lock Screen", systemImage: "waveform") }
             }

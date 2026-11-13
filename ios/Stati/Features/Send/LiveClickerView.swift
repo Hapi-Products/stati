@@ -12,13 +12,20 @@ import SwiftUI
         let song: String
         let service: String
         let serviceID: String
+        let songID: String
+        let contentHash: String
+        let mode: SongReaderMode
+        let columns: PDFColumnCount
+        let size: SlideTextSize
 
         init?(_ live: JSONValue) {
             let position = live["position"]
             sessionID = position["sessionId"].text
             serviceID = position["serviceId"].text
             itemID = position["itemId"].text
-            guard [sessionID, serviceID, itemID].allSatisfy({ UUID(uuidString: $0) != nil }),
+            let standalone = position["songHash"].text.utf8.count == 64 && position["serviceId"] == .null
+            guard UUID(uuidString: sessionID) != nil,
+                  standalone ? itemID.utf8.count == 64 : UUID(uuidString: serviceID) != nil && UUID(uuidString: itemID) != nil,
                   let sequence = Int(exactly: position["sequence"].number), sequence > 0,
                   let page = Int(exactly: position["page"].number), page >= 0 else { return nil }
             self.sequence = sequence
@@ -27,6 +34,11 @@ import SwiftUI
             turn = UUID(uuidString: position["clickerTurn"].text) == nil ? nil : position["clickerTurn"].text
             song = live["songTitle"].text
             service = live["serviceTitle"].text
+            songID = live["songId"].text
+            contentHash = live["contentHash"].text
+            mode = SongReaderMode(rawValue: position["mode"].text) ?? .slides
+            columns = Int(exactly: position["columns"].number).flatMap(PDFColumnCount.init(rawValue:)) ?? .one
+            size = SlideTextSize(sliderPosition: position["slideSize"].number) ?? .large
         }
     }
 
@@ -100,7 +112,10 @@ import SwiftUI
                 "page": .number(Double(live.page)), "turn": live.turn.map(JSONValue.string) ?? .null, "direction": .number(Double(direction)),
             ]))
             guard !Task.isCancelled, mutation == operation, store.accountEpoch == epoch, store.selectedComputer == computer else { return }
-            connection = Connection(.object(["position": response["position"], "songTitle": .string(live.song), "serviceTitle": .string(live.service)]))
+            connection = Connection(.object([
+                "position": response["position"], "songTitle": .string(live.song), "serviceTitle": .string(live.service),
+                "songId": .string(live.songID), "contentHash": .string(live.contentHash)
+            ]))
             message = ""
         } catch {
             guard !Task.isCancelled, mutation == operation, store.accountEpoch == epoch, store.selectedComputer == computer else { return }
@@ -142,6 +157,8 @@ import SwiftUI
 struct LiveClickerView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("stati.clicker.arrowsAtBottom") private var arrowsAtBottom = true
+    @State private var previewRetry = 0
     let clicker: LiveClicker
     @Binding var session: String?
 
@@ -149,27 +166,25 @@ struct LiveClickerView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    if let live = clicker.connection, session == nil || live.sessionID == session {
-                        VStack(spacing: 8) {
+                    if let live {
+                        VStack(spacing: 5) {
                             Text(live.service).font(.subheadline).foregroundStyle(.secondary)
-                            Text(live.song).font(.title.bold())
+                            Text(live.song).font(.title2.bold()).accessibilityAddTraits(.isHeader)
                             if let count = live.count {
                                 Text("Page \(live.page + 1) of \(count)").monospacedDigit().foregroundStyle(.secondary)
                             } else {
                                 Text("Open a song in Slides or PDF on the leader’s iPad.").foregroundStyle(.secondary)
                             }
                         }
-                        HStack(spacing: 16) {
-                            arrow(-1, label: "Previous page", icon: "chevron.left").disabled(clicker.turning || live.count == nil || live.page == 0)
-                            arrow(1, label: "Next page", icon: "chevron.right").disabled(clicker.turning || live.count.map { live.page + 1 >= $0 } != false)
+                        if !arrowsAtBottom { arrows(live) }
+                        if live.count != nil {
+                            LiveClickerPreview(live: live, computer: store.selectedComputer, retry: previewRetry)
                         }
                     } else if !clicker.checked {
                         ProgressView("Connecting to the live reader…")
                     } else {
                         ContentUnavailableView("No live reader connected", systemImage: "cursorarrow.click",
                                                description: Text(unavailableMessage))
-                        Button("Retry", systemImage: "arrow.clockwise") { Task { await clicker.refresh(store: store) } }
-                            .buttonStyle(.glass)
                     }
                 }
                 .multilineTextAlignment(.center)
@@ -177,16 +192,47 @@ struct LiveClickerView: View {
                 .padding(24)
                 .frame(maxWidth: .infinity)
             }
+            .safeAreaBar(edge: .bottom) {
+                if arrowsAtBottom, let live {
+                    arrows(live).frame(maxWidth: 460).padding(.horizontal, 24).padding(.vertical, 10)
+                }
+            }
             .navigationTitle("Live Clicker")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Leave clicker", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly)
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Retry live connection", systemImage: "arrow.clockwise") {
+                        Task { await clicker.refresh(store: store, showActivity: true, expectedSession: session) }
+                        previewRetry += 1
+                    }.labelStyle(.iconOnly).disabled(clicker.turning)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu("Arrow position", systemImage: "slider.horizontal.3") {
+                        Picker("Arrow position", selection: $arrowsAtBottom) {
+                            Text("Middle").tag(false)
+                            Text("Bottom").tag(true)
+                        }
+                    }.labelStyle(.iconOnly)
+                }
             }
             .onChange(of: clicker.connection?.sessionID, initial: true) { _, id in
                 if session == nil { session = id }
             }
+        }
+    }
+
+    private var live: LiveClicker.Connection? {
+        guard let connection = clicker.connection, session == nil || connection.sessionID == session else { return nil }
+        return connection
+    }
+
+    private func arrows(_ live: LiveClicker.Connection) -> some View {
+        HStack(spacing: 16) {
+            arrow(-1, label: "Previous page", icon: "chevron.left").disabled(clicker.turning || live.count == nil || live.page == 0)
+            arrow(1, label: "Next page", icon: "chevron.right").disabled(clicker.turning || live.count.map { live.page + 1 >= $0 } != false)
         }
     }
 
@@ -205,7 +251,7 @@ struct LiveClickerView: View {
             Label(label, systemImage: icon)
                 .labelStyle(.iconOnly)
                 .font(.title2.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 80)
+                .frame(maxWidth: .infinity, minHeight: 60)
                 .contentShape(.rect)
         }
         .buttonStyle(.glass)

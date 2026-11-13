@@ -31,6 +31,7 @@ final class LiveWorshipReader {
         var columns: PDFColumnCount
         var size: SlideTextSize
         var pageCount: Int? = nil
+        var songHash: String? = nil
 
         init(item: String, page: Int, mode: SongReaderMode, transition: ReaderTransition, columns: PDFColumnCount, size: SlideTextSize) {
             self.item = item
@@ -43,7 +44,9 @@ final class LiveWorshipReader {
 
         init?(_ value: JSONValue) {
             let item = value["itemId"].text
-            guard UUID(uuidString: item) != nil, let page = Int(exactly: value["page"].number),
+            let hash = value["songHash"].text
+            guard UUID(uuidString: item) != nil || (item.utf8.count == 64 && hash.utf8.count == 64),
+                  let page = Int(exactly: value["page"].number),
                   let mode = SongReaderMode(rawValue: value["mode"].text),
                   let transition = ReaderTransition(rawValue: value["transition"].text),
                   let columnValue = Int(exactly: value["columns"].number),
@@ -51,6 +54,7 @@ final class LiveWorshipReader {
                   let size = SlideTextSize(sliderPosition: value["slideSize"].number) else { return nil }
             self.init(item: item, page: page, mode: mode, transition: transition, columns: columns, size: size)
             pageCount = Int(exactly: value["pageCount"].number).flatMap { $0 > page ? $0 : nil }
+            songHash = hash.isEmpty ? nil : hash
         }
     }
 
@@ -66,9 +70,13 @@ final class LiveWorshipReader {
     private(set) var status: Status = .idle
     private(set) var position: Position?
     private(set) var serviceID = ""
+    private(set) var followingSession = ""
+    private(set) var songTitle = ""
     private(set) var following = false
     private(set) var leading = false
     private(set) var starting = false
+    var leadingStandalone: Bool { session?.service.isEmpty == true && (starting || leading) }
+    func hosts(group: String, computer: String) -> Bool { session?.path == endpoint(computer: computer, group: group) }
     private(set) var message = ""
     struct ClickerTurn: Equatable {
         let id: String
@@ -94,8 +102,8 @@ final class LiveWorshipReader {
         let computer = store.selectedComputer
         let epoch = store.accountEpoch
         let path = endpoint(computer: computer, group: group)
-        guard !computer.isEmpty, !group.isEmpty, !service.isEmpty, store.canReadSongs else {
-            following = false; position = nil; serviceID = ""; status = .idle
+        guard !computer.isEmpty, !group.isEmpty, store.canReadSongs else {
+            following = false; position = nil; serviceID = ""; followingSession = ""; status = .idle
             return
         }
         while !Task.isCancelled && store.accountEpoch == epoch && store.selectedComputer == computer {
@@ -115,15 +123,19 @@ final class LiveWorshipReader {
                     desired = next
                     clickerTurn = ClickerTurn(id: receivedTurn, position: next)
                 }
-                following = status == .live && session?.id != payload["sessionId"].text &&
-                    payload["serviceId"].text == service && next != nil
-                serviceID = following ? service : ""
+                let remoteSession = payload["sessionId"].text
+                let standalone = next?.songHash != nil && payload["serviceId"] == .null
+                following = status == .live && session?.id != remoteSession &&
+                    (standalone || (!service.isEmpty && payload["serviceId"].text == service)) && next != nil
+                serviceID = following && !standalone ? service : ""
+                followingSession = following ? remoteSession : ""
+                songTitle = standalone ? response["songTitle"].text : ""
                 position = following ? next : nil
                 try await Task.sleep(for: status == .live ? .seconds(1) : .seconds(5))
             } catch is CancellationError { return }
             catch {
                 guard !Task.isCancelled else { return }
-                status = .offline; following = false; position = nil; serviceID = ""
+                status = .offline; following = false; position = nil; serviceID = ""; followingSession = ""
                 if let failure = error as? APIError, [401, 403, 404].contains(failure.status) { return }
                 do { try await Task.sleep(for: .seconds(8)) } catch { return }
             }
@@ -131,7 +143,8 @@ final class LiveWorshipReader {
     }
 
     func start(store: AppStore, group: String, service: String, position: Position) {
-        guard session == nil, !group.isEmpty, !service.isEmpty, !store.selectedComputer.isEmpty else { return }
+        guard session == nil, !group.isEmpty, !store.selectedComputer.isEmpty,
+              service.isEmpty == (position.songHash != nil) else { return }
         let path = endpoint(computer: store.selectedComputer, group: group)
         session = Session(service: service, path: path, epoch: store.accountEpoch)
         message = ""
@@ -169,7 +182,8 @@ final class LiveWorshipReader {
     }
 
     func update(_ position: Position, store: AppStore) {
-        guard session?.epoch == store.accountEpoch, position != desired else { return }
+        guard let session, session.epoch == store.accountEpoch,
+              session.service.isEmpty == (position.songHash != nil), position != desired else { return }
         desired = position
         revision += 1
         sendPosition(store: store)
@@ -192,13 +206,14 @@ final class LiveWorshipReader {
                 session.sequence += 1
                 self.session = session
                 var payload: [String: JSONValue] = [
-                    "serviceId": .string(session.service), "sessionId": .string(session.id),
+                    "serviceId": session.service.isEmpty ? .null : .string(session.service), "sessionId": .string(session.id),
                     "sequence": .number(Double(session.sequence)), "itemId": .string(current.item),
                     "page": .number(Double(current.page)), "mode": .string(current.mode.rawValue),
                     "transition": .string(current.transition.rawValue), "columns": .number(Double(current.columns.rawValue)),
                     "slideSize": .number(current.size.sliderPosition),
                 ]
                 if let count = current.pageCount { payload["pageCount"] = .number(Double(count)) }
+                if let hash = current.songHash { payload["songHash"] = .string(hash) }
                 do {
                     let result = try await store.api.request(session.path, method: "PUT", body: .object(payload))
                     guard !Task.isCancelled, self.session?.id == started else { return }
@@ -242,6 +257,10 @@ struct WorshipLiveContext {
     let items: [APIRecord]
     let shouldOffer: () -> Bool
     let lead: (LiveWorshipReader.Position) -> Void
+    var canLeadSong = false
+    var chooseGroup: ((LiveWorshipReader.Position, String) -> Void)?
+    var availableGroups: [APIRecord] = []
+    var selectedGroup: String?
 }
 
 extension EnvironmentValues {

@@ -73,7 +73,10 @@ struct ServiceEditorContent: View {
                     }
                     .labelStyle(.iconOnly)
                     .worshipGuide(guide, at: .serviceRefresh)
-                    Button("Service controls help", systemImage: "questionmark.circle") {
+                }
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Service controls help", systemImage: "questionmark") {
                         guide.start(.service)
                     }.labelStyle(.iconOnly)
                 }
