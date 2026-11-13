@@ -35,6 +35,8 @@ This feature requires build 58 on the iPhone and the leader’s iPad and the upd
 3. Tap the clicker icon at the top of **Send**. The screen shows the live song and page. Use the arrows to turn pages on the leader’s iPad and the tablets following it.
 4. Tap **×** to leave the clicker. The service continues. If iOS Live Activities are enabled, tap the activity on the Lock Screen or Dynamic Island to reopen the clicker. You can also reopen it from **Send**.
 
+In build 59, the clicker previews the live slide or PDF page. The layout icon in the top bar lets you choose **Middle** or **Bottom** for the arrows. Stați remembers your choice. Use the refresh icon in the top bar to retry the connection.
+
 The iPad needs to stay in the live reader with an internet connection. If leadership changes or the service ends, the phone can no longer turn its pages.
 
 ## Find songs and use Shortcuts

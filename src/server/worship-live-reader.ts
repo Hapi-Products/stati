@@ -48,13 +48,15 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
  const params = [deviceId,userId,time,...guard.params];
  if (request.method === 'GET') {
   const live = await env.DB.prepare(`SELECT live.position_json AS position, service.title AS serviceTitle,
-   json_extract(song.value,'$.title') AS songTitle
+   json_extract(song.value,'$.title') AS songTitle,
+   json_extract(song.value,'$.songId') AS songId,
+   json_extract(song.value,'$.contentHash') AS contentHash
    FROM worship_live_reader live
    JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id
    JOIN json_each(service.content_json,'$.songs') song ON json_extract(song.value,'$.id')=live.item_id
    WHERE ${scope} ORDER BY live.expires_at DESC, live.session_id LIMIT 1`).bind(...params)
-   .first<{position:string;serviceTitle:string;songTitle:string}>();
-  return json({live:live ? {position:JSON.parse(live.position),serviceTitle:live.serviceTitle,songTitle:live.songTitle} : null});
+   .first<{position:string;serviceTitle:string;songTitle:string;songId:string;contentHash:string}>();
+  return json({live:live ? {...live,position:JSON.parse(live.position)} : null});
  }
  const input = await body(request,click,512), page = input.page + input.direction;
  const turn = crypto.randomUUID();

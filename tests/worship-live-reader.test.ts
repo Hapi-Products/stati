@@ -48,7 +48,9 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:3}});
  const ready = {...update,sequence:3,page:1,pageCount:3};
  expect((await request(f.session,'PUT',ready)).status).toBe(200);
- expect(await (await clicker(f.session)).json()).toMatchObject({live:{position:ready,songTitle:'Împreună cântăm'}});
+ expect(await (await clicker(f.session)).json()).toMatchObject({live:{
+  position:ready,songTitle:'Împreună cântăm',songId:f.songId,contentHash:f.contentHash
+ }});
  expect(await (await clicker(memberCookie)).json()).toEqual({live:null});
  const move = {sessionId:ready.sessionId,itemId:ready.itemId,sequence:ready.sequence,page:1,turn:null,direction:1};
  expect((await clicker(memberCookie,move)).status).toBe(409);
