@@ -16,7 +16,7 @@ final class LiveWorshipReader {
 
         var color: Color {
             switch self {
-            case .idle: .secondary
+            case .idle: Color(uiColor: .systemGray)
             case .waiting, .offline: .red
             case .live: .green
             }

@@ -11,11 +11,14 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 53, title: "Follow a live worship reader", highlights: [
-        Highlight(title: "Lead a live service", detail: "Open a song from the active service or use the live indicator in Browse.", icon: "person.wave.2"),
-        Highlight(title: "Follow songs and page turns", detail: "Tablets in your worship group can open the same song and follow the leader’s page turns.", icon: "rectangle.on.rectangle")
+    static let current = AppUpdate(id: 55, title: "Live service status colors", highlights: [
+        Highlight(title: "See whether a leader is connected", detail: "The dot in Browse shows green when connected, red when waiting for a leader, and gray when there’s no active service.", icon: "circle.fill")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 53, title: "Follow a live worship reader", highlights: [
+        Highlight(title: "Lead a live service", detail: "Open a song from the active service or use the live indicator in Browse.", icon: "person.wave.2"),
+        Highlight(title: "Follow songs and page turns", detail: "Tablets in your worship group can open the same song and follow the leader’s page turns.", icon: "rectangle.on.rectangle")
+    ], details: []),
         AppUpdate(id: 52, title: "Reader colors and controls", highlights: [
         Highlight(title: "Stați blue in previews and guides", detail: "Reader controls, guides and the What’s New button use the app’s accent.", icon: "paintbrush"),
         Highlight(title: "Focus on the song", detail: "Use the button at the lower right. The PDF background follows the app and Text is easier to read.", icon: "arrow.up.left.and.arrow.down.right"),

@@ -218,10 +218,10 @@ struct IPadWorkspaceView: View {
                 Text("Choose a worship group to follow.")
             }
         } label: {
-            Label(liveReader.status.title, systemImage: "circle.fill")
-                .labelStyle(.iconOnly)
-                .foregroundStyle(liveReader.status.color)
+            Image(systemName: "circle.fill")
         }
+        .tint(liveReader.status.color)
+        .accessibilityLabel(liveReader.status.title)
     }
 
     private func startLive(_ position: LiveWorshipReader.Position, open: Bool) {
