@@ -1,12 +1,16 @@
 import {z} from 'zod';
-import {body,hash,HttpError,json,now,type Device} from './core';
-import {requireMinistryCapability,ministryAuthorityGuard,type MinistryAuthority,type MinistryCapability} from './ministry-roles';
+import {body,cookie,hash,HttpError,json,now,type Device,type User} from './core';
+import {requireMinistryCapability,ministryAuthorityGuard,ministryCapabilities,type MinistryAuthority,type MinistryCapability,type MinistryRole} from './ministry-roles';
 
+// Callers supply SQL expressions for the authenticated actor, never request input.
+function stationConnectionCheck(actorId:string,actorRole:string){
+ return `EXISTS(SELECT 1 FROM devices computer JOIN users owner ON owner.id=computer.owner_id
+ WHERE computer.id=? AND NOT EXISTS(SELECT 1 FROM station_disconnections removed WHERE removed.device_id=computer.id AND removed.user_id=${actorId}) AND computer.revoked_at IS NULL AND owner.status='active'
+ AND (${actorRole}='admin' OR EXISTS(SELECT 1 FROM station_memberships membership WHERE membership.device_id=computer.id AND membership.user_id=${actorId} AND membership.status='approved')))`;
+}
 export function stationMinistryGuard(authority:MinistryAuthority,deviceId:string,capability:MinistryCapability,time=now()){
  const access=ministryAuthorityGuard(authority,capability,time);
- return{sql:`${access.sql} AND EXISTS(SELECT 1 FROM devices computer JOIN users owner ON owner.id=computer.owner_id
- WHERE computer.id=? AND NOT EXISTS(SELECT 1 FROM station_disconnections removed WHERE removed.device_id=computer.id AND removed.user_id=?) AND computer.revoked_at IS NULL AND owner.status='active'
- AND (?='admin' OR EXISTS(SELECT 1 FROM station_memberships membership WHERE membership.device_id=computer.id AND membership.user_id=? AND membership.status='approved')))`,params:[...access.params,deviceId,authority.user.id,authority.user.role,authority.user.id]};
+ return{sql:`${access.sql} AND ${stationConnectionCheck('?','?')}`,params:[...access.params,deviceId,authority.user.id,authority.user.role,authority.user.id]};
 }
 export async function requireStationMinistry(request:Request,env:Env,deviceId:string,capability:MinistryCapability,native=false){
  const authority=await requireMinistryCapability(request,env,capability,native?deviceId:undefined),guard=stationMinistryGuard(authority,deviceId,capability);
@@ -14,6 +18,33 @@ export async function requireStationMinistry(request:Request,env:Env,deviceId:st
  if(!await env.DB.prepare('SELECT 1 WHERE '+guard.sql).bind(...guard.params).first())throw new HttpError(403,'Connect to this computer and wait for approval first.');
  return authority;
 }
+// Authenticate and check the computer and group together. The read/write
+// statements below still recheck access in case it changes during a request.
+export async function requireSongStation(request:Request,env:Env,deviceId:string,groupId?:string):Promise<MinistryAuthority> {
+ const raw = cookie(request,'stati_session');
+ if (!raw) throw new HttpError(401,'Sign in with your passkey to continue.');
+ const sessionHash = await hash(raw);
+ const groupCheck = groupId === undefined ? '1' : `EXISTS(
+  SELECT 1 FROM worship_groups wg JOIN worship_group_members gm ON gm.group_id=wg.id
+  WHERE wg.id=? AND wg.archived_at IS NULL AND gm.user_id=actor.id
+ )`;
+ const args = groupId === undefined ? [deviceId] : [deviceId,groupId];
+ const row = await env.DB.prepare(`SELECT actor.*, ministry.role AS ministryRole,
+   ${stationConnectionCheck('actor.id','actor.role')} AS stationAccess, ${groupCheck} AS groupAccess
+  FROM sessions authentication JOIN users actor ON actor.id=authentication.user_id
+  LEFT JOIN user_ministry_roles ministry ON ministry.user_id=actor.id
+  WHERE authentication.token_hash=? AND authentication.expires_at>? AND actor.status<>'removed'`)
+  .bind(...args,sessionHash,now()).first<User & {ministryRole:MinistryRole|null;stationAccess:number;groupAccess:number}>();
+ if (!row) throw new HttpError(401,'Sign in with your passkey to continue.');
+ if (row.status !== 'active') throw new HttpError(403,'An administrator or worship leader needs to approve your account.');
+ const {ministryRole,stationAccess,groupAccess,...user} = row;
+ const capabilities = ministryCapabilities(user,ministryRole);
+ if (!capabilities.readSongs) throw new HttpError(403,'Your role does not allow this action.');
+ if (!stationAccess) throw new HttpError(403,'Connect to this computer and wait for approval first.');
+ if (!groupAccess) throw new HttpError(403,'Choose a worship group you belong to.');
+ return {user,ministryRole,capabilities,kind:'session',sessionHash,operator:null};
+}
+
 const entry=z.object({id:z.string().regex(/^[a-f0-9]{64}$/),contentHash:z.string().regex(/^[a-f0-9]{64}$/),title:z.string().min(1).max(300),filename:z.string().max(255),category:z.string().max(100),language:z.enum(['eng','ron','unknown']),fontSize:z.number().int().min(32).max(160),text:z.string().max(100000),firstSlide:z.string().max(2000),addedAt:z.number().int().nonnegative(),modifiedAt:z.number().int().nonnegative(),groupName:z.string().trim().min(1).max(80).nullable().optional(),sourceSongId:z.string().regex(/^[a-f0-9]{64}$/).nullable().optional()}).strict();
 const snapshot=z.discriminatedUnion('action',[
  z.object({action:z.literal('begin'),generation:z.string().uuid(),count:z.number().int().min(0).max(10000),unreadable:z.number().int().min(0).max(10000)}).strict(),
@@ -63,7 +94,8 @@ export async function publishStationCatalog(request:Request,env:Env,device:Devic
  return json({ok:true});
 }
 export async function readStationCatalog(request:Request,env:Env,deviceId:string,songId?:string){
- const authority=await requireStationMinistry(request,env,deviceId,'readSongs'),guard=stationMinistryGuard(authority,deviceId,'readSongs'),url=new URL(request.url);
+ const authority=songId ? await requireSongStation(request,env,deviceId) : await requireStationMinistry(request,env,deviceId,'readSongs');
+ const guard=stationMinistryGuard(authority,deviceId,'readSongs'),url=new URL(request.url);
  if(songId){const song=await env.DB.prepare(`SELECT song_id AS id,content_hash AS contentHash,title,filename,category,language,font_size AS fontSize,text,first_slide AS firstSlide,added_at AS addedAt,modified_at AS modifiedAt,group_name AS groupName,source_song_id AS sourceSongId FROM station_catalog WHERE device_id=? AND song_id=? AND ${guard.sql}`).bind(deviceId,songId,...guard.params).first();if(!song)throw new HttpError(404,'This song is unavailable.');return json(song);}
  const data=z.object({includeText:z.enum(['0','1']),limit:z.coerce.number().int().min(1).max(500),query:z.string().max(200),offset:z.coerce.number().int().min(0).max(10000),language:z.enum(['all','eng','ron']),category:z.string().max(100),groupName:z.string().max(80)}).safeParse({includeText:url.searchParams.get('includeText')||'0',limit:url.searchParams.get('limit')??'50',query:url.searchParams.get('query')||'',offset:url.searchParams.get('offset')||0,language:url.searchParams.get('language')||'all',category:url.searchParams.get('category')||'',groupName:url.searchParams.get('groupName')||''});
  if(!data.success)throw new HttpError(400,'Choose valid song filters.');

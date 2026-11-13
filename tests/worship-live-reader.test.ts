@@ -44,6 +44,36 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await request(memberCookie,'PUT',update)).status).toBe(409);
  expect((await request(f.session,'PUT',update)).status).toBe(200);
  expect(await (await request(memberCookie)).json()).toEqual({state:'live',isLeader:false,position:update});
+ // Count remote D1 calls across the actual Worker request, including authentication.
+ let databaseCalls = 0;
+ const DB = new Proxy(env.DB,{get(target,key) {
+  if (key !== 'prepare') return Reflect.get(target,key);
+  return (sql:string) => {
+   const measure = (statement:D1PreparedStatement):D1PreparedStatement => new Proxy(statement,{get(target,method) {
+    if (method === 'bind') return (...values:unknown[]) => measure(target.bind(...values));
+    if (method === 'first' || method === 'run') return (...args:[]) => {
+     databaseCalls++;
+     return target[method](...args);
+    };
+    return Reflect.get(target,method);
+   }});
+   return measure(target.prepare(sql));
+  };
+ }});
+ const measureRead = (path:string,session?:string) => worker.fetch(
+  new Request('http://localhost:8787/api/computers/'+f.deviceId+path,{
+   headers:{Origin:'http://localhost:8787',...(session ? {Cookie:'stati_session='+session} : {})},
+  }),{...env,DB},createExecutionContext());
+ const measured = await measureRead('/worship-live/'+group,memberCookie);
+ expect(await measured.json()).toEqual({state:'live',isLeader:false,position:update});
+ expect(databaseCalls).toBe(2);
+ databaseCalls = 0;
+ const lyrics = await measureRead('/songs/'+f.songId,memberCookie);
+ expect(await lyrics.json()).toMatchObject({id:f.songId,text:'Împreună cântăm'});
+ expect(databaseCalls).toBe(2);
+ for (const path of ['/worship-live/'+group,'/live-clicker','/songs/'+f.songId]) {
+  expect((await measureRead(path)).status).toBe(401);
+ }
  expect((await request(f.session,'PUT',{...update,sequence:2,page:3})).status).toBe(200);
  expect((await request(f.session,'PUT',update)).status).toBe(409);
  expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:3}});

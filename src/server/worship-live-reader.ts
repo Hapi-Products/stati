@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { body, HttpError, json, now } from './core';
-import { requireStationMinistry, stationMinistryGuard } from './station-catalog';
+import { requireSongStation, stationMinistryGuard } from './station-catalog';
 
 const position = z.strictObject({
   serviceId: z.string().uuid().nullable(),
@@ -53,7 +53,7 @@ const click = z.strictObject({
 });
 
 export async function worshipClicker(request:Request, env:Env, deviceId:string) {
- const authority = await requireStationMinistry(request,env,deviceId,'readSongs');
+ const authority = await requireSongStation(request,env,deviceId);
  const time = now(), userId = authority.user.id;
  const guard = stationMinistryGuard(authority,deviceId,'readSongs',time);
  const scope = `live.device_id=? AND live.leader_id=? AND live.expires_at>? AND ${currentHost}
@@ -89,12 +89,9 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
 }
 
 export async function worshipLiveReader(request: Request, env: Env, deviceId: string, groupId: string) {
- const authority = await requireStationMinistry(request, env, deviceId, 'readSongs');
+ const authority = await requireSongStation(request,env,deviceId,groupId);
  const userId = authority.user.id;
  const time = now(), guard = stationMinistryGuard(authority, deviceId, 'readSongs', time);
- if (!await env.DB.prepare('SELECT 1 WHERE ' + readAccess).bind(groupId, userId).first()) {
-  throw new HttpError(403, 'Choose a worship group you belong to.');
- }
 
  if (request.method === 'GET') {
   const row = await env.DB.prepare(`
