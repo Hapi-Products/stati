@@ -20,7 +20,7 @@ export class TaskEvents extends DurableObject<Env>{
  }
  private async allowed(value:Subscriber){return!!await this.env.DB.prepare("SELECT 1 FROM sessions authentication JOIN users actor ON actor.id=authentication.user_id WHERE authentication.token_hash=? AND authentication.user_id=? AND authentication.expires_at>? AND actor.status='active'").bind(value.sessionHash,value.userId,now()).first();}
  async changed(type:WorkspaceMessage='tasks-changed'){
-  if(!['tasks-changed','catalog-changed','services-changed','groups-changed','files-changed','account-changed'].includes(type))return;
+  if(!['tasks-changed','catalog-changed','services-changed','groups-changed','files-changed','account-changed','live-reader-changed'].includes(type))return;
   const connections=this.ctx.getWebSockets(),subscribers=connections.map(socket=>({socket,value:socket.deserializeAttachment() as unknown}));
   const hashes=[...new Set(subscribers.flatMap(({value})=>validSubscriber(value)?[value.sessionHash]:[]))];
   if(!hashes.length)return;

@@ -87,9 +87,17 @@ async function routes(r:Request,env:Env,ctx:ExecutionContext):Promise<Response>{
  if(p==='/api/tasks'){if(m==='GET')return readFeedbackTasks(r,env);if(m==='POST'){const response=await changeFeedbackTask(r,env);if(response.ok)ctx.waitUntil(notifyTaskChange(env));return response;}}
  const feedbackTask=p.match(/^\/api\/tasks\/([0-9a-f-]{36})$/i);if(feedbackTask&&m==='GET')return readFeedbackTasks(r,env,feedbackTask[1]);
  const readerRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/worship-live\/([0-9a-f-]{36})$/i);
- if(readerRoute&&['GET','PUT','PATCH','DELETE'].includes(m))return worshipLiveReader(r,env,readerRoute[1],readerRoute[2]);
+ if(readerRoute&&['GET','PUT','PATCH','DELETE'].includes(m)){
+  const response=await worshipLiveReader(r,env,readerRoute[1],readerRoute[2]);
+  if(response.ok&&(m==='PUT'||m==='DELETE'))ctx.waitUntil(notifyWorkspaceChange(env,'live-reader-changed'));
+  return response;
+ }
  const clickerRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/live-clicker$/i);
- if(clickerRoute&&['GET','POST'].includes(m))return worshipClicker(r,env,clickerRoute[1]);
+ if(clickerRoute&&['GET','POST'].includes(m)){
+  const response=await worshipClicker(r,env,clickerRoute[1]);
+  if(response.ok&&m==='POST')ctx.waitUntil(notifyWorkspaceChange(env,'live-reader-changed'));
+  return response;
+ }
  const serviceTool=p.match(/^\/api\/(computers\/([0-9a-f-]{36})|station)\/services\/([0-9a-f-]{36})\/(versions|requests|readiness)$/i);
  if(serviceTool){const native=serviceTool[1]==='station',id=native?(await device(r,env)).id:serviceTool[2],serviceId=serviceTool[3],tool=serviceTool[4];if(m==='GET')return(tool==='versions'?readStationServiceVersions:tool==='requests'?readServiceRequests:readServiceReadiness)(r,env,id,serviceId,native);if(m==='POST')return(tool==='versions'?saveStationServiceVersion:tool==='requests'?changeServiceRequest:changeServiceReadiness)(r,env,id,serviceId,native);}
  const serviceRoute=p.match(/^\/api\/(computers\/([0-9a-f-]{36})|station)\/services$/i);

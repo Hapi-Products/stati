@@ -1,7 +1,8 @@
-import {env, SELF} from 'cloudflare:test';
+import {createExecutionContext, env, SELF, waitOnExecutionContext} from 'cloudflare:test';
 import {expect, it, vi} from 'vitest';
 import {fixture} from './helpers/service-fixture';
 import {hash, token} from '../src/server/core';
+import worker from '../src/server/index';
 
 it('syncs the leader’s exact service item and PDF page only within the named group', async () => {
  const f = await fixture('worship_leader');
@@ -54,7 +55,27 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect(await (await clicker(memberCookie)).json()).toEqual({live:null});
  const move = {sessionId:ready.sessionId,itemId:ready.itemId,sequence:ready.sequence,page:1,turn:null,direction:1};
  expect((await clicker(memberCookie,move)).status).toBe(409);
- const moved = await (await clicker(f.session,move)).json() as {position:{page:number;clickerTurn:string}};
+ const followerHeaders = {Origin:'http://localhost:8787',Cookie:'stati_session='+memberCookie};
+ const subscription = await worker.fetch(new Request('http://localhost:8787/api/tasks/events',{
+  headers:{...followerHeaders,Upgrade:'websocket'}
+ }),env,createExecutionContext());
+ expect(subscription.status).toBe(101);
+ const socket=subscription.webSocket!;
+ socket.accept();
+ const next=()=>new Promise<string>(resolve=>socket.addEventListener('message',event=>resolve(String(event.data)),{once:true}));
+ let moved:{position:{page:number;clickerTurn:string}};
+ try {
+  expect(JSON.parse(await next())).toEqual({type:'tasks-ready'});
+  const updateArrived=next(),ctx=createExecutionContext();
+  const accepted = await worker.fetch(new Request('http://localhost:8787/api/computers/'+f.deviceId+'/live-clicker',{
+   method:'POST',headers:{...followerHeaders,Cookie:'stati_session='+f.session},body:JSON.stringify(move)
+  }),env,ctx);
+  expect(accepted.status).toBe(200);
+  moved = await accepted.json();
+  await waitOnExecutionContext(ctx);
+  expect(JSON.parse(await updateArrived)).toEqual({type:'live-reader-changed'});
+  expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:2}});
+ } finally { socket.close(1000,'Test complete'); }
  expect(moved.position.page).toBe(2);
  expect((await clicker(f.session,move)).status).toBe(409);
  expect((await clicker(f.session,{...move,page:2,turn:moved.position.clickerTurn})).status).toBe(409);

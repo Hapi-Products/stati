@@ -1,6 +1,6 @@
 /** Invalidation hints only. Clients must re-read through their authenticated API. */
 export type WorkspaceChange='tasks'|'catalog'|'services'|'groups'|'files'|'all';
-export type WorkspaceMessage='tasks-changed'|'catalog-changed'|'services-changed'|'groups-changed'|'files-changed'|'account-changed';
+export type WorkspaceMessage='tasks-changed'|'catalog-changed'|'services-changed'|'groups-changed'|'files-changed'|'account-changed'|'live-reader-changed';
 export function workspaceChange(value:unknown):WorkspaceChange|null {
  if(!value||typeof value!=='object'||!('type'in value))return null;
  const type=value.type;
