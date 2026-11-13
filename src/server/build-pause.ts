@@ -11,10 +11,11 @@ export async function buildPauseStatus(env:Env){
   EXISTS(SELECT 1 FROM station_service_selections selection
    JOIN station_services plan ON plan.device_id=selection.device_id AND plan.id=selection.service_id AND plan.archived=0
    JOIN devices station ON station.id=selection.device_id AND station.revoked_at IS NULL
-   JOIN users owner ON owner.id=station.owner_id AND owner.status='active') AS selected`).bind(pauseKey)
-  .first<{manual:string;selected:number}>();
- if(!row||!['0','1'].includes(row.manual)||(row.selected!==0&&row.selected!==1))throw new HttpError(503,'Build status is unavailable.');
- const manualPaused=row.manual==='1',activeService=row.selected===1,scheduledUntil=scheduledServiceEnd();
+   JOIN users owner ON owner.id=station.owner_id AND owner.status='active') AS selected,
+  EXISTS(SELECT 1 FROM worship_live_reader WHERE expires_at>?) AS live`).bind(pauseKey,now())
+  .first<{manual:string;selected:number;live:number}>();
+ if(!row||!['0','1'].includes(row.manual)||![0,1].includes(row.selected)||![0,1].includes(row.live))throw new HttpError(503,'Build status is unavailable.');
+ const manualPaused=row.manual==='1',activeService=row.selected===1||row.live===1,scheduledUntil=scheduledServiceEnd();
  return {manualPaused,activeService,scheduledUntil,allowed:!manualPaused&&!activeService&&scheduledUntil===null};
 }
 

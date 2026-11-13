@@ -37,6 +37,8 @@ This feature requires build 58 on the iPhone and the leader’s iPad and the upd
 
 In build 59, the clicker previews the live slide or PDF page. The layout icon in the top bar lets you choose **Middle** or **Bottom** for the arrows. Stați remembers your choice. Use the refresh icon in the top bar to retry the connection.
 
+The iPad leader can also open a song from **Browse** and tap **Lead song** without an active service. Connect from the same iPhone clicker as usual.
+
 The iPad needs to stay in the live reader with an internet connection. If leadership changes or the service ends, the phone can no longer turn its pages.
 
 ## Find songs and use Shortcuts

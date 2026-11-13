@@ -36,6 +36,14 @@ With build 58 and the updated server, the leader can turn pages from an iPhone s
 
 Build 59 makes the status dot larger and gives the Help button its own Liquid Glass surface in Browse, Groups, Service and the song reader.
 
+### Lead a song without an active service
+
+In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Use the stop icon or close the iPad reader to end the session.
+
+### Hide the status bar in Focus
+
+Tap the diagonal arrows at the bottom right of a song to enter Focus. It hides the status bar by default. To keep the clock and battery visible, turn off **Hide status bar in Focus** in **Account → Features**.
+
 ## Add a song in order
 
 In the song reader, open the menu and choose **Add to service**, or use the Siri shortcut. Pick an active service, drag the song into place and tap **Done**. The selected computer sees the updated order in its shared plan. [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts)

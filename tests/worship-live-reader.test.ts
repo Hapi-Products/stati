@@ -74,4 +74,18 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await request(memberCookie)).status).toBe(403);
  await f.change({type:'select',id:null});
  expect(await (await request(f.session)).json()).toEqual({state:'idle'});
+ await env.DB.prepare('INSERT INTO worship_group_members VALUES(?,?,?,?)').bind(group,member,f.user,f.timestamp).run();
+ const solo = {...update, serviceId:null, itemId:f.songId, songHash:f.contentHash,
+  sessionId:crypto.randomUUID(), page:0, pageCount:3};
+ expect((await request(memberCookie,'PUT',solo)).status).toBe(403);
+ expect((await request(f.session,'PUT',{...solo,songHash:'0'.repeat(64)})).status).toBe(409);
+ expect((await request(f.session,'PUT',solo)).status).toBe(200);
+ expect(await (await request(memberCookie)).json()).toMatchObject({state:'live',songTitle:'Împreună cântăm',position:solo});
+ expect(await (await SELF.fetch('http://localhost:8787/api/build-status')).json()).toEqual({version:1,allowed:false});
+ expect(await (await clicker(f.session)).json()).toMatchObject({live:{position:solo,songId:f.songId}});
+ expect((await clicker(f.session,{sessionId:solo.sessionId,itemId:solo.itemId,sequence:1,page:0,turn:null,direction:1})).status).toBe(200);
+ expect((await request(f.session,'PATCH',{sessionId:solo.sessionId})).status).toBe(200);
+ expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:1}});
+ expect((await request(f.session,'DELETE',{sessionId:solo.sessionId})).status).toBe(200);
+ expect(await (await request(memberCookie)).json()).toEqual({state:'idle'});
 });

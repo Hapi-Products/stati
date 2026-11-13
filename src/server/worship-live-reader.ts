@@ -3,16 +3,19 @@ import { body, HttpError, json, now } from './core';
 import { requireStationMinistry, stationMinistryGuard } from './station-catalog';
 
 const position = z.strictObject({
-  serviceId: z.string().uuid(),
+  serviceId: z.string().uuid().nullable(),
   sessionId: z.string().uuid(),
   sequence: z.number().int().min(1).max(1_000_000_000),
-  itemId: z.string().uuid(),
+  itemId: z.union([z.string().uuid(),z.string().regex(/^[a-f0-9]{64}$/)]),
+  songHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   page: z.number().int().min(0).max(10_000),
   mode: z.enum(['slides', 'document', 'text']),
   transition: z.enum(['slide', 'pageTurn', 'fade', 'instant']),
   columns: z.union([z.literal(1), z.literal(2)]),
   slideSize: z.number().min(0).max(3),
   pageCount: z.number().int().min(1).max(10_001).optional(),
+}).refine(value => value.serviceId === null ? !!value.songHash && value.itemId.length === 64 : !value.songHash && value.itemId.length === 36, {
+  message: 'Choose a song from the library or service.',
 }).refine(value => value.pageCount === undefined || (value.mode !== 'text' && value.page < value.pageCount), {
   message: 'Choose a page in the current song.',
 });
@@ -21,17 +24,29 @@ const readAccess = `EXISTS(
  WHERE wg.id=? AND wg.archived_at IS NULL AND gm.user_id=?
 )`;
 const sessionInput = z.strictObject({sessionId:z.string().uuid()});
-const currentHost = `EXISTS(
+const standaloneLeader = `EXISTS(SELECT 1 FROM users host LEFT JOIN user_ministry_roles role ON role.user_id=host.id
+ WHERE host.id=live.leader_id AND host.status='active'
+ AND (host.role='admin' OR role.role IN ('worship_leader','choir_director','pastor')))`;
+const currentHost = `((live.service_id IS NULL AND ${standaloneLeader}
+ AND EXISTS(SELECT 1 FROM station_catalog c WHERE c.device_id=live.device_id AND c.song_id=live.song_id AND c.content_hash=live.song_hash))
+ OR EXISTS(
  SELECT 1 FROM station_service_selections selection
  JOIN station_services service ON service.device_id=selection.device_id AND service.id=selection.service_id
  JOIN station_service_leadership leadership ON leadership.device_id=service.device_id AND leadership.service_id=service.id
  WHERE selection.device_id=live.device_id AND selection.service_id=live.service_id
  AND service.archived=0 AND service.revision=live.service_revision
  AND leadership.leader_id=live.leader_id AND leadership.revision=live.leadership_revision
+))`;
+const leaderAccess = `EXISTS(
+ SELECT 1 FROM users host JOIN worship_group_members lm ON lm.user_id=host.id AND lm.group_id=live.group_id
+ WHERE host.id=live.leader_id AND host.status='active'
+ AND NOT EXISTS(SELECT 1 FROM station_disconnections removed WHERE removed.device_id=live.device_id AND removed.user_id=host.id)
+ AND (host.role='admin' OR EXISTS(SELECT 1 FROM station_memberships sm
+   WHERE sm.device_id=live.device_id AND sm.user_id=host.id AND sm.status='approved'))
 )`;
 
 const click = z.strictObject({
- sessionId:z.string().uuid(), itemId:z.string().uuid(),
+ sessionId:z.string().uuid(), itemId:position.shape.itemId,
  sequence:z.number().int().min(1).max(1_000_000_000),
  page:z.number().int().min(0).max(10_000), turn:z.string().uuid().nullable(),
  direction:z.union([z.literal(-1),z.literal(1)]),
@@ -47,13 +62,14 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
   AND ${guard.sql}`;
  const params = [deviceId,userId,time,...guard.params];
  if (request.method === 'GET') {
-  const live = await env.DB.prepare(`SELECT live.position_json AS position, service.title AS serviceTitle,
-   json_extract(song.value,'$.title') AS songTitle,
-   json_extract(song.value,'$.songId') AS songId,
-   json_extract(song.value,'$.contentHash') AS contentHash
+  const live = await env.DB.prepare(`SELECT live.position_json AS position, COALESCE(service.title,'Live worship') AS serviceTitle,
+   COALESCE(catalog.title,json_extract(song.value,'$.title')) AS songTitle,
+   COALESCE(live.song_id,json_extract(song.value,'$.songId')) AS songId,
+   COALESCE(live.song_hash,json_extract(song.value,'$.contentHash')) AS contentHash
    FROM worship_live_reader live
-   JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id
-   JOIN json_each(service.content_json,'$.songs') song ON json_extract(song.value,'$.id')=live.item_id
+   LEFT JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id
+   LEFT JOIN json_each(service.content_json,'$.songs') song ON json_extract(song.value,'$.id')=live.item_id
+   LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash
    WHERE ${scope} ORDER BY live.expires_at DESC, live.session_id LIMIT 1`).bind(...params)
    .first<{position:string;serviceTitle:string;songTitle:string;songId:string;contentHash:string}>();
   return json({live:live ? {...live,position:JSON.parse(live.position)} : null});
@@ -82,24 +98,14 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
 
  if (request.method === 'GET') {
   const row = await env.DB.prepare(`
-   SELECT live.position_json AS position, live.leader_id AS leader,
-    live.expires_at AS expiry, CASE WHEN leader_user.id IS NOT NULL
-     AND EXISTS(SELECT 1 FROM worship_group_members lm WHERE lm.group_id=live.group_id AND lm.user_id=leader_user.id)
-     AND NOT EXISTS(SELECT 1 FROM station_disconnections removed WHERE removed.device_id=live.device_id AND removed.user_id=leader_user.id)
-     AND (leader_user.role='admin' OR EXISTS(SELECT 1 FROM station_memberships sm
-      WHERE sm.device_id=live.device_id AND sm.user_id=leader_user.id AND sm.status='approved'))
-     THEN leader.revision END AS currentLeadership, live.leadership_revision AS leadership,
-    service.revision AS currentService, live.service_revision AS service
+   SELECT live.position_json AS position, live.leader_id AS leader, live.service_id AS service,
+    catalog.title AS songTitle
    FROM worship_live_reader live
-   JOIN station_service_selections selection ON selection.device_id=live.device_id AND selection.service_id=live.service_id
-   JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id AND service.archived=0
-   LEFT JOIN station_service_leadership leader ON leader.device_id=live.device_id AND leader.service_id=live.service_id
-    AND leader.leader_id=live.leader_id
-   LEFT JOIN users leader_user ON leader_user.id=leader.leader_id AND leader_user.status='active'
-   WHERE live.device_id=? AND live.group_id=? AND ${readAccess} AND ${guard.sql}
-  `).bind(deviceId,groupId,groupId,userId,...guard.params).first<{
-   position:string;leader:string;expiry:number;currentLeadership:number|null;leadership:number;currentService:number;service:number
-  }>();
+   LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash
+   WHERE live.device_id=? AND live.group_id=? AND live.expires_at>? AND ${currentHost}
+    AND ${leaderAccess} AND ${readAccess} AND ${guard.sql}
+  `).bind(deviceId,groupId,time,groupId,userId,...guard.params)
+   .first<{position:string;leader:string;service:string|null;songTitle:string|null}>();
   if (!row) {
    const active = await env.DB.prepare(`
     SELECT 1 FROM station_service_selections selection
@@ -108,10 +114,8 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
    `).bind(deviceId,groupId,userId,...guard.params).first();
    return json({ state: active ? 'waiting' : 'idle' });
   }
-  if (row.expiry<=time || row.currentLeadership!==row.leadership || row.currentService!==row.service) {
-   return json({ state: 'waiting' });
-  }
-  return json({ state: 'live', isLeader: row.leader===userId, position: JSON.parse(row.position) });
+  return json({ state: 'live', isLeader: row.leader===userId, position: JSON.parse(row.position),
+   ...(row.service===null ? {songTitle:row.songTitle} : {}) });
  }
 
  if (request.method === 'PATCH') {
@@ -135,6 +139,26 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
  }
 
  const update = await body(request, position);
+ if (update.serviceId === null) {
+  if (authority.user.role !== 'admin' && !['worship_leader','choir_director','pastor'].includes(authority.ministryRole ?? '')) {
+   throw new HttpError(403,'A worship leader is required to lead a song.');
+  }
+  const standalone = await env.DB.prepare(`
+   INSERT INTO worship_live_reader(device_id,group_id,service_id,service_revision,leadership_revision,leader_id,
+    session_id,sequence,item_id,position_json,expires_at,song_id,song_hash)
+   SELECT c.device_id,?,NULL,0,0,?,?,?,?,?,?,c.song_id,c.content_hash
+   FROM station_catalog c WHERE c.device_id=? AND c.song_id=? AND c.content_hash=? AND ${readAccess} AND ${guard.sql}
+   ON CONFLICT(device_id,group_id) DO UPDATE SET service_id=NULL,service_revision=0,leadership_revision=0,
+    leader_id=excluded.leader_id,session_id=excluded.session_id,sequence=excluded.sequence,item_id=excluded.item_id,
+    position_json=excluded.position_json,expires_at=excluded.expires_at,song_id=excluded.song_id,song_hash=excluded.song_hash
+   WHERE (worship_live_reader.session_id=excluded.session_id AND worship_live_reader.leader_id=excluded.leader_id
+    AND worship_live_reader.service_id IS NULL AND worship_live_reader.expires_at>? AND worship_live_reader.sequence<excluded.sequence)
+    OR (excluded.sequence=1 AND worship_live_reader.expires_at<=?)
+  `).bind(groupId,userId,update.sessionId,update.sequence,update.itemId,JSON.stringify(update),time+24,
+   deviceId,update.itemId,update.songHash,groupId,userId,...guard.params,time,time).run();
+  if (!standalone.meta.changes) throw new HttpError(409,'The song changed or your worship group already has a live reader.');
+  return json({ok:true});
+ }
  const result = await env.DB.prepare(`
   INSERT INTO worship_live_reader(device_id,group_id,service_id,service_revision,leadership_revision,leader_id,
      session_id,sequence,item_id,position_json,expires_at)
@@ -150,12 +174,13 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
     AND ${readAccess} AND ${guard.sql}
   ON CONFLICT(device_id,group_id) DO UPDATE SET service_id=excluded.service_id,service_revision=excluded.service_revision,
    leadership_revision=excluded.leadership_revision,leader_id=excluded.leader_id,session_id=excluded.session_id,
-   sequence=excluded.sequence,item_id=excluded.item_id,position_json=excluded.position_json,expires_at=excluded.expires_at
+   sequence=excluded.sequence,item_id=excluded.item_id,position_json=excluded.position_json,expires_at=excluded.expires_at,
+   song_id=NULL,song_hash=NULL
   WHERE (worship_live_reader.session_id=excluded.session_id AND worship_live_reader.expires_at>?
      AND worship_live_reader.sequence<excluded.sequence)
      OR (excluded.sequence=1 AND (worship_live_reader.expires_at<=?
-      OR worship_live_reader.service_id<>excluded.service_id
-      OR worship_live_reader.leader_id<>excluded.leader_id))
+      OR (worship_live_reader.service_id IS NOT NULL AND (worship_live_reader.service_id<>excluded.service_id
+      OR worship_live_reader.leader_id<>excluded.leader_id))))
  `).bind(groupId,update.sessionId,update.sequence,update.itemId,JSON.stringify(update),time+24,
   deviceId,update.serviceId,userId,update.itemId,groupId,userId,...guard.params,time,time).run();
  if (!result.meta.changes) throw new HttpError(409, 'The active service, leader, or group access changed.');
