@@ -31,6 +31,10 @@ it('syncs the leader’s exact service item and PDF page only within the named g
   serviceId:plan.id,sessionId:crypto.randomUUID(),sequence:1,itemId:song.id,page:2,
   mode:'document',transition:'pageTurn',columns:2,slideSize:2,
  };
+ const clicker = (session: string, payload?: object) => SELF.fetch(
+  'http://localhost:8787/api/computers/'+f.deviceId+'/live-clicker',
+  {method:payload?'POST':'GET',headers:{Origin:'http://localhost:8787',Cookie:'stati_session='+session},body:payload ? JSON.stringify(payload) : undefined},
+ );
  expect(await (await request(memberCookie)).json()).toEqual({state:'waiting'});
  expect((await request(outsiderCookie)).status).toBe(403);
  expect((await request(f.session,'PUT',update)).status).toBe(409);
@@ -42,10 +46,28 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await request(f.session,'PUT',{...update,sequence:2,page:3})).status).toBe(200);
  expect((await request(f.session,'PUT',update)).status).toBe(409);
  expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:3}});
+ const ready = {...update,sequence:3,page:1,pageCount:3};
+ expect((await request(f.session,'PUT',ready)).status).toBe(200);
+ expect(await (await clicker(f.session)).json()).toMatchObject({live:{position:ready,songTitle:'Împreună cântăm'}});
+ expect(await (await clicker(memberCookie)).json()).toEqual({live:null});
+ const move = {sessionId:ready.sessionId,itemId:ready.itemId,sequence:ready.sequence,page:1,turn:null,direction:1};
+ expect((await clicker(memberCookie,move)).status).toBe(409);
+ const moved = await (await clicker(f.session,move)).json() as {position:{page:number;clickerTurn:string}};
+ expect(moved.position.page).toBe(2);
+ expect((await clicker(f.session,move)).status).toBe(409);
+ expect((await clicker(f.session,{...move,page:2,turn:moved.position.clickerTurn})).status).toBe(409);
+ expect((await request(f.session,'PATCH',{sessionId:ready.sessionId})).status).toBe(200);
+ expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:2,clickerTurn:moved.position.clickerTurn}});
+ expect((await clicker(f.session,{...move,page:2,turn:moved.position.clickerTurn,direction:-1})).status).toBe(200);
+ expect((await clicker(f.session,{...move,page:1})).status).toBe(409);
+ expect((await request(f.session,'PUT',{...ready,sequence:4,page:0})).status).toBe(200);
+ expect((await clicker(f.session,{...move,page:0,direction:1})).status).toBe(409);
  expect((await request(memberCookie,'DELETE',{sessionId:update.sessionId})).status).toBe(200);
  expect(await (await request(memberCookie)).json()).toMatchObject({state:'live'});
  vi.setSystemTime(new Date((f.timestamp+25)*1000));
  expect(await (await request(memberCookie)).json()).toEqual({state:'waiting'});
+ expect(await (await clicker(f.session)).json()).toEqual({live:null});
+ expect((await clicker(f.session,{...move,sequence:4,page:0})).status).toBe(409);
  await env.DB.prepare('DELETE FROM worship_group_members WHERE group_id=? AND user_id=?').bind(group,member).run();
  expect((await request(memberCookie)).status).toBe(403);
  await f.change({type:'select',id:null});

@@ -12,11 +12,63 @@ const position = z.strictObject({
   transition: z.enum(['slide', 'pageTurn', 'fade', 'instant']),
   columns: z.union([z.literal(1), z.literal(2)]),
   slideSize: z.number().min(0).max(3),
+  pageCount: z.number().int().min(1).max(10_001).optional(),
+}).refine(value => value.pageCount === undefined || (value.mode !== 'text' && value.page < value.pageCount), {
+  message: 'Choose a page in the current song.',
 });
 const readAccess = `EXISTS(
  SELECT 1 FROM worship_groups wg JOIN worship_group_members gm ON gm.group_id=wg.id
  WHERE wg.id=? AND wg.archived_at IS NULL AND gm.user_id=?
 )`;
+const sessionInput = z.strictObject({sessionId:z.string().uuid()});
+const currentHost = `EXISTS(
+ SELECT 1 FROM station_service_selections selection
+ JOIN station_services service ON service.device_id=selection.device_id AND service.id=selection.service_id
+ JOIN station_service_leadership leadership ON leadership.device_id=service.device_id AND leadership.service_id=service.id
+ WHERE selection.device_id=live.device_id AND selection.service_id=live.service_id
+ AND service.archived=0 AND service.revision=live.service_revision
+ AND leadership.leader_id=live.leader_id AND leadership.revision=live.leadership_revision
+)`;
+
+const click = z.strictObject({
+ sessionId:z.string().uuid(), itemId:z.string().uuid(),
+ sequence:z.number().int().min(1).max(1_000_000_000),
+ page:z.number().int().min(0).max(10_000), turn:z.string().uuid().nullable(),
+ direction:z.union([z.literal(-1),z.literal(1)]),
+});
+
+export async function worshipClicker(request:Request, env:Env, deviceId:string) {
+ const authority = await requireStationMinistry(request,env,deviceId,'readSongs');
+ const time = now(), userId = authority.user.id;
+ const guard = stationMinistryGuard(authority,deviceId,'readSongs',time);
+ const scope = `live.device_id=? AND live.leader_id=? AND live.expires_at>? AND ${currentHost}
+  AND EXISTS(SELECT 1 FROM worship_groups wg JOIN worship_group_members gm ON gm.group_id=wg.id
+    WHERE wg.id=live.group_id AND wg.archived_at IS NULL AND gm.user_id=live.leader_id)
+  AND ${guard.sql}`;
+ const params = [deviceId,userId,time,...guard.params];
+ if (request.method === 'GET') {
+  const live = await env.DB.prepare(`SELECT live.position_json AS position, service.title AS serviceTitle,
+   json_extract(song.value,'$.title') AS songTitle
+   FROM worship_live_reader live
+   JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id
+   JOIN json_each(service.content_json,'$.songs') song ON json_extract(song.value,'$.id')=live.item_id
+   WHERE ${scope} ORDER BY live.expires_at DESC, live.session_id LIMIT 1`).bind(...params)
+   .first<{position:string;serviceTitle:string;songTitle:string}>();
+  return json({live:live ? {position:JSON.parse(live.position),serviceTitle:live.serviceTitle,songTitle:live.songTitle} : null});
+ }
+ const input = await body(request,click,512), page = input.page + input.direction;
+ const turn = crypto.randomUUID();
+ const updated = await env.DB.prepare(`UPDATE worship_live_reader AS live
+  SET position_json=json_set(position_json,'$.page',?,'$.clickerTurn',?)
+  WHERE ${scope} AND live.session_id=? AND live.item_id=? AND live.sequence=?
+    AND json_extract(position_json,'$.page')=? AND json_extract(position_json,'$.clickerTurn') IS ?
+    AND json_extract(position_json,'$.mode')<>'text'
+    AND ? >=0 AND ? < json_extract(position_json,'$.pageCount')
+  RETURNING position_json AS position`).bind(page,turn,...params,input.sessionId,input.itemId,input.sequence,
+   input.page,input.turn,page,page).first<{position:string}>();
+ if (!updated) throw new HttpError(409,'The live page changed or is unavailable. Try again after it refreshes.');
+ return json({position:JSON.parse(updated.position)});
+}
 
 export async function worshipLiveReader(request: Request, env: Env, deviceId: string, groupId: string) {
  const authority = await requireStationMinistry(request, env, deviceId, 'readSongs');
@@ -60,8 +112,19 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
   return json({ state: 'live', isLeader: row.leader===userId, position: JSON.parse(row.position) });
  }
 
+ if (request.method === 'PATCH') {
+  const {sessionId} = await body(request,sessionInput,128);
+  const result = await env.DB.prepare(`
+   UPDATE worship_live_reader AS live SET expires_at=?
+   WHERE device_id=? AND group_id=? AND leader_id=? AND session_id=? AND expires_at>?
+   AND ${currentHost} AND ${readAccess} AND ${guard.sql}
+  `).bind(time+24,deviceId,groupId,userId,sessionId,time,groupId,userId,...guard.params).run();
+  if (!result.meta.changes) throw new HttpError(409,'The active service, leader, or group access changed.');
+  return json({ok:true});
+ }
+
  if (request.method === 'DELETE') {
-  const stop = await body(request, z.strictObject({sessionId:z.string().uuid()}));
+  const stop = await body(request, sessionInput);
   await env.DB.prepare(`
    UPDATE worship_live_reader SET expires_at=0
    WHERE device_id=? AND group_id=? AND leader_id=? AND session_id=? AND ${readAccess} AND ${guard.sql}

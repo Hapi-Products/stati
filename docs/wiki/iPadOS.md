@@ -1,6 +1,6 @@
 # Stați Worship for iPad
 
-**Updated on** November 12, 2026 · **Updated by** Codex for Stați
+**Updated on** November 13, 2026 · **Updated by** Codex for Stați
 
 Stați Worship gives iPad users **Recents**, **Groups**, **Browse**, and **Service**. The computer you select and your church role determine the material you can open.
 
@@ -31,6 +31,8 @@ If you can manage notes, open a song and use the chain link in its toolbar to at
 4. The indicator is green when connected, red when the active service is waiting for a leader or the connection is unavailable, and gray when there is no active service for the selected group.
 
 Stați sends the song, page and reader format. Each iPad renders it locally. PDF page turns use the leader’s selected transition, subject to Reduce Motion. Keep the leader’s app open during the service.
+
+With build 58 and the updated server, the leader can turn pages from an iPhone signed in to the same profile. Start leading on the iPad and open the song as Slides or PDF first. [Use iPhone as a live clicker](https://github.com/Hapi-Products/stati/wiki/iPhone#use-iphone-as-a-live-clicker)
 
 ## Add a song in order
 
