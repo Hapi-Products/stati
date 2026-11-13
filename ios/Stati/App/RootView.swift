@@ -133,8 +133,10 @@ struct RootView: View {
                 guard UIDevice.current.userInterfaceIdiom == .phone, scenePhase == .active,
                       canUseClicker, store.api.signedIn, !store.selectedComputer.isEmpty else { return }
                 while !Task.isCancelled {
+                    let observed = store.liveReaderUpdates.revision
                     await liveClicker.refresh(store: store, showActivity: showingClicker, expectedSession: clickerSession)
-                    do { try await Task.sleep(for: showingClicker ? .seconds(1) : liveClicker.connection == nil ? .seconds(15) : .seconds(5)) }
+                    let delay: Duration = showingClicker ? .seconds(1) : liveClicker.connection == nil ? .seconds(15) : .seconds(5)
+                    do { try await store.liveReaderUpdates.wait(after: observed, timeout: delay) }
                     catch { return }
                 }
             }

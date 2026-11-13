@@ -15,7 +15,7 @@ import Foundation
                         switch message { case .string(let string): data = Data(string.utf8); case .data(let bytes): data = bytes; @unknown default: continue }
                         guard data.count <= 1024, isCurrent(), !Task.isCancelled else { break }
                         let value = try JSONDecoder().decode(JSONValue.self, from: data)
-                        if ["tasks-ready", "tasks-changed", "catalog-changed", "services-changed", "groups-changed", "files-changed", "account-changed"].contains(value["type"].text) { connected(true); attempts = 0; invalidate(value["type"].text) }
+                        if ["tasks-ready", "tasks-changed", "catalog-changed", "services-changed", "groups-changed", "files-changed", "account-changed", "live-reader-changed"].contains(value["type"].text) { connected(true); attempts = 0; invalidate(value["type"].text) }
                     }
                 } onCancel: { socket.cancel(with: .goingAway, reason: nil) }
             } catch { if Task.isCancelled || !isCurrent() { socket.cancel(with: .goingAway, reason: nil); return } }

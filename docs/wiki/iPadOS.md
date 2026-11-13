@@ -36,6 +36,8 @@ With build 58 and the updated server, the leader can turn pages from an iPhone s
 
 Build 59 makes the status dot larger and gives the Help button its own Liquid Glass surface in Browse, Groups, Service and the song reader.
 
+Build 60 lets the iPad react to a live page turn as soon as a change arrives from Stați. The reader checks periodically if the live connection drops.
+
 ### Lead a song without an active service
 
 In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Use the stop icon or close the iPad reader to end the session.

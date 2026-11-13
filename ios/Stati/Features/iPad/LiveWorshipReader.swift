@@ -107,6 +107,7 @@ final class LiveWorshipReader {
             return
         }
         while !Task.isCancelled && store.accountEpoch == epoch && store.selectedComputer == computer {
+            let observed = store.liveReaderUpdates.revision
             do {
                 let response = try await store.api.request(path)
                 try Task.checkCancellation()
@@ -131,13 +132,13 @@ final class LiveWorshipReader {
                 followingSession = following ? remoteSession : ""
                 songTitle = standalone ? response["songTitle"].text : ""
                 position = following ? next : nil
-                try await Task.sleep(for: status == .live ? .seconds(1) : .seconds(5))
+                try await store.liveReaderUpdates.wait(after: observed, timeout: status == .live ? .seconds(1) : .seconds(5))
             } catch is CancellationError { return }
             catch {
                 guard !Task.isCancelled else { return }
                 status = .offline; following = false; position = nil; serviceID = ""; followingSession = ""
                 if let failure = error as? APIError, [401, 403, 404].contains(failure.status) { return }
-                do { try await Task.sleep(for: .seconds(8)) } catch { return }
+                do { try await store.liveReaderUpdates.wait(after: observed, timeout: .seconds(8)) } catch { return }
             }
         }
     }

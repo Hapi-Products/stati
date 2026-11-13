@@ -57,8 +57,10 @@ final class AppStore {
     private(set) var lastTaskChange: APIRecord?
     private(set) var catalogChangeRevision = 0
     private(set) var groupChangeRevision = 0
+    let liveReaderUpdates = LiveReaderUpdates()
     func workspaceInvalidated(_ type: String) {
         guard me != nil, api.signedIn else { return }
+        if type == "live-reader-changed" || type == "tasks-ready" { liveReaderUpdates.signal() }
         if ["tasks-ready", "account-changed"].contains(type) {
             accountRefresh?.cancel(); let epoch = accountEpoch
             accountRefresh = Task { do { try await Task.sleep(for: .milliseconds(150)); guard epoch == accountEpoch else { return }; await refresh() } catch { } }

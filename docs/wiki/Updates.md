@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 60 | Delivers live reader changes over Stați’s existing connection, with periodic checks as a fallback. Requires the updated server. |
 | iPhone and iPad development build 59 | Adds live page previews, arrow placement and toolbar Retry on iPhone. On iPad, lead a song from Browse without an active service, use the larger live dot and separate glass Help button, and choose whether Focus hides the status bar. |
 | iPhone and iPad development build 58 | Adds an iPhone clicker for the live worship reader and a Live Activity that reopens it. Requires the updated server. [Live Clicker guide](https://github.com/Hapi-Products/stati/wiki/iPhone#use-iphone-as-a-live-clicker) |
 | Build 57 and release tools | The server now holds releases during a scheduled or selected service. On an updated iPhone, administrators can manually pause and resume from [Send](https://github.com/Hapi-Products/stati/wiki/iPhone#pause-builds-during-service). |

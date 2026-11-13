@@ -11,13 +11,16 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 59, title: "See the live page on iPhone", highlights: [
-        Highlight(title: "Live page preview", detail: "Live Clicker shows the current slide or PDF page. Move the arrows with the layout menu and reconnect with the refresh icon.", icon: "rectangle.on.rectangle"),
-        Highlight(title: "Lead a song from Browse", detail: "Open a song on iPad and tap Lead song to share it with your worship group without an active service.", icon: "person.wave.2"),
-        Highlight(title: "Hide the status bar in Focus", detail: "Use the Focus button at the lower right of the reader. Change the status bar preference in Features.", icon: "arrow.up.left.and.arrow.down.right"),
-        Highlight(title: "Clearer iPad controls", detail: "The live service dot is larger and Help has its own Liquid Glass button.", icon: "questionmark")
+    static let current = AppUpdate(id: 60, title: "Faster live page turns", highlights: [
+        Highlight(title: "Quicker clicker sync", detail: "The leader’s iPad and following tablets react as soon as Stați tells them the page changed.", icon: "bolt")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 59, title: "See the live page on iPhone", highlights: [
+            Highlight(title: "Live page preview", detail: "Live Clicker shows the current slide or PDF page. Move the arrows with the layout menu and reconnect with the refresh icon.", icon: "rectangle.on.rectangle"),
+            Highlight(title: "Lead a song from Browse", detail: "Open a song on iPad and tap Lead song to share it with your worship group without an active service.", icon: "person.wave.2"),
+            Highlight(title: "Hide the status bar in Focus", detail: "Use the Focus button at the lower right of the reader. Change the status bar preference in Features.", icon: "arrow.up.left.and.arrow.down.right"),
+            Highlight(title: "Clearer iPad controls", detail: "The live service dot is larger and Help has its own Liquid Glass button.", icon: "questionmark")
+        ], details: []),
         AppUpdate(id: 58, title: "Use your iPhone as a live clicker", highlights: [
             Highlight(title: "Turn pages from iPhone", detail: "Start leading on iPad, then open Live Clicker from Send on your iPhone. Tap the Live Activity to return after leaving.", icon: "cursorarrow.click")
         ], details: []),
