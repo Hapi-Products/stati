@@ -1,12 +1,12 @@
 import {useEffect,useRef,useState} from 'react';
-import {BookOpen,Copy,ChevronLeft,ChevronRight,Eye,History,MoreHorizontal,X,LayoutGrid,List,PenLine,RefreshCw,Search,SlidersHorizontal,Star,Trash2} from 'lucide-react';
+import {BookOpen,Copy,ChevronLeft,ChevronRight,Eye,FolderOpen,History,MoreHorizontal,X,LayoutGrid,List,PenLine,RefreshCw,Search,SlidersHorizontal,Star,Trash2} from 'lucide-react';
 import {lyricFontSize} from '../shared/lyric-layout.js';
 import type {LibrarySyncStatus} from './bridge';
 import type {LibraryEntry,LibraryResult,LibrarySearch} from './song-library-types';
 import './song-library.css';
 import {hasSongHistory,SongHistory,type SongHistoryBridge} from './SongHistory';
 
-type LibraryBridge=Pick<Window['stati'],'searchSongLibrary'|'favoriteSong'>&Partial<Pick<Window['stati'],'librarySyncStatus'|'rescanSongLibrary'|'cloneLibrarySong'|'librarySongInfo'|'openSongArchive'>>&Partial<SongHistoryBridge>;
+type LibraryBridge=Pick<Window['stati'],'searchSongLibrary'|'favoriteSong'>&Partial<Pick<Window['stati'],'librarySyncStatus'|'rescanSongLibrary'|'chooseSongLibraryFolder'|'cloneLibrarySong'|'librarySongInfo'|'openSongArchive'>>&Partial<SongHistoryBridge>;
 type Props={renderActions?:(song:LibraryEntry)=>React.ReactNode;bridge?:LibraryBridge;active?:boolean;refreshKey?:number;emptyMessage?:string;disabled:boolean;readOnly?:boolean;allowFavorites?:boolean;onOpen:(id:string)=>Promise<void>;embedded?:boolean;beforeHistory?:()=>Promise<boolean>;onRestored?:(id:string,contentHash:string)=>void};
 function FirstSlide({song}:{song:LibraryEntry}){
  const text=song.firstSlide??song.lyricPreview??song.firstLine;
@@ -44,9 +44,10 @@ export function SongLibrary({bridge=window.stati,disabled,onOpen,readOnly=false,
   async function read(){if(reading||document.visibilityState==='hidden')return;reading=true;try{const value=await bridge.librarySyncStatus!();if(live)setSync(value);}catch(failure){if(live)setSync({state:'error',updatedAt:null,songCount:0,error:failure instanceof Error?failure.message:'Song sharing is unavailable.'});}finally{reading=false;}}
   void read();const timer=setInterval(()=>void read(),30000);return()=>{live=false;clearInterval(timer);};
  },[bridge,active,disabled,refreshKey,readOnly]);
- async function rescan(){
-  if(disabled||readOnly||syncBusy||!bridge.rescanSongLibrary)return;const generation=scope.current;setSyncBusy(true);
-  try{const value=await bridge.rescanSongLibrary();if(mounted.current&&generation===scope.current){setSync(value);setRefresh(value=>value+1);}}
+ async function rescan(chooseFolder=false){
+  const change=chooseFolder?bridge.chooseSongLibraryFolder:bridge.rescanSongLibrary;
+  if(disabled||readOnly||syncBusy||!change)return;const generation=scope.current;setSyncBusy(true);
+  try{const value=await change();if(value&&mounted.current&&generation===scope.current){setSync(value);setOffset(0);setRefresh(value=>value+1);}}
   catch(failure){if(mounted.current&&generation===scope.current)setSync(current=>({state:'error',updatedAt:current?.updatedAt||null,songCount:current?.songCount||0,error:failure instanceof Error?failure.message:'Could not share songs. The last shared library has been kept.'}));}
   finally{if(mounted.current&&generation===scope.current)setSyncBusy(false);}
  }
@@ -99,6 +100,9 @@ export function SongLibrary({bridge=window.stati,disabled,onOpen,readOnly=false,
    <div className="song-library-views" role="group" aria-label="Song layout"><button type="button" className="button library-icon" title="List" aria-label="List" aria-pressed={view==='list'} onClick={()=>setView('list')}><List size={17} aria-hidden="true"/></button><button type="button" className="button library-icon" title="Grid" aria-label="Grid" aria-pressed={view==='grid'} onClick={()=>setView('grid')}><LayoutGrid size={17} aria-hidden="true"/></button></div>
   </div>
   {!readOnly&&bridge.rescanSongLibrary&&<div className="song-library-sync"><span className={'library-sync-pill '+(sync?.state==='error'?'is-error':'')} role={sync?.state==='error'?'alert':'status'} title={sync?.state==='error'?sync.error||'Sharing needs attention':sync?.updatedAt?'Last shared '+new Date(sync.updatedAt).toLocaleString():'Share this library to make it available on phones'}><i aria-hidden="true"/>{sync?.state==='error'?sync.error||'Sharing needs attention':syncBusy||sync?.state==='syncing'?'Sharing…':sync?.updatedAt?(sync.songCount===null?'Songs':sync.songCount+' songs')+' shared':'Not shared yet'}</span><button type="button" className="button library-icon" title="Share songs with phones" aria-label="Share songs with phones" disabled={disabled||syncBusy||sync?.state==='syncing'} onClick={()=>void rescan()}><RefreshCw size={16} aria-hidden="true"/></button></div>}
+  {!readOnly&&bridge.chooseSongLibraryFolder&&<button type="button" className="button" disabled={locked||syncBusy} onClick={()=>void rescan(true)}>
+   <FolderOpen size={17} aria-hidden="true"/>Choose library folder
+  </button>}
   {error&&<p className="inline-error" role="alert">{error}</p>}
   {notice&&<p role="status">{notice}</p>}
   {versionSong&&active&&!disabled&&!readOnly&&bridge.cloneLibrarySong&&<section className="song-version-dialog panel" role="dialog" aria-label="Create a group version"><h3>Create a group version</h3><p>Copy {versionSong.title} before changing a person or group’s arrangement. The original song stays as it is.</p><form onSubmit={event=>void createVersion(event)}><label>Person or group<input type="text" value={versionGroup} maxLength={80} required disabled={!!action} onChange={event=>setVersionGroup(event.target.value)}/></label><div><button className="button primary" disabled={locked||!versionGroup.trim()}>Create and edit copy</button><button type="button" className="button" disabled={!!action} onClick={()=>setVersionSong(null)}>Cancel</button></div></form></section>}

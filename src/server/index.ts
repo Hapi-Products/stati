@@ -1,3 +1,4 @@
+import {worshipLiveReader} from './worship-live-reader';
 import {sendSupportReport} from './support-reports';
 import {issuePhoneEnrollment} from './phone-enrollment';
 import {songComments,readSongComment} from './song-comments';
@@ -84,6 +85,8 @@ async function routes(r:Request,env:Env,ctx:ExecutionContext):Promise<Response>{
  const stationSongCommands=p.match(/^\/api\/station\/song-commands(?:\/([0-9a-f-]{36}))?$/i);if(stationSongCommands){const d=await device(r,env);return nativeSongCommands(r,env,d.id,stationSongCommands[1]);}
  if(p==='/api/tasks'){if(m==='GET')return readFeedbackTasks(r,env);if(m==='POST'){const response=await changeFeedbackTask(r,env);if(response.ok)ctx.waitUntil(notifyTaskChange(env));return response;}}
  const feedbackTask=p.match(/^\/api\/tasks\/([0-9a-f-]{36})$/i);if(feedbackTask&&m==='GET')return readFeedbackTasks(r,env,feedbackTask[1]);
+ const readerRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/worship-live\/([0-9a-f-]{36})$/i);
+ if(readerRoute&&['GET','PUT','DELETE'].includes(m))return worshipLiveReader(r,env,readerRoute[1],readerRoute[2]);
  const serviceTool=p.match(/^\/api\/(computers\/([0-9a-f-]{36})|station)\/services\/([0-9a-f-]{36})\/(versions|requests|readiness)$/i);
  if(serviceTool){const native=serviceTool[1]==='station',id=native?(await device(r,env)).id:serviceTool[2],serviceId=serviceTool[3],tool=serviceTool[4];if(m==='GET')return(tool==='versions'?readStationServiceVersions:tool==='requests'?readServiceRequests:readServiceReadiness)(r,env,id,serviceId,native);if(m==='POST')return(tool==='versions'?saveStationServiceVersion:tool==='requests'?changeServiceRequest:changeServiceReadiness)(r,env,id,serviceId,native);}
  const serviceRoute=p.match(/^\/api\/(computers\/([0-9a-f-]{36})|station)\/services$/i);

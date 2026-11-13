@@ -543,6 +543,17 @@ function catalogPublisher(){return localCatalogPublisher||(localCatalogPublisher
 function catalogChanged(){catalogScanAt=Date.now();catalogPublisher().cancel({forgetDigest:false});catalogPublisher().schedule();}
 async function catalogSyncStatus(operator){const state=catalogPublisher().status(),saved=await readJson('catalog-sync.json',{});assertIdentity(operator.generation);if(state.updatedAt===null&&saved.deviceId===operator.deviceId&&Number.isFinite(saved.updatedAt)&&Number.isInteger(saved.songCount)&&saved.songCount>=0)return{...state,updatedAt:saved.updatedAt,songCount:saved.songCount};return state;}
 handle('song-library-sync-status',async()=>{const operator=await workspaceOperator('readSongs');return catalogSyncStatus(operator);});
+handle('song-library-choose-folder',async()=>{
+ const operator=await workspaceOperator('editLyrics');
+ const folder=await advanced.songsFolder(main,app.getPath('documents'),()=>assertIdentity(operator.generation),true);
+ if(!folder)return null;
+ assertIdentity(operator.generation);
+ catalogConnection={credential,deviceId:operator.deviceId};
+ catalogChanged();
+ await catalogPublisher().flush();
+ assertIdentity(operator.generation);
+ return catalogSyncStatus(operator);
+});
 handle('song-library-rescan',async()=>{const operator=await workspaceOperator('readSongs');await libraryDirectory(operator);assertIdentity(operator.generation);catalogConnection={credential,deviceId:operator.deviceId};catalogChanged();await catalogPublisher().flush();assertIdentity(operator.generation);return catalogSyncStatus(operator);});
 let localServicePlans;
 function legacyServicePlans(){return localServicePlans||(localServicePlans=require('./service-plans.cjs').servicePlans(app.getPath('userData'),safeStorage));}

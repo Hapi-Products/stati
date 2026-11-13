@@ -60,6 +60,7 @@ declare global { interface Window { stati: {
  loadPrepareDraft:()=>Promise<{draft:{text:string;title:string;source:string;url:string;songLang:'auto'|'eng'|'ron';language:'eng'|'ron'|'both';lines:number;fontSizeInput:string;amenFontSizeInput?:string;libraryId?:string|null;libraryHash?:string|null};savedAt:number}|null>;
  savePrepareDraft:(data:{text:string;title:string;source:string;url:string;songLang:'auto'|'eng'|'ron';language:'eng'|'ron'|'both';lines:number;fontSizeInput:string;amenFontSizeInput?:string;libraryId?:string|null;libraryHash?:string|null})=>Promise<{savedAt:number}>;
  librarySyncStatus:()=>Promise<LibrarySyncStatus>;
+ chooseSongLibraryFolder:()=>Promise<LibrarySyncStatus|null>;
  rescanSongLibrary:()=>Promise<LibrarySyncStatus>;
  searchSongLibrary:(options:LibrarySearch)=>Promise<LibraryResult>;
  openLibrarySong:(id:string)=>Promise<LibrarySong>;
