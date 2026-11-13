@@ -6,10 +6,11 @@ struct ServiceRouteView: View {
     let serviceID: String
     var showServices: (() -> Void)? = nil
     @State private var plan: APIRecord?
+    @State private var offline = false
     @State private var message = ""
     var body: some View {
         Group {
-            if let plan { ServiceDetailView(computerID: computerID, initial: plan) }
+            if let plan { ServiceDetailView(computerID: computerID, initial: plan, offline: offline) }
             else if !message.isEmpty { ContentUnavailableView("Service unavailable", systemImage: "calendar.badge.exclamationmark", description: Text(message)) }
             else { ProgressView("Opening service…") }
         }
@@ -23,13 +24,27 @@ struct ServiceRouteView: View {
         }
         .task(id: store.accountEpoch.uuidString + computerID + serviceID) {
             let epoch = store.accountEpoch
-            plan = nil; message = ""
+            plan = nil; message = ""; offline = false
             do {
                 let rows = try await store.api.request("/computers/" + computerID + "/services")["plans"].records
                 try Task.checkCancellation(); guard epoch == store.accountEpoch, computerID == store.selectedComputer else { return }
                 plan = rows.first(where: { $0.id == serviceID })
                 if plan == nil { message = "This service was removed or your access changed. Return to services and refresh." }
-            } catch { message = error.localizedDescription }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled, epoch == store.accountEpoch, computerID == store.selectedComputer else { return }
+                if UIDevice.current.userInterfaceIdiom == .pad, OfflineReadPolicy.permits(error),
+                   let saved = try? store.offlineSongs.services(computer: computerID).first(where: { $0.id == serviceID }) {
+                    offline = true
+                    plan = saved
+                } else {
+                    if let failure = error as? APIError, [401, 403].contains(failure.status) {
+                        store.offlineSongs.invalidate(computer: computerID)
+                    }
+                    message = error.localizedDescription
+                }
+            }
         }
     }
 }

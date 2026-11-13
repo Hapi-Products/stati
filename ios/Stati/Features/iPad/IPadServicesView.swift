@@ -45,7 +45,19 @@ struct IPadServicesView: View {
         loading = true; defer { if epoch == store.accountEpoch && computer == store.selectedComputer { loading = false } }
         do { let rows = try await store.api.request("/computers/" + computer + "/services")["plans"].records; try Task.checkCancellation(); guard owner != nil, owner == store.me?.id, epoch == store.accountEpoch, computer == store.selectedComputer else { return }; plans = rows; message = "" }
         catch is CancellationError { }
-        catch { if epoch == store.accountEpoch { message = error.localizedDescription } }
+        catch {
+            guard !Task.isCancelled, epoch == store.accountEpoch, computer == store.selectedComputer else { return }
+            if OfflineReadPolicy.permits(error), let saved = try? store.offlineSongs.services(computer: computer), !saved.isEmpty {
+                plans = saved
+                message = "Offline · saved services"
+            } else {
+                if let failure = error as? APIError, [401, 403].contains(failure.status) {
+                    store.offlineSongs.invalidate(computer: computer)
+                }
+                plans = []
+                message = error.localizedDescription
+            }
+        }
     }
 }
 

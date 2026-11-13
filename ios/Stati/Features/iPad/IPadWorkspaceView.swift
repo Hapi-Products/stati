@@ -8,6 +8,7 @@ struct IPadWorkspaceView: View {
     @State private var groups: WorshipGroupsModel
     @State private var navigation = IPadWorkspaceSelection(tab: "browse")
     @State private var account = false
+    @State private var showingRecents = false
     @State private var liveReader = LiveWorshipReader()
     @State private var liveSong: SongGalleryRequest?
     @State private var liveError = ""
@@ -34,7 +35,7 @@ struct IPadWorkspaceView: View {
         #if DEBUG && targetEnvironment(simulator)
         let route = NativeReview.route ?? ""
         if ["ipad-browse", "ipad-worship-library", "ipad-browse-list", "ipad-browse-list-large", "ipad-sidebar", "ipad-service-sidebar", "ipad-groups-none", "ipad-original", "ipad-search", "ipad-search-ranking", "ipad-reader-dismiss"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "browse")) }
-        if route == "ipad-recents" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "groups")) }
+        if route == "ipad-recents" { _showingRecents = State(initialValue: true) }
         if ["ipad-shared", "ipad-group-switcher", "ipad-scan-review", "ipad-shared-member", "ipad-file-preview", "ipad-scan-pdf", "ipad-scan-form", "ipad-markup", "ipad-group-delete"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared")) }
         if route == "ipad-group-selected" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared", groupSelection: .named(NativeReview15.groupID))) }
 
@@ -53,7 +54,7 @@ struct IPadWorkspaceView: View {
     private var groupSelection: GroupSelection { navigation.groupSelection ?? preferences.selection }
     private var selectedGroupID: String? {
         if case .named(let id) = groupSelection { return groups.groups.contains(where: { $0.id == id }) ? id : nil }
-        if groupSelection == .automatic && !store.isAdmin { return groups.groups.first?.id }
+        if groupSelection == .automatic && (groups.groups.count == 1 || !store.isAdmin) { return groups.groups.first?.id }
         return nil
     }
     private var legacyFileGroup: String { if case .legacy(let name) = groupSelection { return name }; return "__generic__" }
@@ -75,7 +76,7 @@ struct IPadWorkspaceView: View {
                 if wasFollowing && liveReader.following { mutedService = liveReader.followingSession }
                 wasFollowing = false
             }) { request in
-                SongGalleryView(store: store, request: request)
+                SongGalleryView(store: store, request: request, followsLiveSession: wasFollowing)
                     .environment(\.worshipLiveContext, liveContext)
             }
     }
@@ -91,9 +92,8 @@ struct IPadWorkspaceView: View {
     private var tabs: some View {
         TabView(selection: Binding(get: { navigation.tab }, set: { navigation.select($0) })) {
             if store.canReadSongs {
-                Tab("Recents", systemImage: "clock", value: "groups") { IPadNavigation(store: store) { IPadRecentsView(active: navigation.tab == "groups") } }
                 if showsGroups {
-                    Tab("Groups", systemImage: "person.2", value: "shared") {
+                    Tab(value: "shared") {
                         IPadNavigation(store: store) {
                             IPadSharedFilesView(store: store, defaultGroup: legacyFileGroup, groupID: selectedGroupID,
                                                groupTitle: groups.groups.first(where: { $0.id == selectedGroupID })?.name,
@@ -102,22 +102,38 @@ struct IPadWorkspaceView: View {
                                 if !id.isEmpty { chosenLiveGroup = id }
                             })
                             .id(selectedGroupID ?? legacyFileGroup)
+                            .toolbar { if liveReader.following { ToolbarItem(placement: .topBarTrailing) { liveControls } } }
                         }
-                    }
+                    } label: { tabLabel("Groups", symbol: "person.2") }.accessibilityLabel("Groups")
                 }
-                Tab("Browse", systemImage: "music.note.list", value: "browse") {
+                Tab(value: "browse") {
                     IPadNavigation(store: store, path: $navigation.path) {
-                        IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Browse", group: preferences.selection == .originalSongs ? "__generic__" : "")
-                            .toolbar { ToolbarItem(placement: .topBarTrailing) { liveControls } }
+                        Group {
+                            if showingRecents { IPadRecentsView() }
+                            else {
+                                IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Browse",
+                                              group: preferences.selection == .originalSongs ? "__generic__" : "",
+                                              serviceSongs: livePlan?["songs"].records ?? [])
+                            }
+                        }
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button(showingRecents ? "Browse library" : "Recents", systemImage: showingRecents ? "music.note.list" : "clock") {
+                                    showingRecents.toggle()
+                                }
+                                .labelStyle(.iconOnly)
+                            }
+                            ToolbarItem(placement: .topBarTrailing) { liveControls }
+                        }
                             .navigationDestination(for: IPadSidebarRoute.self) { page in
                                 switch page {
                                 case .service(let id): ServiceRouteView(computerID: store.selectedComputer, serviceID: id).id(store.accountEpoch.uuidString + store.selectedComputer + id)
                                 case .group(let id): IPadSharedFilesView(store: store, defaultGroup: "__generic__", groupID: id, groupTitle: groups.groups.first(where: { $0.id == id })?.name, groups: groups)
-                                case .folder(let name): IPadSongsView(title: name, group: name)
+                                case .folder(let name): IPadSongsView(title: name, group: name, serviceSongs: livePlan?["songs"].records ?? [])
                                 }
                             }
                     }
-                }
+                } label: { tabLabel("Browse", symbol: "music.note.list") }.accessibilityLabel("Browse")
             }
             if !store.canReadSongs {
                 Tab("Account", systemImage: "person.crop.circle", value: "account") {
@@ -131,9 +147,9 @@ struct IPadWorkspaceView: View {
                 }
             }
             if store.canReadSongs {
-                Tab("Service", systemImage: "calendar", value: "service") {
-                    IPadNavigation(store: store) { services }
-                }
+                Tab(value: "service") {
+                    IPadNavigation(store: store) { services.toolbar { if liveReader.following { ToolbarItem(placement: .topBarTrailing) { liveControls } } } }
+                } label: { tabLabel("Service", symbol: "calendar") }.accessibilityLabel("Service")
                 TabSection("Song folders") { ForEach(overview.songGroups, id: \.self) { group in Tab(group, systemImage: "folder", value: "group:" + group) { EmptyView() }.tabPlacement(.sidebarOnly) } }.tabPlacement(.sidebarOnly)
             }
         }.tabViewStyle(.sidebarAdaptable).defaultAdaptableTabBarPlacement(preferredPlacement).environment(\.symbolVariants, .none).environment(store)
@@ -143,14 +159,14 @@ struct IPadWorkspaceView: View {
             #if DEBUG && targetEnvironment(simulator)
             .sheet(item: $reviewGroup) { draft in WorshipGroupEditorView(store: store, groups: groups, draft: draft) { } }
             #endif
-            .onChange(of: store.selectedComputer) { overview.reset(); navigation = IPadWorkspaceSelection(tab: "browse") }
+            .onChange(of: store.selectedComputer) { overview.reset(); showingRecents = false; chosenLiveGroup = nil; resetLiveScope(); navigation = IPadWorkspaceSelection(tab: "browse") }
             .onChange(of: store.serviceChangeRevision) { Task { await overview.loadServices(); if let id = navigation.serviceID, !overview.services.contains(where: { $0.id == id }) { navigation.serviceID = nil } } }
             .onChange(of: store.catalogChangeRevision) { Task { await overview.load() } }
             .onChange(of: store.groupChangeRevision) { Task { await groups.load() } }
             .onChange(of: groups.revision) {
                 resolveDefault()
                 if case .named(let id) = navigation.groupSelection, !groups.groups.contains(where: { $0.id == id }) { navigation.groupSelection = nil }
-                if groups.loaded && navigation.tab == "shared" && !showsGroups { navigation.select("groups") }
+                if groups.loaded && navigation.tab == "shared" && !showsGroups { navigation.select("browse") }
             }
             .task(id: store.accountEpoch.uuidString + store.selectedComputer) { await loadWorkspace() }
             .task(id: scenePhase) {
@@ -165,11 +181,17 @@ struct IPadWorkspaceView: View {
             }
             .onAppear { if !store.canReadSongs { navigation.select("account") } }
     }
+    @ViewBuilder private func tabLabel(_ title: String, symbol: String) -> some View {
+        if preferredPlacement == .sidebar { Label(title, systemImage: symbol) }
+        else { ActionTabSymbol(name: symbol) }
+    }
+
     private func resetLiveScope() {
         liveReader.stop(store: store)
         liveSong = nil
         mutedService = nil
         wasFollowing = false
+        liveReader.returnRequested = false
     }
 
     private func updateFollowedReader() {
@@ -192,11 +214,17 @@ struct IPadWorkspaceView: View {
             return true
         }, lead: { startLive($0, open: false) },
            canLeadSong: canLeadSong,
+           canLeadService: liveGroup != nil && (plan?["leadership"]["isLeader"].flag == true || plan?["leadership"]["canClaim"].flag == true),
            chooseGroup: { position, group in
                if liveGroup != group { chosenLiveGroup = group }
                startStandalone(position, group: group)
            },
-           availableGroups: groups.groups, selectedGroup: liveGroup)
+           availableGroups: groups.groups, selectedGroup: liveGroup,
+           completeReturnToLive: {
+               guard liveReader.returnRequested else { return }
+               liveReader.returnRequested = false
+               returnToLive()
+           })
     }
 
     private func startStandalone(_ position: LiveWorshipReader.Position, group: String) {
@@ -204,7 +232,22 @@ struct IPadWorkspaceView: View {
         liveReader.start(store: store, group: group, service: "", position: position)
     }
 
-    private var liveControls: some View {
+    @ViewBuilder private var liveControls: some View {
+        if liveReader.following {
+            Button("Back to Live", systemImage: "dot.radiowaves.left.and.right", action: returnToLive)
+                .labelStyle(.iconOnly)
+        } else {
+            liveMenu
+        }
+    }
+
+    private func returnToLive() {
+        guard liveReader.following, let position = liveReader.position, liveSong == nil else { return }
+        mutedService = nil
+        openLive(position, follower: true)
+    }
+
+    private var liveMenu: some View {
         Menu {
             Text(liveReader.status.title)
             if groups.groups.count > 1 {
@@ -220,8 +263,6 @@ struct IPadWorkspaceView: View {
                 Text("Connecting…")
             } else if liveReader.leading {
                 Button("Stop leading live", systemImage: "stop.circle") { liveReader.stop(store: store) }
-            } else if liveReader.following, let position = liveReader.position {
-                Button("Open live song", systemImage: "music.note") { mutedService = nil; openLive(position, follower: true) }
             } else if let plan = livePlan, liveGroup != nil, let first = plan["songs"].records.first,
                       plan["leadership"]["isLeader"].flag || plan["leadership"]["canClaim"].flag {
                 Button("Lead service", systemImage: "person.badge.plus") {
@@ -264,7 +305,7 @@ struct IPadWorkspaceView: View {
 
     private func openLive(_ position: LiveWorshipReader.Position, follower: Bool) {
         if position.songHash != nil {
-            let item = SongGalleryItem(id: position.item, songID: position.item, title: liveReader.songTitle)
+            let item = SongGalleryItem(id: position.item, songID: position.item, title: liveReader.songTitle, contentHash: position.songHash ?? "")
             wasFollowing = follower
             liveSong = SongGalleryRequest(computerID: store.selectedComputer, items: [item], selectedID: item.id)
             return
@@ -307,9 +348,9 @@ struct IPadWorkspaceView: View {
     private func applyDefault() {
         switch preferences.selection {
         case .originalSongs: navigation.select("browse")
-        case .named: navigation.select(showsGroups ? "shared" : "groups")
-        case .legacy(let name): navigation.select(overview.songGroups.contains(name) ? "group:" + name : showsGroups ? "shared" : "groups")
-        case .allGroups: navigation.select(showsGroups ? "shared" : "groups")
+        case .named: navigation.select(showsGroups ? "shared" : "browse")
+        case .legacy(let name): navigation.select(overview.songGroups.contains(name) ? "group:" + name : showsGroups ? "shared" : "browse")
+        case .allGroups: navigation.select(showsGroups ? "shared" : "browse")
         case .automatic: navigation.select("browse")
         }
     }

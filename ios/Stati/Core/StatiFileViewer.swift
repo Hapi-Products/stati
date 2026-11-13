@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatiFileViewer: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.worshipLiveContext) private var live
     @Environment(\.dismiss) private var dismiss
     let request: FilePreviewRequest
     var navigation: ReaderNavigation? = nil
@@ -18,7 +19,7 @@ struct StatiFileViewer: View {
     var body: some View {
         Group {
             if prepared, let url = markup?.source ?? session.url {
-                AppleMarkupView(url: url, filename: item.filename, canEdit: markup?.source != nil && markup?.canEdit == true, navigate: { step in if let navigation { navigate(step < 0 ? navigation.previous : navigation.next) } else { change(to: index + step) } }, saved: { markup?.saved($0) }, close: finish)
+                AppleMarkupView(url: url, filename: item.filename, canEdit: markup?.source != nil && markup?.canEdit == true, navigate: { step in if let navigation { navigate(step < 0 ? navigation.previous : navigation.next) } else { change(to: index + step) } }, saved: { markup?.saved($0) }, close: { finish() })
                     .id(selectedID + retry.uuidString).ignoresSafeArea(.container, edges: .top)
             } else {
                 NavigationStack {
@@ -39,7 +40,7 @@ struct StatiFileViewer: View {
             } message: { Text("Your earlier Markup stays on this device.") }
     }
     @ViewBuilder private var footer: some View {
-        if navigation != nil || request.items.count > 1 || markup?.message.isEmpty == false || closing {
+        if navigation != nil || request.items.count > 1 || markup?.message.isEmpty == false || closing || live?.reader.following == true {
             VStack(spacing: 8) {
                 if let markup, !markup.message.isEmpty {
                     Text(markup.message).font(.footnote).foregroundStyle(Color.statiSecondary)
@@ -47,6 +48,13 @@ struct StatiFileViewer: View {
                         HStack { Button("Sync saved changes") { Task { await markup.sync() } }.disabled(markup.busy); if let url = markup.savedFile { ShareLink("Export saved edit", item: url) }; Button("Use current version") { usingCurrent = true }.disabled(markup.busy) }.font(.footnote)
                         if !markup.busy { Button("Close and keep saved edit") { dismiss() }.font(.footnote) }
                     } else if markup.intent?.state == .keptOnDevice, let url = markup.savedFile { ShareLink("Export earlier Markup", item: url).font(.footnote) }
+                }
+                if let live, live.reader.following {
+                    Button("Back to Live", systemImage: "dot.radiowaves.left.and.right") {
+                        finish(returnToLive: true)
+                    }
+                    .labelStyle(.iconOnly).buttonStyle(.glass)
+                    .disabled(closing || markup?.needsSync == true)
                 }
                 if closing { ProgressView("Saving changes…") }
                 if let navigation {
@@ -76,12 +84,16 @@ struct StatiFileViewer: View {
             action()
         }
     }
-    private func finish() {
+    private func finish(returnToLive: Bool = false) {
         guard !closing else { return }; closing = true
         Task {
             await markup?.editorClosed()
             closing = false
-            if markup?.needsSync != true { store.resources.invalidate(path: item.path); dismiss() }
+            if markup?.needsSync != true {
+                if returnToLive { live?.reader.returnRequested = true }
+                store.resources.invalidate(path: item.path)
+                dismiss()
+            }
         }
     }
     private func load() async {

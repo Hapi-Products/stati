@@ -56,9 +56,17 @@ import SwiftUI
         song = nil; files = []; fileRequest = nil; choosingNotes = false; message = ""; loading = true
         defer { if generation == scope { loading = false } }
         do {
+            if request.offline {
+                guard let cached = try cachedSong(item) else {
+                    message = "This version of the song is unavailable offline."
+                    return
+                }
+                showOfflineSong(cached)
+                return
+            }
             let value = try await fetch("/computers/" + request.computerID + "/songs/" + item.songID)
             try Task.checkCancellation(); guard active, generation == scope else { return }
-            guard value["id"].text == item.songID else { throw APIError(status: 409, message: "The selected song could not be verified. Try opening it again.") }
+            guard value["id"].text == item.songID, !request.isService || item.contentHash.isEmpty || value["contentHash"].text == item.contentHash else { throw APIError(status: 409, message: "The selected song could not be verified. Try opening it again.") }
             let loaded = APIRecord(raw: value.fields); song = loaded; store.recents.opened(song: loaded, computerID: request.computerID)
             var cursor = "", seen: Set<String> = [], ids: Set<String> = []
             var authorizedFiles: [APIRecord] = []
@@ -77,11 +85,24 @@ import SwiftUI
         catch {
             guard active, generation == scope else { return }
             files = []; fileRequest = nil; choosingNotes = false
-            if OfflineReadPolicy.permits(error), let rows = try? store.offlineSongs.rows(computer: request.computerID), let saved = rows.first(where: { $0.id == item.songID }) {
-                song = saved; message = "Offline · saved on this device."; store.recents.opened(song: saved, computerID: request.computerID); return
+            if OfflineReadPolicy.permits(error), let saved = try? cachedSong(item) {
+                showOfflineSong(saved)
+                return
             }
             if song == nil, let failure = error as? APIError, [401,403,404].contains(failure.status) { store.offlineSongs.invalidate(computer: request.computerID) }
             message = song == nil ? error.localizedDescription : "Song notes could not be checked. " + error.localizedDescription
         }
     }
+    private func cachedSong(_ item: SongGalleryItem) throws -> APIRecord? {
+        try store.offlineSongs.rows(computer: request.computerID).first {
+            $0.id == item.songID && (item.contentHash.isEmpty || item.contentHash == $0["contentHash"].text)
+        }
+    }
+
+    private func showOfflineSong(_ saved: APIRecord) {
+        song = saved
+        message = "Offline · saved on this device."
+        store.recents.opened(song: saved, computerID: request.computerID)
+    }
+
 }

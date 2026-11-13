@@ -31,14 +31,17 @@ import SwiftUI
         return try OfflineSongStorage(ownerID: owner, computerID: computer, root: namespace)
     }
     func rows(computer: String) throws -> [APIRecord] { try storage(computer).rows() }
+    func services(computer: String) throws -> [APIRecord] { try storage(computer).services() }
+    func saveService(_ plan: APIRecord, computer: String) throws { try storage(computer).saveService(plan) }
     func issue(computer: String) -> String { computer == failureComputer ? failure : "" }
     func cancel() { token = UUID(); worker?.cancel(); worker = nil; scope = ""; pending = [:]; order = []; next = 0; failure = ""; failureComputer = "" }
     func invalidate(computer: String) { cancel(); try? storage(computer).invalidate() }
     /// Source persistence completes before returning; PDF rendering never gates a library page.
-    func save(_ songs: [APIRecord], computer: String, complete: Bool = false) async throws {
+    func save(_ songs: [APIRecord], computer: String, complete: Bool = false, renderPDFs: Bool = true) async throws {
         guard let store, let owner = store.me?.id, store.selectedComputer == computer, !Task.isCancelled else { throw CancellationError() }
         let cache = try storage(computer)
         try cache.save(songs, complete: complete)
+        guard renderPDFs else { return }
         let current = owner + store.accountEpoch.uuidString + computer
         if complete || scope != current { cancel(); scope = current }
         for song in songs {

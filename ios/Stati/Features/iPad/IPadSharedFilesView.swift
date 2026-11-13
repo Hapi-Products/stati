@@ -2,6 +2,7 @@ import SwiftUI
 import VisionKit
 
 struct IPadSharedFilesView: View {
+    @Environment(\.worshipLiveContext) private var live
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let store: AppStore
@@ -57,7 +58,7 @@ struct IPadSharedFilesView: View {
         .onDisappear { guide.stop() }
         .navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if let switchGroup, let groups, !groups.groups.isEmpty, groups.groups.count > 1 || store.isAdmin {
+                if let switchGroup, let groups, !groups.groups.isEmpty, groups.groups.count > 1 {
                     ToolbarItemGroup(placement: .topBarLeading) {
                         Menu("Switch worship group", systemImage: "person.2") {
                             ForEach(groups.groups) { group in
@@ -81,7 +82,7 @@ struct IPadSharedFilesView: View {
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Grid", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
-                if canUpload || groups?.canCreate == true || canManageGroup {
+                if canUpload || groups?.canCreate == true || canManageGroup || (store.isAdmin && groups?.groups.count == 1 && switchGroup != nil) {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Add and manage", systemImage: "plus") {
                             if canUpload {
@@ -89,6 +90,11 @@ struct IPadSharedFilesView: View {
                                 Button("Scan Document", systemImage: "doc.viewfinder") { scanning = true }.disabled(!VNDocumentCameraViewController.isSupported || scanRecoveryError || !savedScans.isEmpty)
                             }
                             if groups?.canCreate == true { Button("New worship group", systemImage: "person.2.badge.plus") { actions?.create() } }
+                            if store.isAdmin, groupID != nil, groups?.groups.count == 1, let switchGroup {
+                                Button("All groups", systemImage: "person.2") { switchGroup("") }
+                            } else if store.isAdmin, groupID == nil, let groups, groups.groups.count == 1, let group = groups.groups.first, let switchGroup {
+                                Button(group.name, systemImage: "person.2") { switchGroup(group.id) }
+                            }
                             if canManageGroup, let groupID { Button("Group members", systemImage: "person.2") { Task { await actions?.edit(groupID) } } }
                             if let actions { ForEach(actions.drafts) { draft in Button("Continue " + (draft.name.isEmpty ? "group" : draft.name)) { actions.draft = draft } } }
                         }.labelStyle(ActionIconLabelStyle())
@@ -99,7 +105,7 @@ struct IPadSharedFilesView: View {
             .onChange(of: scenePhase) { _, phase in if phase == .active { reader?.reload() } }
             .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in reader?.reload() }
             .searchable(text: $query, placement: .toolbar, prompt: "Search loaded group files").searchToolbarBehavior(.minimize)
-            .fullScreenCover(item: $preview, onDismiss: { Task { await load() } }) { StatiFileViewer(request: $0) }
+            .fullScreenCover(item: $preview, onDismiss: { live?.completeReturnToLive(); Task { await load() } }) { StatiFileViewer(request: $0) }
             .sheet(isPresented: $sharing, onDismiss: { Task { await load() } }) { ShareGroupFileView(initialGroupID: groupID) { sharing = false; Task { await load() } }.presentationSizing(.form) }
             .sheet(item: $reviewScan, onDismiss: loadScans) { scan in ShareGroupFileView(initialScan: scan) { reviewScan = nil; loadScans(); Task { await load() } }.presentationSizing(.form) }
             .sheet(isPresented: $scanning, onDismiss: { if active, let pendingScan { reviewScan = pendingScan; self.pendingScan = nil }; loadScans() }) { DocumentScanner(finished: scanned) }

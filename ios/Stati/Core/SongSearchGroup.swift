@@ -5,16 +5,26 @@ nonisolated struct SongSearchGroup: Identifiable {
     let name: String
     let primaryMatch: Bool
     let songs: [APIRecord]
+    var currentService = false
     var matchLabel: String { primaryMatch ? "Title or first line" : "Other lyrics" }
-    static func sections(_ songs: [APIRecord], query: String) -> [SongSearchGroup] {
+    static func sections(_ songs: [APIRecord], query: String, serviceSongs: [APIRecord] = []) -> [SongSearchGroup] {
+        let byID = Dictionary(songs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var serviceIDs: Set<String> = []
+        let current = serviceSongs.compactMap { item -> APIRecord? in
+            guard let song = byID[item["songId"].text], !item["contentHash"].text.isEmpty,
+                  item["contentHash"] == song["contentHash"], serviceIDs.insert(song.id).inserted else { return nil }
+            return song
+        }
+        let serviceSection = current.isEmpty ? [] : [SongSearchGroup(id: "current-service", name: "In this service", primaryMatch: true, songs: current, currentService: true)]
+        let remaining = songs.filter { !serviceIDs.contains($0.id) }
         let words = normalized(query).split(separator: " ").map(String.init)
         func matches(_ text: String) -> Bool { let value = normalized(text); return !words.isEmpty && words.allSatisfy { value.contains($0) } }
         func primary(_ song: APIRecord) -> Bool {
             let first = song["firstLine"].text.isEmpty ? song["firstSlide"].text.components(separatedBy: .newlines).first ?? "" : song["firstLine"].text
             return matches(song.title) || matches(first)
         }
-        return [true, false].flatMap { priority -> [SongSearchGroup] in
-            let grouped = Dictionary(grouping: songs.filter { primary($0) == priority }) { song in
+        return serviceSection + [true, false].flatMap { priority -> [SongSearchGroup] in
+            let grouped = Dictionary(grouping: remaining.filter { primary($0) == priority }) { song in
                 let group = song["groupName"].text
                 return group.isEmpty || group == "__generic__" ? "Songs" : group
             }

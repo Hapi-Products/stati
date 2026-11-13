@@ -278,7 +278,7 @@ struct SongShortcutDestination: View {
                                 }
                             }
                         } else {
-                            IPadRecentsView(active: true)
+                            IPadRecentsView()
                         }
                     }
                     .toolbar {

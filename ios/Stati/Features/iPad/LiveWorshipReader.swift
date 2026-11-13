@@ -73,6 +73,9 @@ final class LiveWorshipReader {
     private(set) var followingSession = ""
     private(set) var songTitle = ""
     private(set) var following = false
+    private(set) var clickerServiceID: String?
+    private(set) var clickerStatusAvailable = false
+    var returnRequested = false
     private(set) var leading = false
     private(set) var starting = false
     var leadingStandalone: Bool { session?.service.isEmpty == true && (starting || leading) }
@@ -103,18 +106,22 @@ final class LiveWorshipReader {
         let epoch = store.accountEpoch
         let path = endpoint(computer: computer, group: group)
         guard !computer.isEmpty, !group.isEmpty, store.canReadSongs else {
-            following = false; position = nil; serviceID = ""; followingSession = ""; status = .idle
+            following = false; position = nil; serviceID = ""; followingSession = ""; clickerServiceID = nil; clickerStatusAvailable = false; status = .idle
             return
         }
         while !Task.isCancelled && store.accountEpoch == epoch && store.selectedComputer == computer {
             let observed = store.liveReaderUpdates.revision
             do {
-                let response = try await store.api.request(path)
+                let response = try await store.api.request(path + "?clicker=1")
                 try Task.checkCancellation()
                 guard store.accountEpoch == epoch, store.selectedComputer == computer else { return }
                 status = Status(rawValue: response["state"].text) ?? .offline
                 let payload = response["position"]
                 let next = Position(payload)
+                if case .bool = response["clickerConnected"] { clickerStatusAvailable = true }
+                else { clickerStatusAvailable = false }
+                clickerServiceID = status == .live && response["clickerConnected"].flag
+                    ? payload["serviceId"].text : nil
                 if let session, session.id == payload["sessionId"].text, let next,
                    !payload["clickerTurn"].text.isEmpty, payload["clickerTurn"].text != receivedTurn,
                    Int(exactly: payload["sequence"].number) == acknowledgedSequence,
@@ -136,7 +143,7 @@ final class LiveWorshipReader {
             } catch is CancellationError { return }
             catch {
                 guard !Task.isCancelled else { return }
-                status = .offline; following = false; position = nil; serviceID = ""; followingSession = ""
+                status = .offline; clickerServiceID = nil; clickerStatusAvailable = false; following = false; position = nil; serviceID = ""; followingSession = ""
                 if let failure = error as? APIError, [401, 403, 404].contains(failure.status) { return }
                 do { try await store.liveReaderUpdates.wait(after: observed, timeout: .seconds(8)) } catch { return }
             }
@@ -243,6 +250,8 @@ final class LiveWorshipReader {
         sender?.cancel(); sender = nil
         heartbeat?.cancel(); heartbeat = nil
         guard let ending, ending.epoch == store.accountEpoch else { return }
+        clickerServiceID = nil
+        clickerStatusAvailable = false
         status = .waiting
         Task { _ = try? await store.api.request(ending.path, method: "DELETE", body: .object(["sessionId": .string(ending.id)])) }
     }
@@ -259,9 +268,11 @@ struct WorshipLiveContext {
     let shouldOffer: () -> Bool
     let lead: (LiveWorshipReader.Position) -> Void
     var canLeadSong = false
+    var canLeadService = false
     var chooseGroup: ((LiveWorshipReader.Position, String) -> Void)?
     var availableGroups: [APIRecord] = []
     var selectedGroup: String?
+    var completeReturnToLive: () -> Void = {}
 }
 
 extension EnvironmentValues {

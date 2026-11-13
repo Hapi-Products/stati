@@ -1,7 +1,7 @@
 import Foundation
 
 nonisolated struct IPadWorkspaceSelection {
-    var tab = "groups"
+    var tab = "browse"
     var path: [IPadSidebarRoute] = []
     var serviceID: String?
     var groupSelection: GroupSelection?
@@ -21,7 +21,7 @@ nonisolated struct IPadWorkspaceSelection {
             tab = "browse"
             path = [.folder(name)]
         case nil:
-            tab = value
+            tab = value == "groups" ? "browse" : value
         }
     }
 }

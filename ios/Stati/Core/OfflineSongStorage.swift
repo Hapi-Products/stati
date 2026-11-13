@@ -27,7 +27,27 @@ nonisolated struct OfflineSongStorage: Sendable {
         let snapshot = Snapshot(ownerID: ownerID, computerID: computerID, songs: values.values.sorted { $0.id < $1.id })
         try write(JSONEncoder().encode(snapshot), to: directory.appending(path: "catalog.json"))
     }
-    func invalidate() throws { try save([], complete: true) }
+    func services() throws -> [APIRecord] {
+        let url = directory.appending(path: "services.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        return try JSONDecoder().decode([APIRecord].self, from: Data(contentsOf: url))
+    }
+
+    func saveService(_ plan: APIRecord) throws {
+        guard UUID(uuidString: plan.id) != nil else { throw CocoaError(.fileReadCorruptFile) }
+        // A saved plan can be read offline. Its live state and management permissions must be fetched again.
+        var snapshot = plan
+        snapshot["active"] = .bool(false)
+        snapshot["leadership"] = .null
+        let plans = try services().filter { $0.id != snapshot.id } + [snapshot]
+        try write(JSONEncoder().encode(plans), to: directory.appending(path: "services.json"))
+    }
+
+    func invalidate() throws {
+        let url = directory.appending(path: "services.json")
+        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+        try save([], complete: true)
+    }
     private func receipts() throws -> [String: PDFReceipt] {
         let url = directory.appending(path: "pdfs.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return [:] }

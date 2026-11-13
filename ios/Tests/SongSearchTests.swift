@@ -29,4 +29,20 @@ import Testing
         #expect(SongSearchGroup.directMatch([exact, song("second", "Sfânt sfânt", "Other version")], query: "sfant sfant") == nil)
         #expect(SongSearchGroup.directMatch([exact], query: "first verse")?.id == "exact")
     }
+    @Test func currentServicePromotesOnlyMatchingRevisionsInRunningOrder() {
+        var first = song("a", "Holy", "First", "Choir")
+        first["contentHash"] = .string("first")
+        var second = song("b", "Holy", "Second", "Worship")
+        second["contentHash"] = .string("second")
+        var stale = song("c", "Holy", "Third")
+        stale["contentHash"] = .string("new")
+        let order = [("b", "second"), ("a", "first"), ("b", "second"), ("c", "old")].map { id, hash in
+            APIRecord(raw: ["songId": .string(id), "contentHash": .string(hash)])
+        }
+        let sections = SongSearchGroup.sections([first, second, stale], query: "holy", serviceSongs: order)
+        #expect(sections.first?.currentService == true)
+        #expect(sections.first?.songs.map(\.id) == ["b", "a"])
+        #expect(sections.dropFirst().flatMap(\.songs).map(\.id) == ["c"])
+    }
+
 }

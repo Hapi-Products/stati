@@ -99,6 +99,28 @@ import Foundation
             let offlineReader = SongGalleryModel(store: store, request: offlineRequest, fetch: { _ in throw URLError(.notConnectedToInternet) })
             await offlineReader.load()
             checks["offlineSongReaderUsesCachedSourceWithoutInventingGroupNotes"] = offlineReader.song?["text"] == offlineSong["text"] && offlineReader.files.isEmpty && offlineReader.message.hasPrefix("Offline")
+            var servicePlan = APIRecord(raw: NativeReview.plan.fields)
+            servicePlan["active"] = .bool(true)
+            try store.offlineSongs.saveService(servicePlan, computer: store.selectedComputer)
+            let prepared = try store.offlineSongs.services(computer: store.selectedComputer).first { $0.id == servicePlan.id }
+            checks["preparedServiceKeepsRunningOrderWithoutLivePermissions"] = prepared?["songs"] == servicePlan["songs"] &&
+                prepared?["active"].flag == false && prepared?["leadership"] == .null
+            if let prepared, let item = prepared["songs"].records.first,
+               let request = SongGalleryRequest(computerID: store.selectedComputer, songs: prepared["songs"].records,
+                                                selectedID: item.id, service: true, offline: true) {
+                let probe = NativeWorkspaceProbe()
+                let cached = SongGalleryModel(store: store, request: request, fetch: { _ in
+                    probe.downloads += 1
+                    throw URLError(.notConnectedToInternet)
+                })
+                await cached.load()
+                checks["preparedServiceReadsExactCachedLyricsWithoutNetwork"] = cached.song?.id == offlineSong.id && probe.downloads == 0
+                var changed = offlineSong
+                changed["contentHash"] = .string(String(repeating: "f", count: 64))
+                try await store.offlineSongs.save([changed], computer: store.selectedComputer, renderPDFs: false)
+                await cached.load()
+                checks["preparedServiceRejectsAnOfflineCopyOfTheWrongVersion"] = cached.song == nil && probe.downloads == 0
+            }
             if let me = store.me {
                 try OfflineIdentityStorage.save(OfflineIdentity(sessionFingerprint: store.api.sessionFingerprint, profile: me, computers: store.computers))
                 let cold = AppStore()
@@ -133,7 +155,7 @@ import Foundation
             resources.clear(); _ = try await resources.bytes(key: "other-owner|file|v1", filename: "sample.pdf", download: fetch)
             checks["accountResetCannotReusePrivatePreview"] = probe.downloads == 3
         } catch { checks["unexpectedError"] = false }
-        let report: [String: Any] = ["checks": checks, "passed": checks.count == 20 && checks.values.allSatisfy { $0 }, "scope": "Simulator actual observable models, injected HTTP responses and protected cache I/O; no UI gestures or production mutations"]
+        let report: [String: Any] = ["checks": checks, "passed": checks.count == 23 && checks.values.allSatisfy { $0 }, "scope": "Simulator actual observable models, injected HTTP responses and protected cache I/O; no UI gestures or production mutations"]
         if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) { try? data.write(to: URL.applicationSupportDirectory.appending(path: "native-workspace-checks.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
     }
 }

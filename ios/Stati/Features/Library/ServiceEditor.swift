@@ -16,10 +16,10 @@ final class ServiceEditor {
     let computerID: String
     private var debounce: Task<Void, Never>?
     private var resave = false
-    init(store: AppStore, computerID: String, plan: APIRecord, request: (@MainActor (String) async throws -> JSONValue)? = nil) {
+    init(store: AppStore, computerID: String, plan: APIRecord, offline: Bool = false, request: (@MainActor (String) async throws -> JSONValue)? = nil) {
         fetch = request ?? { try await store.api.request($0) }
         self.store = store; self.computerID = computerID; ownerID = store.me?.id ?? ""; epoch = store.accountEpoch
-        self.plan = store.serviceDrafts[plan.id].map { APIRecord(raw: $0) } ?? plan
+        self.plan = offline ? plan : store.serviceDrafts[plan.id].map { APIRecord(raw: $0) } ?? plan
     }
     var canEdit: Bool { plan["leadership"]["canEdit"].flag || (plan["leadership"] == .null && store.canPlan) }
     var title: String { get { plan.title } set { plan["title"] = .string(newValue); changed() } }

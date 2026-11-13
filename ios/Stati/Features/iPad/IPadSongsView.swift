@@ -6,6 +6,8 @@ struct IPadSongsView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
     let group: String
+    var serviceSongs: [APIRecord] = []
+    @Environment(\.worshipLiveContext) private var live
     @State private var library: SongLibraryModel?
     @State private var reader: ReaderPreferences?
     @State private var preview: SongGalleryRequest?
@@ -20,7 +22,7 @@ struct IPadSongsView: View {
     private var sections: [SongAlphabet] { SongAlphabet.sections(songs) }
     private var showsGrid: Bool { searchTerm.isEmpty && !(libraryLayout == "list" || libraryLayout == "saved" && listMode) && !dynamicTypeSize.isAccessibilitySize && !songs.isEmpty }
     private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var searchGroups: [SongSearchGroup] { SongSearchGroup.sections(songs, query: searchTerm) }
+    private var searchGroups: [SongSearchGroup] { SongSearchGroup.sections(songs, query: searchTerm, serviceSongs: serviceSongs) }
     private var orderedSongs: [APIRecord] { searchTerm.isEmpty ? sections.flatMap(\.songs) : searchGroups.flatMap(\.songs) }
     private var largePreviews: Bool { reader?.settings.largePreviews == true }
     private var requestKey: String { store.accountEpoch.uuidString + store.selectedComputer + group + query + String(store.catalogChangeRevision) }
@@ -57,7 +59,7 @@ struct IPadSongsView: View {
             #endif
         } catch { } }
         .refreshable { await load() }
-        .fullScreenCover(item: $preview) { SongGalleryView(store: store, request: $0) }
+        .fullScreenCover(item: $preview, onDismiss: { live?.completeReturnToLive() }) { SongGalleryView(store: store, request: $0) }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in reader?.reload() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { reader?.reload() } }
         .onChange(of: store.accountEpoch) { library = nil; preview = nil; reader = ReaderPreferences(ownerID: store.me?.id ?? "") }
@@ -79,7 +81,7 @@ struct IPadSongsView: View {
             } else {
                 if !searchTerm.isEmpty {
                     ForEach(searchGroups) { section in
-                        Section { ForEach(section.songs) { song in songButton(song) { songRow(song) } } } header: { Text(section.name + " · " + section.matchLabel) }
+                        Section { ForEach(section.songs) { song in songButton(song) { songRow(song) } } } header: { Text(section.currentService ? section.name : section.name + " · " + section.matchLabel) }
                     }
                 } else {
                     ForEach(sections) { section in
@@ -95,13 +97,19 @@ struct IPadSongsView: View {
     }
     private func openSong(_ song: APIRecord) { preview = SongGalleryRequest(computerID: store.selectedComputer, songs: orderedSongs, selectedID: song.id) }
     private func songButton<Content: View>(_ song: APIRecord, @ViewBuilder content: () -> Content) -> some View {
-        Button { openSong(song) } label: { content() }.buttonStyle(.plain).accessibilityLabel(song.title)
+        Button { openSong(song) } label: { content() }.buttonStyle(.plain).accessibilityLabel(song.title).accessibilityHint(searchTerm.isEmpty ? "" : song["firstSlide"].text)
     }
     private func songRow(_ song: APIRecord) -> some View {
-        HStack(spacing: 16) {
+        let language = switch song["language"].text {
+        case "ron": "Romanian"
+        case "eng": "English"
+        default: "Language unspecified"
+        }
+        return HStack(spacing: 16) {
             SlidePreview(text: song["firstSlide"].text, large: largePreviews)
             VStack(alignment: .leading, spacing: 4) {
                 Text(song.title).font(largePreviews ? .title3 : .body).foregroundStyle(.primary)
+                if !searchTerm.isEmpty { Text(language).font(.footnote).foregroundStyle(.secondary) }
                 if group.isEmpty && !song["groupName"].text.isEmpty { Text(song["groupName"].text).font(.footnote).foregroundStyle(Color.statiSecondary) }
             }
             Spacer()

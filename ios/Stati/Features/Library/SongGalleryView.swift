@@ -5,6 +5,7 @@ struct SongGalleryView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.worshipLiveContext) private var live
     private let openingRequest: SongGalleryRequest
+    private let followsLiveSession: Bool
     private let selectionChanged: (String) -> Void
     @State private var model: SongGalleryModel
     @State private var preferences: ReaderPreferences
@@ -28,7 +29,7 @@ struct SongGalleryView: View {
     @State private var didFollow = false
 
     private var following: Bool {
-        guard let live, live.reader.following,
+        guard followsLiveSession, let live, live.reader.following,
               let position = live.reader.position else { return false }
         return position.songHash == nil ? model.request.isService && model.request.items.contains { $0.id == position.item }
             : !model.request.isService && (model.selected.id == position.item || didFollow)
@@ -57,8 +58,9 @@ struct SongGalleryView: View {
     @ScaledMetric(relativeTo: .body) private var actionSize = 20.0
     private var actionSymbolSize: CGFloat { iPad ? 20 : actionSize }
     private var actionTarget: CGFloat { iPad ? 44 : max(44, actionSize * 1.2 + 20) }
-    init(store: AppStore, request: SongGalleryRequest, selectionChanged: @escaping (String) -> Void = { _ in }) {
+    init(store: AppStore, request: SongGalleryRequest, followsLiveSession: Bool = false, selectionChanged: @escaping (String) -> Void = { _ in }) {
         openingRequest = request
+        self.followsLiveSession = followsLiveSession
         self.selectionChanged = selectionChanged
         _model = State(initialValue: SongGalleryModel(store: store, request: request))
         _preferences = State(initialValue: ReaderPreferences(ownerID: store.me?.id ?? ""))
@@ -108,7 +110,7 @@ struct SongGalleryView: View {
             pageIndex = position.page
         }
         .onChange(of: livePosition) {
-            guard let live, let position = livePosition, !following else { return }
+            guard let live, let position = livePosition, !live.reader.following else { return }
             guard position.songHash != nil ? live.reader.leadingStandalone : live.items.contains(where: { $0.id == position.item }) else { return }
             live.reader.update(position, store: store)
         }
@@ -150,9 +152,13 @@ struct SongGalleryView: View {
         .onChange(of: scenePhase) { _, phase in if phase == .active { preferences.reload(); if !following { modeOverride = nil } } }
         .onChange(of: store.accountEpoch) { dismiss() }
         .onChange(of: store.selectedComputer) { dismiss() }
-        .fullScreenCover(item: $preview) { StatiFileViewer(request: $0) }
+        .fullScreenCover(item: $preview, onDismiss: {
+            guard let live, live.reader.returnRequested else { return }
+            if followsLiveSession { live.reader.returnRequested = false }
+            else { dismiss() }
+        }) { StatiFileViewer(request: $0) }
         .sheet(isPresented: $choosingSong) {
-            WorshipReaderSongsView(computerID: model.request.computerID, source: preferences.settings.selectorSource, selected: model.selected) { request in
+            WorshipReaderSongsView(computerID: model.request.computerID, source: model.request.offline ? .currentService : preferences.settings.selectorSource, offlineRequest: model.request.offline ? model.request : nil, selected: model.selected) { request in
                 choosingSong = false
                 if request.items.map(\.id) == model.request.items.map(\.id), request.isService == model.request.isService {
                     if request.position.index == model.position.index { return }
@@ -240,9 +246,24 @@ struct SongGalleryView: View {
                 }
             }
             if iPad, let song = model.song {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if !model.request.isService, let live, live.canLeadSong, !live.availableGroups.isEmpty, !following {
-                        if live.reader.leadingStandalone {
+                if let live, (live.reader.following && !followsLiveSession) || showsLeadControl {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        if live.reader.following && !followsLiveSession {
+                            Button("Back to Live", systemImage: "dot.radiowaves.left.and.right") {
+                                live.reader.returnRequested = true
+                                dismiss()
+                            }
+                            .labelStyle(.iconOnly)
+                        } else if model.request.isService, live.reader.leading {
+                            Button("Stop leading service", systemImage: "stop.circle") { live.reader.stop(store: store) }
+                                .labelStyle(.iconOnly)
+                        } else if model.request.isService {
+                            Button("Lead service", systemImage: "person.wave.2") {
+                                if let position = livePosition { live.lead(position) }
+                            }
+                            .labelStyle(.iconOnly)
+                            .disabled(live.reader.starting)
+                        } else if live.reader.leadingStandalone {
                             Button("Stop leading song", systemImage: "stop.circle") { live.reader.stop(store: store) }
                                 .labelStyle(.iconOnly).disabled(live.reader.starting)
                         } else if !live.reader.leading {
@@ -254,18 +275,14 @@ struct SongGalleryView: View {
                             }.labelStyle(.iconOnly).disabled(live.reader.starting)
                         }
                     }
-                    if store.canPlan {
-                        Button("Link shared notes", systemImage: "link") {
-                            guide.stop()
-                            linking = true
-                        }
-                        .labelStyle(.iconOnly)
-                        .worshipGuide(guide, at: .linkNotes)
-                    }
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0; pageIndex = 0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }.disabled(following)
                         Menu("Notes", systemImage: "note.text") { notesActions }
-                        if store.canPlan {
+                        if store.canPlan && !model.request.offline {
+                            Button("Link shared notes", systemImage: "link") { guide.stop(); linking = true }
                             Button("Add to service", systemImage: "text.badge.plus") { songToPlace = song }
                         }
                         Menu("Share", systemImage: "square.and.arrow.up") {
@@ -274,18 +291,26 @@ struct SongGalleryView: View {
                             }
                             Button("Copy text", systemImage: "doc.on.doc") { UIPasteboard.general.string = song["text"].text }
                         }.disabled(exporting)
-                    } label: { actionIcon("ellipsis") }.accessibilityLabel("Reader options")
+                    } label: { actionIcon("ellipsis") }.accessibilityLabel("Reader options").worshipGuide(guide, at: .linkNotes)
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Song controls help", systemImage: "questionmark") {
                         let hasPages = readerMode == .document || (readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1)
-                        guide.start(.reader(hasPages: hasPages, following: following, canLink: store.canPlan))
+                        guide.start(.reader(hasPages: hasPages, following: following, canLink: store.canPlan && !model.request.offline))
                     }.labelStyle(.iconOnly)
                 }
             }
         }
     }
+    private var showsLeadControl: Bool {
+        guard let live, !live.reader.following else { return false }
+        if model.request.isService {
+            return !model.request.offline && live.canLeadService && live.items.contains { $0.id == model.selected.id }
+        }
+        return live.canLeadSong && !live.availableGroups.isEmpty && (!live.reader.leading || live.reader.leadingStandalone)
+    }
+
     private func followLivePage() {
         guard let position = live?.reader.position, following else {
             if didFollow { didFollow = false; modeOverride = nil; pageIndex = 0 }
@@ -298,7 +323,7 @@ struct SongGalleryView: View {
             model.selectSong(position.item)
             Task { await model.load() }
         } else if model.selected.id != position.item, position.songHash != nil {
-            let item = SongGalleryItem(id: position.item, songID: position.item, title: live?.reader.songTitle ?? "")
+            let item = SongGalleryItem(id: position.item, songID: position.item, title: live?.reader.songTitle ?? "", contentHash: position.songHash ?? "")
             if let request = SongGalleryRequest(computerID: model.request.computerID, items: [item], selectedID: item.id) {
                 model = SongGalleryModel(store: store, request: request)
                 Task { await model.load() }

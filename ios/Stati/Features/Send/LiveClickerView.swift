@@ -129,6 +129,13 @@ import SwiftUI
         }
     }
 
+    func reportPresence(session: String, store: AppStore) async {
+        guard let live = connection, live.sessionID == session, live.count != nil,
+              store.canReadSongs, store.api.signedIn, !store.selectedComputer.isEmpty else { return }
+        _ = try? await store.api.request(path(store.selectedComputer), method: "PATCH",
+                                        body: .object(["sessionId": .string(session)]))
+    }
+
     func endActivities(except session: String? = nil) async {
         for activity in Activity<ServiceActivityAttributes>.activities
         where activity.attributes.clickerSessionID != nil && activity.attributes.clickerSessionID != session {
@@ -160,6 +167,7 @@ import SwiftUI
 struct LiveClickerView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("stati.clicker.arrowsAtBottom") private var arrowsAtBottom = true
     @State private var previewRetry = 0
     let clicker: LiveClicker
@@ -219,6 +227,14 @@ struct LiveClickerView: View {
                             Text("Bottom").tag(true)
                         }
                     }.labelStyle(.iconOnly)
+                }
+            }
+            .task(id: (live?.sessionID ?? "") + String(scenePhase == .active) + String(live?.count != nil)) {
+                guard scenePhase == .active, let live, live.count != nil else { return }
+                let session = live.sessionID
+                while !Task.isCancelled {
+                    await clicker.reportPresence(session: session, store: store)
+                    do { try await Task.sleep(for: .seconds(4)) } catch { return }
                 }
             }
             .onChange(of: clicker.connection?.sessionID, initial: true) { _, id in

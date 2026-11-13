@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct ServiceEditorContent: View {
+    @Environment(\.worshipLiveContext) private var live
     @Environment(AppStore.self) private var store
     @Bindable var editor: ServiceEditor
+    var offline = false
     private var iPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var canEdit: Bool { editor.canEdit && !iPad }
     private var leadership: JSONValue { editor.plan["leadership"] }
@@ -26,13 +28,21 @@ struct ServiceEditorContent: View {
                     DatePicker("Time", selection: $editor.schedule, displayedComponents: .hourAndMinute).disabled(!canEdit)
                 }
             }
-            Section("Service leader") {
-                if leadership["leaderLabel"].text.isEmpty { Text("No leader assigned").foregroundStyle(.secondary) }
-                else { ServiceLeaderBadge(plan: editor.plan) }
+            if iPad && !offline && !editor.plan["archived"].flag {
+                IPadServiceReadyCheck(plan: editor.plan, computerID: editor.computerID)
+                    .id(editor.plan.id + String(editor.plan["revision"].number))
+            }
+            if offline {
+                Section { Label("Offline · saved running order", systemImage: "arrow.down.circle") }
+            } else {
+                Section("Service leader") {
+                    if leadership["leaderLabel"].text.isEmpty { Text("No leader assigned").foregroundStyle(.secondary) }
+                    else { ServiceLeaderBadge(plan: editor.plan) }
+                }
             }
             Section {
                 ForEach(editor.songs) { song in
-                    Button { readingID = song.id; preview = SongGalleryRequest(computerID: editor.computerID, songs: editor.songs, selectedID: song.id, service: true) }
+                    Button { readingID = song.id; preview = SongGalleryRequest(computerID: editor.computerID, songs: editor.songs, selectedID: song.id, service: true, offline: offline) }
                     label: {
                         HStack(spacing: 12) {
                             ServiceSongRow(computerID: editor.computerID, song: song).foregroundStyle(.primary)
@@ -42,11 +52,11 @@ struct ServiceEditorContent: View {
                         .contextMenu { if canEdit { Button("Remove from service", systemImage: "trash", role: .destructive) { editor.remove(song.id) } } }
                         .moveDisabled(!canEdit)
                 }.onMove(perform: editor.move)
-                if editor.canEdit {
+                if editor.canEdit && !offline {
                     Button("Add song from library", systemImage: "plus") { adding = true }
                         .disabled(editor.changingLeader || editor.songs.count >= 1000)
                 }
-                if iPad && !editor.plan["archived"].flag {
+                if iPad && !offline && !editor.plan["archived"].flag {
                     Button("Song requests and uploads", systemImage: "tray.and.arrow.up") { showingRequests = true }
                 }
             } header: { SectionHeading("Running order · \(editor.songs.count)") }
@@ -55,11 +65,11 @@ struct ServiceEditorContent: View {
                 Task { do { let song = APIRecord(raw: try await store.api.request("/computers/" + editor.computerID + "/songs/" + id).fields); editor.add(song) } catch { editor.message = error.localizedDescription } }; return true
             }
             LabeledSection("Notes") { if iPad { Text(editor.notes.isEmpty ? "No notes" : editor.notes).textSelection(.enabled) } else { TextEditor(text: $editor.notes).frame(minHeight: 96).disabled(!canEdit).accessibilityLabel("Service notes") } }
-            Section {
+            if !offline { Section {
                 Button("Version history & changes", systemImage: "clock.arrow.circlepath") { history = true }
                 if !iPad && editor.plan["leadership"]["isLeader"].flag { Button("Finalize running order", systemImage: "checkmark.seal") { Task { await editor.leadership("finalize-order") } } }
                 if !iPad && editor.plan["leadership"]["canAcknowledge"].flag { Button("Acknowledge running order") { Task { await editor.leadership("acknowledge-order") } } }
-            }
+            } }
         }
         .worshipGuide(iPad ? guide : nil, at: .fallback)
         .environment(\.editMode, .constant(canEdit ? .active : .inactive))
@@ -72,6 +82,7 @@ struct ServiceEditorContent: View {
                         Task { await editor.refresh() }
                     }
                     .labelStyle(.iconOnly)
+                    .disabled(offline)
                     .worshipGuide(guide, at: .serviceRefresh)
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
@@ -94,8 +105,8 @@ struct ServiceEditorContent: View {
         .alert("Service leadership changed", isPresented: Binding(get: { !editor.leadershipNotice.isEmpty }, set: { if !$0 { editor.leadershipNotice = "" } })) {
             Button("OK", role: .cancel) { editor.leadershipNotice = "" }
         } message: { Text(editor.leadershipNotice) }
-        .refreshable { await editor.refresh() }
-        .fullScreenCover(item: $preview) { SongGalleryView(store: store, request: $0, selectionChanged: { readingID = $0 }) }
+        .refreshable { if !offline { await editor.refresh() } }
+        .fullScreenCover(item: $preview, onDismiss: { live?.completeReturnToLive() }) { SongGalleryView(store: store, request: $0, selectionChanged: { readingID = $0 }) }
         .sheet(isPresented: $adding) { NavigationStack { SongPicker(computerID: editor.computerID) { editor.add($0); adding = false } } }
         .sheet(isPresented: $showingRequests) { ServiceSongRequestsView(computerID: editor.computerID, serviceID: editor.plan.id, title: editor.title) }
         .sheet(isPresented: $history) { NavigationStack { ServiceHistoryView(computerID: editor.computerID, serviceID: editor.plan.id) } }
@@ -109,7 +120,7 @@ struct ServiceEditorContent: View {
             }
         }
         #endif
-        .onDisappear { guide.stop(); if !editor.failed { Task { await editor.save() } } }
+        .onDisappear { guide.stop(); if !offline && !editor.failed { Task { await editor.save() } } }
     }
 
     private var leadershipConfirmation: String {
@@ -119,13 +130,13 @@ struct ServiceEditorContent: View {
     @ViewBuilder private var leadershipActions: some View {
         if leadership["isLeader"].flag, !editor.plan["archived"].flag {
             Button("Leave leadership", systemImage: "person.badge.minus") { confirmingLeadership = "release-leadership" }
-                .disabled(editor.saving || editor.changingLeader)
+                .disabled(editor.saving || editor.changingLeader || offline)
         } else if leadership["canTakeOver"].flag {
             Button("Take over", systemImage: "person.badge.plus") { confirmingLeadership = "claim-leadership" }
-                .disabled(editor.saving || editor.changingLeader)
+                .disabled(editor.saving || editor.changingLeader || offline)
         } else if leadership["canClaim"].flag {
             Button("Lead service", systemImage: "person.badge.plus") { Task { await editor.leadership("claim-leadership") } }
-                .disabled(editor.saving || editor.changingLeader)
+                .disabled(editor.saving || editor.changingLeader || offline)
         }
     }
 

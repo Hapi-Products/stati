@@ -5,6 +5,7 @@ struct WorshipReaderSongsView: View {
     @Environment(\.dismiss) private var dismiss
     let computerID: String
     let source: SongSelectorSource
+    var offlineRequest: SongGalleryRequest? = nil
     let selected: SongGalleryItem
     let select: (SongGalleryRequest) -> Void
     @State private var service: APIRecord?
@@ -13,11 +14,12 @@ struct WorshipReaderSongsView: View {
     @State private var query = ""
 
     private var items: [SongGalleryItem] {
+        if let offlineRequest { return offlineRequest.items }
         if let service {
             return service["songs"].records.compactMap { row in
                 let songID = row["songId"].text
                 guard !songID.isEmpty else { return nil }
-                return SongGalleryItem(id: row.id, songID: songID, title: row.title)
+                return SongGalleryItem(id: row.id, songID: songID, title: row.title, contentHash: row["contentHash"].text)
             }
         }
         return store.recents.items.filter { $0.kind == .song && $0.computerID == computerID }
@@ -35,10 +37,10 @@ struct WorshipReaderSongsView: View {
                 if loading { ProgressView("Finding current service…") }
                 if !message.isEmpty { NoticeView(text: message) }
                 if !loading {
-                    Section(service?.title ?? "Recents") {
+                    Section(offlineRequest != nil ? "Running order" : service?.title ?? "Recents") {
                         ForEach(matching) { song in
                             Button {
-                                if let request = SongGalleryRequest(computerID: computerID, items: items, selectedID: song.id, service: service != nil) { select(request) }
+                                if let request = SongGalleryRequest(computerID: computerID, items: items, selectedID: song.id, service: service != nil || offlineRequest != nil, offline: offlineRequest != nil) { select(request) }
                             } label: {
                                 HStack {
                                     Text(song.title).foregroundStyle(.primary)
@@ -70,11 +72,11 @@ struct WorshipReaderSongsView: View {
     }
 
     private func isSelected(_ song: SongGalleryItem) -> Bool {
-        service == nil ? song.songID == selected.songID : song.id == selected.id
+        service == nil && offlineRequest == nil ? song.songID == selected.songID : song.id == selected.id
     }
 
     private func loadService() async {
-        guard source == .currentService else { return }
+        guard offlineRequest == nil, source == .currentService else { return }
         let epoch = store.accountEpoch
         loading = true
         defer { loading = false }

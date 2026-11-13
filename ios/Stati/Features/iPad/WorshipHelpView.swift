@@ -38,7 +38,7 @@ enum WorshipHelpTopic {
             readerSteps(hasPages: hasPages, following: following, canLink: canLink)
         case .browse:
             [
-                Step(target: .fallback, title: "Browse your song library", instruction: "Tap a first-slide preview to open the song. Use the magnifying glass to search by title or lyrics."),
+                Step(target: .fallback, title: "Browse your song library", instruction: "Tap a first-slide preview to open the song. Use the magnifying glass to search by title or lyrics, or tap the clock for Recents."),
                 Step(target: .fallback, title: "Check live service status", instruction: "The dot is gray with no active service, red when you’re waiting or disconnected, and green when live. Tap it for details.")
             ]
         case .groups:
@@ -48,7 +48,7 @@ enum WorshipHelpTopic {
             ]
         case .service:
             [
-                Step(target: .fallback, title: "Read from the running order", instruction: "Tap a song in the service to open it. Use Song Selector in the reader to move between songs in the order."),
+                Step(target: .fallback, title: "Read from the running order", instruction: "Tap a song in the service to open it. Use Song Selector in the reader to move between songs in the order. The ready check shows which songs are saved on this iPad."),
                 Step(target: .serviceRefresh, title: "Refresh the running order", instruction: "Tap the refresh icon to fetch the latest service. Use the person icon when it appears to lead or leave the service.")
             ]
         }
@@ -67,7 +67,7 @@ enum WorshipHelpTopic {
             }
         }
         if canLink {
-            steps.append(Step(target: .linkNotes, title: "Link shared notes", instruction: "Tap the link icon at the top, then pick a shared file. Open Reader options → Notes to find the file again."))
+            steps.append(Step(target: .linkNotes, title: "Link shared notes", instruction: "Open Reader options (•••) and tap Link shared notes, then pick a shared file. Open Reader options → Notes to find the file again."))
         }
         steps.append(Step(target: .focus, title: "Focus on the song", instruction: "Tap the diagonal arrows at the lower right to hide reader controls. Tap them again to bring the controls back."))
         return steps
