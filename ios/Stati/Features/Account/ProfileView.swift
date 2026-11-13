@@ -45,7 +45,7 @@ struct ProfileView: View {
                     }
                 }
                 VStack(spacing: 0) {
-                    NavigationLink { PhoneFeaturesView() } label: { ProfileDestinationRow(title: "Features", icon: "slider.horizontal.3") }
+                    NavigationLink(value: MoreRoute.features) { ProfileDestinationRow(title: "Features", icon: "slider.horizontal.3") }
                     Divider().padding(.leading, 56)
                     NavigationLink { DiagnosticsView() } label: { ProfileDestinationRow(title: "Diagnostics", icon: "stethoscope") }
                     Divider().padding(.leading, 56)
@@ -68,7 +68,7 @@ struct ProfileView: View {
                 }
             }
             .navigationDestination(for: MoreRoute.self) { route in
-                switch route { case .account: AccountView(); case .team: TeamView(); case .computers: ComputersView(); case .songRequests: SongRequestsView(); case .privacy: PrivacyView(); case .whatsNew: WhatsNewView() }
+                switch route { case .account: AccountView(); case .features: PhoneFeaturesView(); case .team: TeamView(); case .computers: ComputersView(); case .songRequests: SongRequestsView(); case .privacy: PrivacyView(); case .whatsNew: WhatsNewView() }
             }
             .task(id: store.me?.id) { await loadTeam() }
             .refreshable { await loadTeam() }

@@ -14,7 +14,8 @@ struct AppUpdate: Identifiable {
     static let current = AppUpdate(id: 63, title: "Get ready for worship", highlights: [
         Highlight(title: "Prepare your set", detail: "Check which songs are saved and prepare the running order for offline use.", icon: "arrow.down.circle"),
         Highlight(title: "Back to Live", detail: "Return to the leader’s current song and page after browsing.", icon: "dot.radiowaves.left.and.right"),
-        Highlight(title: "Find the right version", detail: "Browse puts matching songs from the current service first. Tap the clock for Recents.", icon: "music.note.list")
+        Highlight(title: "Find the right version", detail: "Browse puts matching songs from the current service first. Tap the clock for Recents.", icon: "music.note.list"),
+        Highlight(title: "Pause Builds in settings", detail: "Administrators can pause and resume releases from Profile → Features.", icon: "pause.circle")
     ], details: [])
     static let previous: [AppUpdate] = [
         AppUpdate(id: 62, title: "Quicker Live Clicker", highlights: [

@@ -26,7 +26,7 @@ import SwiftUI
             value["capabilities"] = .object(["readSongs": .bool(true), "commentSongs": .bool(true), "sendFiles": .bool(false), "planServices": .bool(false), "editLyrics": .bool(false)])
             return .object(value)
         }
-        guard ["team-member", "team-leader", "account-member", "computers-member", "send-build-pause-member"].contains(route ?? "") else { return person }
+        guard ["team-member", "team-leader", "account-member", "computers-member", "phone-build-pause-member"].contains(route ?? "") else { return person }
         var value = person.fields; value["role"] = .string("member")
         if route == "team-leader" { value["ministryRole"] = .string("worship_leader") }
         return .object(value)
@@ -77,13 +77,13 @@ import SwiftUI
         return renderer.uiImage!.pngData()!
     }
     static func buildPauseResponse(_ request: URLRequest) -> (status: Int, body: JSONValue)? {
-        guard route == "send-build-pause", request.url?.path == "/api/admin/build-pause" else { return nil }
+        guard ["phone-build-pause", "phone-build-pause-service"].contains(route ?? ""), request.url?.path == "/api/admin/build-pause" else { return nil }
         if request.httpMethod == "PUT" {
             guard let data = NativeMarkupServer.requestBody(request), let body = try? JSONDecoder().decode(JSONValue.self, from: data),
                   case let .bool(paused) = body["paused"] else { return (400, .object(["error": .string("Invalid pause.")])); }
             reviewBuildPause = paused
         }
-        return (200, .object(["manualPaused": .bool(reviewBuildPause), "activeService": .bool(false), "scheduledUntil": .null]))
+        return (200, .object(["manualPaused": .bool(reviewBuildPause), "activeService": .bool(route == "phone-build-pause-service"), "scheduledUntil": .null]))
     }
     static func clickerResponse(_ request: URLRequest) -> (status: Int, body: JSONValue)? {
         guard route == "phone-live-clicker", request.url?.path == "/api/computers/" + computerID + "/live-clicker" else { return nil }
