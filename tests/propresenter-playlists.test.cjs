@@ -250,3 +250,30 @@ test('connection check catches unsupported playlist shapes without writing or ad
  await assert.rejects(api.probe({playlists:true}),{code:'INVALID_RESPONSE',message:/songs were kept/});assert.ok(state.calls.every(call=>call.method==='GET'));
  state.tree=[{type:'playlist',id:{name:servicePlaylistName(service)}}];await assert.rejects(api.ensureServicePlaylist(service),{code:'INVALID_RESPONSE'});assert.equal(state.calls.some(call=>call.method!=='GET'),false);
 });
+
+test('reads the exact active presentation and confirms a guarded slide jump', async t => {
+ const presentationId = songA.uuid;
+ let index = 0, id = presentationId, triggers = 0;
+ const {api} = await fixture(t, {override: (req, res, _state, {url}) => {
+  if (url.pathname === '/v1/presentation/slide_index') {
+   res.writeHead(200, {'Content-Type':'application/json'});
+   res.end(JSON.stringify({presentation_index:{index,presentation_id:{uuid:id}}}));
+   return true;
+  }
+  if (url.pathname === '/v1/presentation/'+presentationId+'/3/trigger') {
+   triggers++;
+   index = 3;
+   res.writeHead(204);
+   res.end();
+   return true;
+  }
+  return false;
+ }});
+ const current = await api.activeSlide();
+ assert.deepEqual(current,{presentationId,index:0});
+ assert.deepEqual(await api.triggerActiveSlide(current,3),{presentationId,index:3});
+ await assert.rejects(api.triggerActiveSlide(current,3),{code:'SLIDE_CHANGED'});
+ id = songB.uuid;
+ await assert.rejects(api.triggerActiveSlide({presentationId,index:3},0),{code:'SLIDE_CHANGED'});
+ assert.equal(triggers,1);
+});

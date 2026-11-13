@@ -274,7 +274,33 @@ function createProPresenterPlaylists(options={}){
    return{...ref,ownedItems:owned,changed:!same};
   });
  }
+ async function activeSlide({signal}={}){
+  const result=await request('GET','/v1/presentation/slide_index',undefined,signal);
+  const current=result?.presentation_index;
+  if(current===null)return null;
+  if(!current||!Number.isSafeInteger(current.index)||current.index<0||current.index>10000){
+   throw fail('INVALID_RESPONSE','ProPresenter returned an invalid slide position.');
+  }
+  return {presentationId:uuid(current.presentation_id?.uuid,'presentation UUID'),index:current.index};
+ }
+ async function triggerActiveSlide(expected,index,{signal}={}){
+  const presentationId=uuid(expected?.presentationId,'presentation UUID');
+  const currentIndex=integer(expected?.index,-1,0,10000,'current slide');
+  const target=integer(index,-1,0,10000,'target slide');
+  if(currentIndex<0||target<0)throw fail('INVALID_INPUT','Choose a valid slide.');
+  const current=await activeSlide({signal});
+  if(current?.presentationId!==presentationId||current.index!==currentIndex){
+   throw fail('SLIDE_CHANGED','The active ProPresenter slide changed. Refresh before trying again.');
+  }
+  if(target===currentIndex)return current;
+  await request('GET','/v1/presentation/'+presentationId+'/'+target+'/trigger',undefined,signal);
+  const confirmed=await activeSlide({signal});
+  if(confirmed?.presentationId!==presentationId||confirmed.index!==target){
+   throw fail('SLIDE_UNCONFIRMED','ProPresenter did not confirm the selected slide.');
+  }
+  return confirmed;
+ }
  async function deletePlaylist(){throw fail('UNSUPPORTED_OPERATION','ProPresenter does not document a playlist deletion API. Remove the empty service playlist in ProPresenter.');}
- return{probe,ensureServicePlaylist,getServicePlaylist,resolvePresentation,addPresentations,orderPresentations,cleanupPlaylist,deletePlaylist};
+ return{probe,ensureServicePlaylist,getServicePlaylist,resolvePresentation,addPresentations,orderPresentations,cleanupPlaylist,deletePlaylist,activeSlide,triggerActiveSlide};
 }
 module.exports={createProPresenterPlaylists,servicePlaylistName,ProPresenterError};

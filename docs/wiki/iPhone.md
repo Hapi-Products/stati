@@ -45,6 +45,12 @@ In development build 62, the clicker uses the confirmed page from each tap so yo
 
 With development build 63 and the accompanying server update, keeping the clicker open lets the leader’s iPad show **Phone clicker connected** in the Service ready check.
 
+### Test the clicker before service
+
+Open **Service → Ready check → Clicker Test** on the iPad. On iPhone, open **Live Clicker** from Send, tap the options icon, and choose **Clicker Test**. Use the same profile and computer on both devices. Start the test and leave both screens open for ten seconds. Stați sends five sample pages and shows how many the iPad acknowledged, plus the median time from the server receiving a page to the iPad’s acknowledgment. The test runs separately from the live reader.
+
+In build 64, swipe the live preview to turn pages, or tap the page count to choose a specific page. The preview uses the PDF transition from the leader’s iPad and respects Reduce Motion.
+
 ## Find songs and use Shortcuts
 
 Use the search icon and enter a title or part of a lyric. Choose the matching version from the results. The **Find a Song** Siri shortcut opens matching library results for you to choose from. Turn on Siri Shortcuts in **Profile → Features**.

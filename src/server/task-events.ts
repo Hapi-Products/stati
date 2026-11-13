@@ -1,3 +1,4 @@
+import {rehearse} from './clicker-rehearsal';
 import {DurableObject} from 'cloudflare:workers';
 import {HttpError,now} from './core';
 import type {WorkspaceMessage} from '../shared/workspace-events';
@@ -9,6 +10,7 @@ const validSubscriber=(value:unknown):value is Subscriber=>!!value&&typeof value
 
 /** Per-deployment ministry notification room. No task, song, group or file contents, names or identifiers travel on it. */
 export class TaskEvents extends DurableObject<Env>{
+ rehearsal(input:Parameters<typeof rehearse>[1]){return rehearse(this.ctx.storage,input);}
  async fetch(request:Request){
   if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
   const subscriber={userId:request.headers.get('X-Task-User')||'',sessionHash:request.headers.get('X-Task-Session')||''};

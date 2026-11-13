@@ -49,7 +49,10 @@ const click = z.strictObject({
  sessionId:z.string().uuid(), itemId:position.shape.itemId,
  sequence:z.number().int().min(1).max(1_000_000_000),
  page:z.number().int().min(0).max(10_000), turn:z.string().uuid().nullable(),
- direction:z.union([z.literal(-1),z.literal(1)]),
+ direction:z.union([z.literal(-1),z.literal(1)]).optional(),
+ targetPage:z.number().int().min(0).max(10_000).optional(),
+}).refine(input => (input.direction === undefined) !== (input.targetPage === undefined), {
+ message:'Choose a direction or target page.',
 });
 
 const clickerPresenceSeconds = 12;
@@ -94,16 +97,16 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
   if (!result.meta.changes) throw new HttpError(409,'The live reader is no longer available.');
   return json({ok:true});
  }
- const input = await body(request,click,512), page = input.page + input.direction;
+ const input = await body(request,click,512), page = input.targetPage ?? input.page + (input.direction ?? 0);
  const turn = crypto.randomUUID();
  const updated = await env.DB.prepare(`UPDATE worship_live_reader AS live
   SET position_json=json_set(position_json,'$.page',?,'$.clickerTurn',?,'$.clickerUntil',?)
   WHERE ${scope} AND live.session_id=? AND live.item_id=? AND live.sequence=?
     AND json_extract(position_json,'$.page')=? AND json_extract(position_json,'$.clickerTurn') IS ?
     AND json_extract(position_json,'$.mode')<>'text'
-    AND ? >=0 AND ? < json_extract(position_json,'$.pageCount')
+    AND ? >=0 AND ? < json_extract(position_json,'$.pageCount') AND ?<>json_extract(position_json,'$.page')
   RETURNING position_json AS position`).bind(page,turn,time+clickerPresenceSeconds,...params,input.sessionId,input.itemId,input.sequence,
-   input.page,input.turn,page,page).first<{position:string}>();
+   input.page,input.turn,page,page,page).first<{position:string}>();
  if (!updated) throw new HttpError(409,'The live page changed or is unavailable. Try again after it refreshes.');
  return json({position:publicPosition(updated.position).position});
 }

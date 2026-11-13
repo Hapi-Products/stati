@@ -64,6 +64,8 @@ In the song reader, open the menu and choose **Add to service**, or use the Siri
 
 Open the service and look for **Ready check**. It shows which versions of the songs are saved on this iPad. Expand **Songs to save** to see what is missing. Tap **Prepare set for offline use** to download the songs and save the running order. An updated server and phone report whether the leader’s clicker is connected during an active service.
 
+In development build 64, **Changes since preparation** shows additions with a green plus and removals with a red minus. A replacement shows the old and new entries. A move shows both positions. Tap **Update saved set** to save the new order and download the song versions that are missing. Use **Clicker Test** in the same section to receive rehearsal pages from the phone.
+
 If the iPad loses internet access, open **Service** to find saved running orders. Open one to read the prepared songs. The offline copy is for reading. Live following and clicker commands require a connection.
 
 

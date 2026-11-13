@@ -133,6 +133,13 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect(await hostStatus()).toMatchObject({state:'live',clickerConnected:false});
  expect((await presence(f.session)).status).toBe(200);
  expect(await hostStatus()).toMatchObject({state:'live',clickerConnected:true});
+ const jump = {sessionId:ready.sessionId,itemId:ready.itemId,sequence:4,page:0,turn:null,targetPage:2};
+ expect((await clicker(f.session,{...jump,targetPage:3})).status).toBe(409);
+ expect((await clicker(f.session,{...jump,direction:1})).status).toBe(400);
+ expect(await (await clicker(f.session,jump)).json()).toMatchObject({position:{page:2}});
+ expect((await clicker(f.session,jump)).status).toBe(409);
+ expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:2}});
+
 
  expect((await clicker(f.session,{...move,page:0,direction:1})).status).toBe(409);
  expect((await request(memberCookie,'DELETE',{sessionId:update.sessionId})).status).toBe(200);

@@ -17,6 +17,10 @@
 
 Linking leaves the original file in **Groups** and preserves its permissions. If you can manage the link, use **Notes → Unlink file** to remove it from the song.
 
+## Read a linked PDF or image
+
+On iPad in development build 64, open a linked PDF to swipe between pages or choose a page from the counter. Tap the half-filled circle to invert a PDF or image for reading. The eye icon opens the file in Quick Look for Markup or sharing.
+
 ## Get help in portrait or landscape
 
 Tap the **question mark** in the song reader toolbar. The guide starts with the reading formats, then covers Song Selector, page previews when available, linking notes from Reader options, and Focus. If you’re following a live leader, the guide explains why manual song and page controls are unavailable.
