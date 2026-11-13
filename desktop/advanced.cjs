@@ -9,11 +9,12 @@ async function writeNewFile(file,content,assertCurrent=()=>{}){
 }
 async function uniqueWrite(directory,name,content,assertCurrent=()=>{}){const ext=path.extname(name),stem=name.slice(0,-ext.length);for(let i=0;i<10000;i++){assertCurrent();const p=path.join(directory,i?`${stem} (${i})${ext}`:name);try{return await writeNewFile(p,content,assertCurrent);}catch(e){if(e.code!=='EEXIST')throw e;}}throw new Error('Could not choose a new presentation filename.');}
 function filename(raw){return raw.normalize('NFKC').replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/,'').slice(0,90)||'Presentation';}
-async function songsFolder(parent,documents,assertCurrent=()=>{}){
+async function songsFolder(parent,documents,assertCurrent=()=>{},chooseAgain=false){
  assertCurrent();const config=path.join(require('electron').app.getPath('userData'),'lyrics-folder.json');let existing;
  try{const saved=JSON.parse(await fs.readFile(config,'utf8'));if(typeof saved.path==='string'&&path.basename(saved.path)==='Lyrics'&&(await fs.stat(saved.path)).isDirectory())existing=saved.path;}catch{}
- assertCurrent();if(existing)return existing;
- const choice=await dialog.showOpenDialog(parent,{title:'Choose your ProPresenter Libraries folder — songs will go in Lyrics',defaultPath:path.join(documents,'ProPresenter','Libraries'),properties:['openDirectory']});assertCurrent();
+ assertCurrent();if(existing&&!chooseAgain)return existing;
+ const choice=await dialog.showOpenDialog(parent,{title:'Choose a Lyrics folder or its parent, including a synced drive',defaultPath:existing||path.join(documents,'ProPresenter','Libraries'),properties:['openDirectory']});assertCurrent();
+ if(choice.canceled&&chooseAgain)return null;
  if(choice.canceled||!choice.filePaths[0])throw new Error('Choose a library folder to continue.');const selected=choice.filePaths[0],directory=path.basename(selected)==='Lyrics'?selected:path.join(selected,'Lyrics');
  await fs.mkdir(directory,{recursive:true});assertCurrent();await fs.writeFile(config,JSON.stringify({path:directory}),{mode:0o600});assertCurrent();return directory;
 }
