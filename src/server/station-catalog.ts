@@ -18,23 +18,27 @@ export async function requireStationMinistry(request:Request,env:Env,deviceId:st
  if(!await env.DB.prepare('SELECT 1 WHERE '+guard.sql).bind(...guard.params).first())throw new HttpError(403,'Connect to this computer and wait for approval first.');
  return authority;
 }
-// Authenticate and check the computer and group together. The read/write
-// statements below still recheck access in case it changes during a request.
-export async function requireSongStation(request:Request,env:Env,deviceId:string,groupId?:string):Promise<MinistryAuthority> {
+// The live reader can use the same access check inside its page query.
+export async function songStationAccess(request:Request,deviceId:string,groupId?:string){
  const raw = cookie(request,'stati_session');
  if (!raw) throw new HttpError(401,'Sign in with your passkey to continue.');
- const sessionHash = await hash(raw);
+ const sessionHash = await hash(raw), time = now();
  const groupCheck = groupId === undefined ? '1' : `EXISTS(
   SELECT 1 FROM worship_groups wg JOIN worship_group_members gm ON gm.group_id=wg.id
   WHERE wg.id=? AND wg.archived_at IS NULL AND gm.user_id=actor.id
  )`;
- const args = groupId === undefined ? [deviceId] : [deviceId,groupId];
- const row = await env.DB.prepare(`SELECT actor.*, ministry.role AS ministryRole,
+ const sql = `SELECT actor.*, ministry.role AS ministryRole,
    ${stationConnectionCheck('actor.id','actor.role')} AS stationAccess, ${groupCheck} AS groupAccess
   FROM sessions authentication JOIN users actor ON actor.id=authentication.user_id
   LEFT JOIN user_ministry_roles ministry ON ministry.user_id=actor.id
-  WHERE authentication.token_hash=? AND authentication.expires_at>? AND actor.status<>'removed'`)
-  .bind(...args,sessionHash,now()).first<User & {ministryRole:MinistryRole|null;stationAccess:number;groupAccess:number}>();
+  WHERE authentication.token_hash=? AND authentication.expires_at>? AND actor.status<>'removed'`;
+ const params = [...(groupId === undefined ? [deviceId] : [deviceId,groupId]),sessionHash,time];
+ return {sql,params,sessionHash,time};
+}
+
+export type SongStationAccess = User & {ministryRole:MinistryRole|null;stationAccess:number;groupAccess:number};
+
+export function validateSongStation(row:SongStationAccess|null){
  if (!row) throw new HttpError(401,'Sign in with your passkey to continue.');
  if (row.status !== 'active') throw new HttpError(403,'An administrator or worship leader needs to approve your account.');
  const {ministryRole,stationAccess,groupAccess,...user} = row;
@@ -42,7 +46,13 @@ export async function requireSongStation(request:Request,env:Env,deviceId:string
  if (!capabilities.readSongs) throw new HttpError(403,'Your role does not allow this action.');
  if (!stationAccess) throw new HttpError(403,'Connect to this computer and wait for approval first.');
  if (!groupAccess) throw new HttpError(403,'Choose a worship group you belong to.');
- return {user,ministryRole,capabilities,kind:'session',sessionHash,operator:null};
+ return {user,ministryRole,capabilities};
+}
+
+export async function requireSongStation(request:Request,env:Env,deviceId:string,groupId?:string):Promise<MinistryAuthority> {
+ const {sql,params,sessionHash}=await songStationAccess(request,deviceId,groupId);
+ const access=validateSongStation(await env.DB.prepare(sql).bind(...params).first<SongStationAccess>());
+ return {...access,kind:'session',sessionHash,operator:null};
 }
 
 const entry=z.object({id:z.string().regex(/^[a-f0-9]{64}$/),contentHash:z.string().regex(/^[a-f0-9]{64}$/),title:z.string().min(1).max(300),filename:z.string().max(255),category:z.string().max(100),language:z.enum(['eng','ron','unknown']),fontSize:z.number().int().min(32).max(160),text:z.string().max(100000),firstSlide:z.string().max(2000),addedAt:z.number().int().nonnegative(),modifiedAt:z.number().int().nonnegative(),groupName:z.string().trim().min(1).max(80).nullable().optional(),sourceSongId:z.string().regex(/^[a-f0-9]{64}$/).nullable().optional()}).strict();

@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 65 | Labels the iPad song toolbar and iPhone Live Clicker. Opens, links, and unlinks files from one Notes menu. Shortens the live page fallback and reduces the tablet’s live page read to one database call with the updated server. |
 | iPhone and iPad development build 64 | Adds the ten-second Clicker Test, swipe and page jump on iPhone, green and red changes to saved sets, and paged PDF and inverted file reading on iPad. The test and page jumps require the updated server. The server update is live, and build 64 was installed and launched on a physical iPhone and iPad on November 13, 2026. |
 | iPhone and iPad development build 63 | Adds the iPad Service ready check, offline running orders, Back to Live, and search that prioritizes exact versions from the current service. Moves Recents into Browse, Link Notes into Reader options, and Pause Builds into Profile → Features on iPhone. Clicker connection status requires the accompanying server update. |
 | iPhone and iPad development build 62 | Uses the confirmed page immediately after a clicker tap. The accompanying server update reduces database round trips for live pages and individual songs. |

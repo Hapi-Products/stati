@@ -66,7 +66,7 @@ it('syncs the leader’s exact service item and PDF page only within the named g
   }),{...env,DB},createExecutionContext());
  const measured = await measureRead('/worship-live/'+group,memberCookie);
  expect(await measured.json()).toEqual({state:'live',isLeader:false,position:update});
- expect(databaseCalls).toBe(2);
+ expect(databaseCalls).toBe(1);
  databaseCalls = 0;
  const lyrics = await measureRead('/songs/'+f.songId,memberCookie);
  expect(await lyrics.json()).toMatchObject({id:f.songId,text:'Împreună cântăm'});

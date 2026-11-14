@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { body, HttpError, json, now } from './core';
-import { requireSongStation, stationMinistryGuard } from './station-catalog';
+import { requireSongStation, songStationAccess, stationMinistryGuard, validateSongStation, type SongStationAccess } from './station-catalog';
 
 const position = z.strictObject({
   serviceId: z.string().uuid().nullable(),
@@ -111,35 +111,36 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
  return json({position:publicPosition(updated.position).position});
 }
 
+async function readWorshipLiveReader(request:Request,env:Env,deviceId:string,groupId:string){
+ const {sql,params,time}=await songStationAccess(request,deviceId,groupId);
+ const row=await env.DB.prepare(`WITH viewer AS (${sql}), visible AS (
+   SELECT live.position_json AS position, live.leader_id AS leader, live.service_id AS service, catalog.title AS songTitle
+   FROM worship_live_reader live
+   LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash
+   WHERE live.device_id=? AND live.group_id=? AND live.expires_at>? AND ${currentHost} AND ${leaderAccess}
+  ) SELECT viewer.*,visible.*,CASE WHEN visible.position IS NULL THEN EXISTS(
+   SELECT 1 FROM station_service_selections selection
+   JOIN station_services service ON service.device_id=selection.device_id AND service.id=selection.service_id
+   WHERE selection.device_id=? AND service.archived=0
+  ) ELSE 0 END AS active
+  FROM viewer LEFT JOIN visible ON viewer.stationAccess=1 AND viewer.groupAccess=1
+ `).bind(...params,deviceId,groupId,time,deviceId)
+  .first<SongStationAccess & {position:string|null;leader:string|null;service:string|null;songTitle:string|null;active:number}>();
+ const {user}=validateSongStation(row);
+ if (!row?.position) return json({state:row?.active ? 'waiting' : 'idle'});
+ const {position,clickerConnected}=publicPosition(row.position);
+ const isLeader=row.leader===user.id;
+ const canTurn=typeof position.pageCount==='number' && position.mode!=='text';
+ return json({state:'live',isLeader,position,
+  ...(isLeader&&new URL(request.url).searchParams.get('clicker')==='1' ? {clickerConnected:clickerConnected&&canTurn} : {}),
+  ...(row.service===null ? {songTitle:row.songTitle} : {})});
+}
+
 export async function worshipLiveReader(request: Request, env: Env, deviceId: string, groupId: string) {
+ if (request.method === 'GET') return readWorshipLiveReader(request,env,deviceId,groupId);
  const authority = await requireSongStation(request,env,deviceId,groupId);
  const userId = authority.user.id;
  const time = now(), guard = stationMinistryGuard(authority, deviceId, 'readSongs', time);
-
- if (request.method === 'GET') {
-  const row = await env.DB.prepare(`
-   SELECT live.position_json AS position, live.leader_id AS leader, live.service_id AS service,
-    catalog.title AS songTitle
-   FROM worship_live_reader live
-   LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash
-   WHERE live.device_id=? AND live.group_id=? AND live.expires_at>? AND ${currentHost}
-    AND ${leaderAccess} AND ${readAccess} AND ${guard.sql}
-  `).bind(deviceId,groupId,time,groupId,userId,...guard.params)
-   .first<{position:string;leader:string;service:string|null;songTitle:string|null}>();
-  if (!row) {
-   const active = await env.DB.prepare(`
-    SELECT 1 FROM station_service_selections selection
-    JOIN station_services service ON service.device_id=selection.device_id AND service.id=selection.service_id
-    WHERE selection.device_id=? AND service.archived=0 AND ${readAccess} AND ${guard.sql}
-   `).bind(deviceId,groupId,userId,...guard.params).first();
-   return json({ state: active ? 'waiting' : 'idle' });
-  }
-  const {position,clickerConnected} = publicPosition(row.position);
-  const canTurn = typeof position.pageCount === 'number' && position.mode !== 'text';
-  return json({ state: 'live', isLeader: row.leader===userId, position,
-   ...(row.leader===userId&&new URL(request.url).searchParams.get('clicker')==='1' ? {clickerConnected:clickerConnected&&canTurn} : {}),
-   ...(row.service===null ? {songTitle:row.songTitle} : {}) });
- }
 
  if (request.method === 'PATCH') {
   const {sessionId} = await body(request,sessionInput,128);
