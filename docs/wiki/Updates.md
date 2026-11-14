@@ -6,7 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
-| iPhone and iPad development build 64 | Adds the ten-second Clicker Test, swipe and page jump on iPhone, green and red changes to saved sets, and paged PDF and inverted file reading on iPad. The test and page jumps require the updated server. |
+| iPhone and iPad development build 64 | Adds the ten-second Clicker Test, swipe and page jump on iPhone, green and red changes to saved sets, and paged PDF and inverted file reading on iPad. The test and page jumps require the updated server. The server update is live, and build 64 was installed and launched on a physical iPhone and iPad on November 13, 2026. |
 | iPhone and iPad development build 63 | Adds the iPad Service ready check, offline running orders, Back to Live, and search that prioritizes exact versions from the current service. Moves Recents into Browse, Link Notes into Reader options, and Pause Builds into Profile → Features on iPhone. Clicker connection status requires the accompanying server update. |
 | iPhone and iPad development build 62 | Uses the confirmed page immediately after a clicker tap. The accompanying server update reduces database round trips for live pages and individual songs. |
 | iPhone and iPad development build 61 | Places Close at the far left of the iPad song reader, with a gap before the separate Song Selector button. |
