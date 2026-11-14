@@ -7,11 +7,11 @@
 1. Open **Browse** and select a result, or open **Service** and choose the song in the running order.
 2. Use the arrows in the glass page control to move one page at a time. The page counter in the middle opens thumbnails. When there are multiple pages, you can also tap the left or right edge of the reader.
 3. Open the page previews from the page counter. Select a thumbnail to jump to that slide.
-4. Tap the **music note list** at the top left to jump to a different song. The selector can show Recents or the active service. The **X** at the far left closes the reader. In build 61, each control has its own glass button.
+4. Tap **Songs** (the music note list) at the top left to jump to a different song. The selector can show Recents or the active service. The **X** at the far left closes the reader. In build 61, each control has its own glass button.
 
 ## Link a shared file
 
-1. Open the song on iPad. If your role allows linking notes, open **Notes → Link a file** in development build 65. In earlier builds, use **Reader options (•••) → Link shared notes**.
+1. Open the song on iPad. If your role allows linking notes, open **Notes → Link a file** in development build 66. Build 65 also has a Notes icon. In build 64 and earlier, use **Reader options (•••) → Link shared notes**.
 2. Select a file you shared or a file you manage as an administrator. Tap **Load older files** if the file is on another page.
 3. Open **Notes** to view the linked file. Repeat for any other files you want to attach to this song.
 
