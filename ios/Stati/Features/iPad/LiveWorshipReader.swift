@@ -139,7 +139,9 @@ final class LiveWorshipReader {
                 followingSession = following ? remoteSession : ""
                 songTitle = standalone ? response["songTitle"].text : ""
                 position = following ? next : nil
-                try await store.liveReaderUpdates.wait(after: observed, timeout: status == .live ? .seconds(1) : .seconds(5))
+                let delay: Duration = status == .live
+                    ? (store.workspaceLive ? .seconds(1) : .milliseconds(300)) : .seconds(5)
+                try await store.liveReaderUpdates.wait(after: observed, timeout: delay)
             } catch is CancellationError { return }
             catch {
                 guard !Task.isCancelled else { return }

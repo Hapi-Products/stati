@@ -21,7 +21,7 @@ import Foundation
             } catch { if Task.isCancelled || !isCurrent() { socket.cancel(with: .goingAway, reason: nil); return } }
             socket.cancel(with: .goingAway, reason: nil); connected(false)
             guard !Task.isCancelled && isCurrent() else { return }
-            invalidate("tasks-ready") // Fallback authenticated read also detects expired sessions.
+            invalidate("tasks-ready") // Wake the reader immediately so it can switch to its shorter fallback.
             attempts = min(5, attempts + 1)
             do { try await Task.sleep(for: .seconds(min(30, Double(1 << attempts)))) } catch { return }
         }

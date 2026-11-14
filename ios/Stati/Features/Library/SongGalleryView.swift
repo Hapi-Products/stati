@@ -227,7 +227,7 @@ struct SongGalleryView: View {
             if iPad {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close", systemImage: "xmark") { dismiss() }
-                        .labelStyle(.iconOnly)
+                        .labelStyle(.titleAndIcon)
                 }
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
@@ -236,7 +236,7 @@ struct SongGalleryView: View {
                         guide.stop()
                         choosingSong = true
                     }
-                    .labelStyle(.iconOnly)
+                    .labelStyle(.titleAndIcon)
                     .worshipGuide(guide, at: .songSelector)
                     .disabled(following)
                 }
@@ -253,36 +253,38 @@ struct SongGalleryView: View {
                                 live.reader.returnRequested = true
                                 dismiss()
                             }
-                            .labelStyle(.iconOnly)
+                            .labelStyle(.titleAndIcon)
                         } else if model.request.isService, live.reader.leading {
                             Button("Stop leading service", systemImage: "stop.circle") { live.reader.stop(store: store) }
-                                .labelStyle(.iconOnly)
+                                .labelStyle(.titleAndIcon)
                         } else if model.request.isService {
                             Button("Lead service", systemImage: "person.wave.2") {
                                 if let position = livePosition { live.lead(position) }
                             }
-                            .labelStyle(.iconOnly)
+                            .labelStyle(.titleAndIcon)
                             .disabled(live.reader.starting)
                         } else if live.reader.leadingStandalone {
                             Button("Stop leading song", systemImage: "stop.circle") { live.reader.stop(store: store) }
-                                .labelStyle(.iconOnly).disabled(live.reader.starting)
+                                .labelStyle(.titleAndIcon).disabled(live.reader.starting)
                         } else if !live.reader.leading {
                             Button("Lead song", systemImage: "person.wave.2") {
                                 guard let position = livePosition else { return }
                                 if let group = live.selectedGroup ?? (live.availableGroups.count == 1 ? live.availableGroups.first?.id : nil) {
                                     live.chooseGroup?(position, group)
                                 } else { choosingLiveGroup = true }
-                            }.labelStyle(.iconOnly).disabled(live.reader.starting)
+                            }.labelStyle(.titleAndIcon).disabled(live.reader.starting)
                         }
                     }
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    Menu { notesActions } label: { Label("Notes", systemImage: "note.text").labelStyle(.titleAndIcon) }
+                        .worshipGuide(guide, at: .linkNotes)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Song view", selection: Binding(get: { readerMode }, set: { modeOverride = $0; pageIndex = 0 })) { ForEach(SongReaderMode.allCases) { Text($0.title).tag($0) } }.disabled(following)
-                        Menu("Notes", systemImage: "note.text") { notesActions }
                         if store.canPlan && !model.request.offline {
-                            Button("Link shared notes", systemImage: "link") { guide.stop(); linking = true }
                             Button("Add to service", systemImage: "text.badge.plus") { songToPlace = song }
                         }
                         Menu("Share", systemImage: "square.and.arrow.up") {
@@ -291,14 +293,14 @@ struct SongGalleryView: View {
                             }
                             Button("Copy text", systemImage: "doc.on.doc") { UIPasteboard.general.string = song["text"].text }
                         }.disabled(exporting)
-                    } label: { actionIcon("ellipsis") }.accessibilityLabel("Reader options").worshipGuide(guide, at: .linkNotes)
+                    } label: { Label("Options", systemImage: "ellipsis").labelStyle(.titleAndIcon) }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Song controls help", systemImage: "questionmark") {
+                    Button("Help", systemImage: "questionmark") {
                         let hasPages = readerMode == .document || (readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1)
                         guide.start(.reader(hasPages: hasPages, following: following, canLink: store.canPlan && !model.request.offline))
-                    }.labelStyle(.iconOnly)
+                    }.labelStyle(.titleAndIcon)
                 }
             }
         }
@@ -341,7 +343,9 @@ struct SongGalleryView: View {
             let removable = model.files.filter { $0["canDelete"].flag && !$0["removalPending"].flag }
             if !removable.isEmpty { Menu("Unlink file", systemImage: "link.badge.minus") { ForEach(removable) { file in Button(file.title, role: .destructive) { unlinking = file } } }.disabled(unlinkBusy) }
         }
-        if !iPad && store.canPlan { Button("Link shared notes", systemImage: "link") { linking = true } }
+        if store.canPlan && !model.request.offline {
+            Button("Link a file", systemImage: "link") { guide.stop(); linking = true }
+        }
     }
     private func unlink(_ file: APIRecord) async {
         guard !unlinkBusy, store.canPlan else { return }

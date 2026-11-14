@@ -43,7 +43,7 @@ enum WorshipHelpTopic {
             ]
         case .groups:
             [
-                Step(target: .fallback, title: "Open a shared file", instruction: "Tap a file preview to open it. To find a file already linked to a song, open the song and look in Reader options → Notes."),
+                Step(target: .fallback, title: "Open a shared file", instruction: "Tap a file preview to open it. To find a file already linked to a song, open the song and tap Notes."),
                 Step(target: .groupSwitcher, title: "Switch worship groups", instruction: "If you have access to several groups, tap the people icon to switch. Set your default in Account → Worship.")
             ]
         case .service:
@@ -67,7 +67,7 @@ enum WorshipHelpTopic {
             }
         }
         if canLink {
-            steps.append(Step(target: .linkNotes, title: "Link shared notes", instruction: "Open Reader options (•••) and tap Link shared notes, then pick a shared file. Open Reader options → Notes to find the file again."))
+            steps.append(Step(target: .linkNotes, title: "Link a file", instruction: "Tap Notes → Link a file, then pick a shared file. Open Notes again to read or unlink it."))
         }
         steps.append(Step(target: .focus, title: "Focus on the song", instruction: "Tap the diagonal arrows at the lower right to hide reader controls. Tap them again to bring the controls back."))
         return steps

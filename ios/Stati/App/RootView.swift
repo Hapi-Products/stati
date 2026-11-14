@@ -139,7 +139,9 @@ struct RootView: View {
                 while !Task.isCancelled {
                     let observed = store.liveReaderUpdates.revision
                     await liveClicker.refresh(store: store, showActivity: showingClicker, expectedSession: clickerSession)
-                    let delay: Duration = showingClicker ? .seconds(1) : liveClicker.connection == nil ? .seconds(15) : .seconds(5)
+                    let delay: Duration = showingClicker
+                        ? (store.workspaceLive || liveClicker.connection == nil ? .seconds(1) : .milliseconds(300))
+                        : (liveClicker.connection == nil ? .seconds(15) : .seconds(5))
                     do { try await store.liveReaderUpdates.wait(after: observed, timeout: delay) }
                     catch { return }
                 }
