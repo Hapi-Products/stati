@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPad development build 73 | Shows text in the top tabs and icons with names in the sidebar. The Groups page names the current group and supports choosing a photo before sharing. Installed and launched on a physical iPad. |
 | iPhone and iPad development build 70 | Stop Leading closes the iPad song reader, and late updates from the session you stopped no longer reopen it. Installed and launched on a physical iPad. |
 | iPhone and iPad development build 69 | Uses text-only iPad navigation tabs, icon-only iPad reader actions, and an icon-only Live Clicker shortcut on iPhone. Installed and launched on physical iPhone and iPad. |
 | iPhone and iPad development build 68 | Opens PDFs and images as editable chord charts. Transposes the chart and lets the assigned service leader save a default key for a song appearance. Installed and launched on physical iPhone and iPad. |

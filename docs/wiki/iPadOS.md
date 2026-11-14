@@ -2,10 +2,9 @@
 
 **Updated on** November 13, 2026 · **Updated by** Codex for Stați
 
-In development build 63, Stați Worship brings together **Browse**, **Groups**, and **Service**. The computer you select and your church role determine the material you can open.
+Stați Worship brings together **Browse**, **Groups**, and **Service**. The computer you select and your church role determine the material you can open.
 
-
-Starting with build 69, the top navigation uses the names **Groups**, **Browse**, and **Service**. Toolbar actions use icons.
+In development build 73, the top tabs use text. Open the sidebar to see the same destinations with their names and icons. Reader and file actions use icons.
 
 ## Read songs during a service
 
@@ -26,11 +25,19 @@ When you search during an active service, results that match the exact version i
 
 ## Worship groups
 
-With one group, **Groups** opens it directly when your default is automatic. With several groups, use the people icon to switch. Administrators with one group can open **All groups** from the add and manage menu.
+Open **Groups** and look at the top left for the current group’s name. If you can access multiple worship groups, tap the name to choose a specific group. The choices are based on your group access. Administrators can choose any worship group. Tap a file preview to open it. To change the default group, use **Account → Worship**.
 
-**Groups** gives you access to shared files. Tap a preview to open a file. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**.
+To share an image, open the **+** menu and choose **Choose from Photos**. Pick a photo, check the preview and group, and tap the share icon. Use **Choose PDF or image** for files or **Scan Document** for paper charts. Find unfinished group drafts under **Saved group drafts** in the add menu.
 
 If you can manage notes, open a song and choose **Reader options (•••) → Link shared notes** to attach an eligible shared file. [Link a shared file](https://github.com/Hapi-Products/stati/wiki/Song-Reader#link-a-shared-file)
+
+## Send a song file for service review
+
+1. In **Service**, open the plan and tap **Song requests and uploads** under the running order.
+2. Enter the title and choose **Upload song file**. If Google Drive is enabled in Apple’s Files app, browse to **Google Drive** and choose the file from your music folder. [Set up Google Drive in Files](https://support.apple.com/en-ca/102238)
+3. After the presentation computer receives the attachment, tap **Submit song request** for review. Check the request’s status in the same view.
+
+Files opens your selected document from Drive. A direct Google Drive folder connection for the presentation computer is a separate feature.
 
 ## Lead or follow a live service
 
