@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 67 | Connects Live Activity to the current worship song and refreshes on live changes while Stați is open. Expired clicker activities show Updates paused. File actions use icons. Installed on physical iPhone and iPad. |
 | iPhone and iPad development build 66 | Shows text beside the main iPad song toolbar controls and the iPhone Live Clicker button. Installed and launched on both physical devices. |
 | iPhone and iPad development build 65 | Opens, links, and unlinks files from one Notes menu. Shortens the live page fallback and reduces the tablet’s live page read to one database call with the updated server. Installed on both physical devices. |
 | iPhone and iPad development build 64 | Adds the ten-second Clicker Test, swipe and page jump on iPhone, green and red changes to saved sets, and paged PDF and inverted file reading on iPad. The test and page jumps require the updated server. The server update is live, and build 64 was installed and launched on a physical iPhone and iPad on November 13, 2026. |

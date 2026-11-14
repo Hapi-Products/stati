@@ -23,7 +23,7 @@ The Songs controls use two columns when there’s room. Tap the lightbulb beside
 
 ## Appearance, Siri, updates, and the Lock Screen
 
-In the regular build, choose an **App icon** in Features. The picker lets you preview the choices. Turn **Show What’s New after updates** on or off according to your preference. **Live song on Lock Screen** is an opt-in preview. A working church setup also needs the compatible presentation computer and server feed.
+In the regular build, choose an **App icon** in Features. The picker lets you preview the choices. Turn **Show What’s New after updates** on or off according to your preference. **Live song on Lock Screen** is an opt-in preview. With build 67, the Live Activity follows the current song from the connected Stați Worship reader while the app is active. If updates stop, the activity shows **Updates paused**. Updates while the device stays locked require Apple push notifications.
 
 Turn on Siri Shortcuts or Siri AI Song Search in **Features → Siri**. See [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) for phrases, requirements, and how to run an action by hand.
 

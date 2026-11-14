@@ -47,6 +47,8 @@ With development build 63 and the accompanying server update, keeping the clicke
 
 Build 65 checks for page changes sooner during a live song if the notification connection drops. The corresponding server update also uses a single database call to read the tablet’s live page.
 
+Build 67 uses the live session’s expiration time to show **Updates paused** when the clicker activity can no longer refresh. Tap the activity to reopen the clicker.
+
 ### Test the clicker before service
 
 Open **Service → Ready check → Clicker Test** on the iPad. On iPhone, open **Live Clicker** from Send, tap the options icon, and choose **Clicker Test**. Use the same profile and computer on both devices. Start the test and leave both screens open for ten seconds. Stați sends five sample pages and shows how many the iPad acknowledged, plus the median time from the server receiving a page to the iPad’s acknowledgment. The test runs separately from the live reader.
