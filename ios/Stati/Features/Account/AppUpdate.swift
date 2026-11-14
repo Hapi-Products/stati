@@ -11,7 +11,7 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 65, title: "Clearer reader controls", highlights: [
+    static let current = AppUpdate(id: 66, title: "Clearer reader controls", highlights: [
         Highlight(title: "One Notes menu", detail: "Open, link, or unlink files from Notes in the song reader.", icon: "note.text"),
         Highlight(title: "Labeled controls", detail: "Find the Song Selector, Notes, and Live Clicker by name.", icon: "text.below.photo"),
         Highlight(title: "Quicker clicker recovery", detail: "During a live song, devices check for page changes sooner if the live connection drops.", icon: "bolt")

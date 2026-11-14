@@ -116,7 +116,13 @@ struct SendView: View {
             }
             if let openClicker {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Live Clicker", systemImage: "cursorarrow.click", action: openClicker).labelStyle(.titleAndIcon)
+                    Button(action: openClicker) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "cursorarrow.click").accessibilityHidden(true)
+                            Text("Live Clicker").font(.subheadline)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
                 }
             }
         }

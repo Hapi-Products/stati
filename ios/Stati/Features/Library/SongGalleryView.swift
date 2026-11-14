@@ -226,17 +226,16 @@ struct SongGalleryView: View {
         .toolbar {
             if iPad {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close", systemImage: "xmark") { dismiss() }
-                        .labelStyle(.titleAndIcon)
+                    Button { dismiss() } label: { toolbarTitle("Close", icon: "xmark") }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Song Selector", systemImage: "music.note.list") {
+                    Button {
                         preferences.reload()
                         guide.stop()
                         choosingSong = true
-                    }
-                    .labelStyle(.titleAndIcon)
+                    } label: { toolbarTitle("Songs", icon: "music.note.list") }
+                    .accessibilityLabel("Song Selector")
                     .worshipGuide(guide, at: .songSelector)
                     .disabled(following)
                 }
@@ -249,36 +248,35 @@ struct SongGalleryView: View {
                 if let live, (live.reader.following && !followsLiveSession) || showsLeadControl {
                     ToolbarItem(placement: .topBarTrailing) {
                         if live.reader.following && !followsLiveSession {
-                            Button("Back to Live", systemImage: "dot.radiowaves.left.and.right") {
+                            Button {
                                 live.reader.returnRequested = true
                                 dismiss()
-                            }
-                            .labelStyle(.titleAndIcon)
+                            } label: { toolbarTitle("Back to Live", icon: "dot.radiowaves.left.and.right") }
                         } else if model.request.isService, live.reader.leading {
-                            Button("Stop leading service", systemImage: "stop.circle") { live.reader.stop(store: store) }
-                                .labelStyle(.titleAndIcon)
+                            Button { live.reader.stop(store: store) } label: { toolbarTitle("Stop Leading", icon: "stop.circle") }
+                                .accessibilityLabel("Stop leading service")
                         } else if model.request.isService {
-                            Button("Lead service", systemImage: "person.wave.2") {
+                            Button {
                                 if let position = livePosition { live.lead(position) }
-                            }
-                            .labelStyle(.titleAndIcon)
+                            } label: { toolbarTitle("Lead Service", icon: "person.wave.2") }
                             .disabled(live.reader.starting)
                         } else if live.reader.leadingStandalone {
-                            Button("Stop leading song", systemImage: "stop.circle") { live.reader.stop(store: store) }
-                                .labelStyle(.titleAndIcon).disabled(live.reader.starting)
+                            Button { live.reader.stop(store: store) } label: { toolbarTitle("Stop Leading", icon: "stop.circle") }
+                                .accessibilityLabel("Stop leading song").disabled(live.reader.starting)
                         } else if !live.reader.leading {
-                            Button("Lead song", systemImage: "person.wave.2") {
+                            Button {
                                 guard let position = livePosition else { return }
                                 if let group = live.selectedGroup ?? (live.availableGroups.count == 1 ? live.availableGroups.first?.id : nil) {
                                     live.chooseGroup?(position, group)
                                 } else { choosingLiveGroup = true }
-                            }.labelStyle(.titleAndIcon).disabled(live.reader.starting)
+                            } label: { toolbarTitle("Lead Song", icon: "person.wave.2") }
+                                .disabled(live.reader.starting)
                         }
                     }
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu { notesActions } label: { Label("Notes", systemImage: "note.text").labelStyle(.titleAndIcon) }
+                    Menu { notesActions } label: { toolbarTitle("Notes", icon: "note.text") }
                         .worshipGuide(guide, at: .linkNotes)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -293,18 +291,26 @@ struct SongGalleryView: View {
                             }
                             Button("Copy text", systemImage: "doc.on.doc") { UIPasteboard.general.string = song["text"].text }
                         }.disabled(exporting)
-                    } label: { Label("Options", systemImage: "ellipsis").labelStyle(.titleAndIcon) }
+                    } label: { toolbarTitle("Options", icon: "ellipsis") }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Help", systemImage: "questionmark") {
+                    Button {
                         let hasPages = readerMode == .document || (readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1)
                         guide.start(.reader(hasPages: hasPages, following: following, canLink: store.canPlan && !model.request.offline))
-                    }.labelStyle(.titleAndIcon)
+                    } label: { toolbarTitle("Help", icon: "questionmark") }
                 }
             }
         }
     }
+    private func toolbarTitle(_ title: LocalizedStringKey, icon: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).accessibilityHidden(true)
+            Text(title).font(.subheadline)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private var showsLeadControl: Bool {
         guard let live, !live.reader.following else { return false }
         if model.request.isService {
