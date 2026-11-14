@@ -199,7 +199,7 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
     position_json=${preserveClickerPresence},expires_at=excluded.expires_at,song_id=excluded.song_id,song_hash=excluded.song_hash
    WHERE (worship_live_reader.session_id=excluded.session_id AND worship_live_reader.leader_id=excluded.leader_id
     AND worship_live_reader.service_id IS NULL AND worship_live_reader.expires_at>? AND worship_live_reader.sequence<excluded.sequence)
-    OR (excluded.sequence=1 AND worship_live_reader.expires_at<=?)
+    OR (excluded.sequence=1 AND worship_live_reader.session_id<>excluded.session_id AND worship_live_reader.expires_at<=?)
   `).bind(groupId,userId,update.sessionId,update.sequence,update.itemId,JSON.stringify(update),time+24,
    deviceId,update.itemId,update.songHash,groupId,userId,...guard.params,time,time).run();
   if (!standalone.meta.changes) throw new HttpError(409,'The song changed or your worship group already has a live reader.');
@@ -224,7 +224,7 @@ export async function worshipLiveReader(request: Request, env: Env, deviceId: st
    song_id=NULL,song_hash=NULL
   WHERE (worship_live_reader.session_id=excluded.session_id AND worship_live_reader.expires_at>?
      AND worship_live_reader.sequence<excluded.sequence)
-     OR (excluded.sequence=1 AND (worship_live_reader.expires_at<=?
+     OR (excluded.sequence=1 AND worship_live_reader.session_id<>excluded.session_id AND (worship_live_reader.expires_at<=?
       OR (worship_live_reader.service_id IS NOT NULL AND (worship_live_reader.service_id<>excluded.service_id
       OR worship_live_reader.leader_id<>excluded.leader_id))))
  `).bind(groupId,update.sessionId,update.sequence,update.itemId,JSON.stringify(update),time+24,

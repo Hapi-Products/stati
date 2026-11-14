@@ -181,4 +181,10 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await request(f.session,'DELETE',{sessionId:solo.sessionId})).status).toBe(200);
  expect(await (await liveSong(memberCookie)).json()).toEqual({live:null});
  expect(await (await request(memberCookie)).json()).toEqual({state:'idle'});
+ expect((await request(f.session,'PUT',solo)).status).toBe(409);
+ expect(await (await request(memberCookie)).json()).toEqual({state:'idle'});
+ const restarted={...solo,sessionId:crypto.randomUUID()};
+ expect((await request(f.session,'PUT',restarted)).status).toBe(200);
+ expect((await request(f.session,'DELETE',{sessionId:solo.sessionId})).status).toBe(200);
+ expect(await (await request(memberCookie)).json()).toMatchObject({state:'live',position:restarted});
 });
