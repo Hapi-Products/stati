@@ -51,7 +51,7 @@ The server update prepared with development build 62 shortens the requests that 
 
 ### Lead a song without an active service
 
-In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Use the stop icon or close the iPad reader to end the session.
+In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Tap the stop icon to end the session and close the song. Closing the reader with the X also ends a standalone song you were leading. The reader toolbar uses icons.
 
 ### Hide the status bar in Focus
 
