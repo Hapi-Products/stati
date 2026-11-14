@@ -21,6 +21,14 @@ Linking leaves the original file in **Groups** and preserves its permissions. If
 
 On iPad in development build 64, open a linked PDF to swipe between pages or choose a page from the counter. Tap the half-filled circle to invert a PDF or image for reading. The eye icon opens the file in Quick Look for Markup or sharing.
 
+## Transpose a chord chart
+
+In development build 68, open a PDF or image from Notes or Groups in the reading view and tap the **music notes** icon for **Open as Chord Chart**. On iPhone, open the reading view with the book icon first. Stați reads searchable PDFs and uses on-device text recognition for images and scanned pages. PDFs can have up to 20 pages.
+
+Check the original key, then use the second key picker or the plus and minus icons to transpose by semitones. Tap a chord to edit its root or bass note. Use the pencil to correct the extracted text. On supported devices, the Apple Intelligence icon can suggest which lines contain only chords. Review the result against the original, especially for scans, single-chord lines, and complicated layouts.
+
+To share a key, open the song from the service running order and then open its linked chart. The assigned leader can use the menu beside **Service key** to save or clear the default for that song appearance. Musicians can transpose locally while the chart is open and use the reset icon to return to the shared key. Opening the same file directly from Groups is for personal use.
+
 ## Get help in portrait or landscape
 
 Tap **Help** (the question mark) in the song reader toolbar. The guide starts with the reading formats, then covers Song Selector, page previews when available, linking notes from Reader options, and Focus. If you’re following a live leader, the guide explains why manual song and page controls are unavailable.
