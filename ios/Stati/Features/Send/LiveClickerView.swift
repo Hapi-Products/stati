@@ -12,6 +12,7 @@ import SwiftUI
         let song: String
         let service: String
         let serviceID: String
+        let deadline: Date?
         let songID: String
         let contentHash: String
         let mode: SongReaderMode
@@ -35,6 +36,8 @@ import SwiftUI
             turn = UUID(uuidString: position["clickerTurn"].text) == nil ? nil : position["clickerTurn"].text
             song = live["songTitle"].text
             service = live["serviceTitle"].text
+            let expiresAt = live["expiresAt"].number
+            deadline = expiresAt > 0 ? Date(timeIntervalSince1970: expiresAt) : nil
             songID = live["songId"].text
             contentHash = live["contentHash"].text
             mode = SongReaderMode(rawValue: position["mode"].text) ?? .slides
@@ -125,7 +128,8 @@ import SwiftUI
             guard !Task.isCancelled, mutation == operation, store.accountEpoch == epoch, store.selectedComputer == computer else { return }
             connection = Connection(.object([
                 "position": response["position"], "songTitle": .string(live.song), "serviceTitle": .string(live.service),
-                "songId": .string(live.songID), "contentHash": .string(live.contentHash)
+                "songId": .string(live.songID), "contentHash": .string(live.contentHash),
+                "expiresAt": live.deadline.map { .number($0.timeIntervalSince1970) } ?? .null
             ]))
             guard connection != nil else {
                 throw APIError(status: 502, message: "The page turn could not be confirmed.")
@@ -159,9 +163,11 @@ import SwiftUI
         await endActivities(except: live.sessionID)
         guard !Task.isCancelled, connection?.sessionID == live.sessionID else { return }
         let state = ServiceActivityAttributes.ContentState(song: String(live.song.prefix(300)))
-        let content = ActivityContent(state: state, staleDate: nil)
+        let content = ActivityContent(state: state, staleDate: live.deadline)
         if let activity = Activity<ServiceActivityAttributes>.activities.first(where: { $0.attributes.clickerSessionID == live.sessionID }) {
-            if activity.content.state != state { await Self.updateActivity(id: activity.id, song: state.song) }
+            if activity.content.state != state || activity.content.staleDate != content.staleDate {
+                await Self.updateActivity(id: activity.id, content: content)
+            }
         } else {
             let attributes = ServiceActivityAttributes(accountID: owner, computerID: computer, serviceID: live.serviceID,
                                                        service: String(live.service.prefix(80)), clickerSessionID: live.sessionID)
@@ -169,9 +175,9 @@ import SwiftUI
         }
     }
 
-    @concurrent nonisolated private static func updateActivity(id: String, song: String) async {
+    @concurrent nonisolated private static func updateActivity(id: String, content: ActivityContent<ServiceActivityAttributes.ContentState>) async {
         guard !Task.isCancelled, let activity = Activity<ServiceActivityAttributes>.activities.first(where: { $0.id == id }) else { return }
-        await activity.update(ActivityContent(state: ServiceActivityAttributes.ContentState(song: song), staleDate: nil))
+        await activity.update(content)
     }
 }
 

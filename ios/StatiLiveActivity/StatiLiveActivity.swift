@@ -14,7 +14,7 @@ struct StatiLiveActivity: Widget {
                 Image(systemName: context.attributes.clickerURL == nil ? "music.note" : "cursorarrow.click")
                     .accessibilityHidden(true)
             } compactTrailing: {
-                Text(context.attributes.clickerURL != nil ? "Clicker" : context.isStale ? "Paused" : context.state.song)
+                Text(context.isStale ? "Paused" : context.attributes.clickerURL != nil ? "Clicker" : context.state.song)
                     .font(.caption).lineLimit(1)
             } minimal: {
                 Image(systemName: context.attributes.clickerURL != nil ? "cursorarrow.click" : context.isStale ? "pause" : "music.note")
@@ -31,10 +31,10 @@ struct StatiLiveActivity: Widget {
             VStack(alignment: .leading, spacing: 3) {
                 Text(context.attributes.service).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 Text(context.state.song).font(.headline).lineLimit(2)
-                if context.attributes.clickerURL != nil {
-                    Text("Open clicker").font(.caption).foregroundStyle(.secondary)
-                } else if context.isStale {
+                if context.isStale {
                     Text("Updates paused").font(.caption).foregroundStyle(.secondary)
+                } else if context.attributes.clickerURL != nil {
+                    Text("Open clicker").font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 0)

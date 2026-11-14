@@ -15,7 +15,8 @@ import Foundation
         }
         guard foreground, authorized else { return }
         while !Task.isCancelled {
-            var delay: Duration = .seconds(15)
+            let observed = store.liveReaderUpdates.revision
+            var delay: Duration = .seconds(10)
             do {
                 let response = try await store.api.request("/computers/" + computer + "/live-song")
                 try Task.checkCancellation()
@@ -32,7 +33,7 @@ import Foundation
                 if !Task.isCancelled, store.accountEpoch == epoch, store.selectedComputer == computer { await end(owner: owner, computer: computer) }
                 delay = .seconds(60)
             } catch { delay = .seconds(45) }
-            do { try await Task.sleep(for: delay) } catch { return }
+            do { try await store.liveReaderUpdates.wait(after: observed, timeout: delay) } catch { return }
         }
     }
 

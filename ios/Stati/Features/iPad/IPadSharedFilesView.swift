@@ -50,9 +50,9 @@ struct IPadSharedFilesView: View {
                 NoticeView(text: scanMessage).padding(.horizontal, 24)
                 NoticeView(text: message).padding(.horizontal, 24)
                 NoticeView(text: actions?.message ?? "").padding(.horizontal, 24)
-                if !nextCursor.isEmpty { Button("Load older files", systemImage: "arrow.down") { Task { await load(more: true) } }.disabled(loading).padding() }
+                if !nextCursor.isEmpty { Button("Load older files", systemImage: "arrow.down") { Task { await load(more: true) } }.labelStyle(.iconOnly).disabled(loading).padding() }
             }
-            if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.padding(.vertical, 8) }
+            if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.labelStyle(.iconOnly).padding(.vertical, 8) }
         }
         .worshipGuide(guide, at: .fallback)
         .onDisappear { guide.stop() }
