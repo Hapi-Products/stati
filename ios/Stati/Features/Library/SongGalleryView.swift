@@ -6,6 +6,7 @@ struct SongGalleryView: View {
     @Environment(\.worshipLiveContext) private var live
     private let openingRequest: SongGalleryRequest
     private let followsLiveSession: Bool
+    private let onClose: () -> Void
     private let selectionChanged: (String) -> Void
     @State private var model: SongGalleryModel
     @State private var preferences: ReaderPreferences
@@ -58,9 +59,10 @@ struct SongGalleryView: View {
     @ScaledMetric(relativeTo: .body) private var actionSize = 20.0
     private var actionSymbolSize: CGFloat { iPad ? 20 : actionSize }
     private var actionTarget: CGFloat { iPad ? 44 : max(44, actionSize * 1.2 + 20) }
-    init(store: AppStore, request: SongGalleryRequest, followsLiveSession: Bool = false, selectionChanged: @escaping (String) -> Void = { _ in }) {
+    init(store: AppStore, request: SongGalleryRequest, followsLiveSession: Bool = false, onClose: @escaping () -> Void = {}, selectionChanged: @escaping (String) -> Void = { _ in }) {
         openingRequest = request
         self.followsLiveSession = followsLiveSession
+        self.onClose = onClose
         self.selectionChanged = selectionChanged
         _model = State(initialValue: SongGalleryModel(store: store, request: request))
         _preferences = State(initialValue: ReaderPreferences(ownerID: store.me?.id ?? ""))
@@ -232,7 +234,7 @@ struct SongGalleryView: View {
         .toolbar {
             if iPad {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { toolbarIcon("Close", icon: "xmark") }
+                    Button(action: closeReader) { toolbarIcon("Close", icon: "xmark") }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
@@ -256,10 +258,10 @@ struct SongGalleryView: View {
                         if live.reader.following && !followsLiveSession {
                             Button {
                                 live.reader.returnRequested = true
-                                dismiss()
+                                closeReader()
                             } label: { toolbarIcon("Back to Live", icon: "dot.radiowaves.left.and.right") }
                         } else if model.request.isService, live.reader.leading {
-                            Button { live.reader.stop(store: store) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
+                            Button { stopLeading(live.reader) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
                                 .accessibilityLabel("Stop leading service")
                         } else if model.request.isService {
                             Button {
@@ -267,7 +269,7 @@ struct SongGalleryView: View {
                             } label: { toolbarIcon("Lead Service", icon: "person.wave.2") }
                             .disabled(live.reader.starting)
                         } else if live.reader.leadingStandalone {
-                            Button { live.reader.stop(store: store) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
+                            Button { stopLeading(live.reader) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
                                 .accessibilityLabel("Stop leading song").disabled(live.reader.starting)
                         } else if !live.reader.leading {
                             Button {
@@ -309,6 +311,19 @@ struct SongGalleryView: View {
             }
         }
     }
+    private func stopLeading(_ reader: LiveWorshipReader) {
+        reader.stop(store: store)
+        closeReader()
+    }
+
+    private func closeReader() {
+        onClose()
+        if !model.request.isService, let reader = live?.reader, reader.leadingStandalone {
+            reader.stop(store: store)
+        }
+        dismiss()
+    }
+
     private func toolbarIcon(_ title: LocalizedStringKey, icon: String) -> some View {
         Label(title, systemImage: icon).labelStyle(.iconOnly)
     }

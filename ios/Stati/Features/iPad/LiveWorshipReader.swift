@@ -91,6 +91,7 @@ final class LiveWorshipReader {
     @ObservationIgnored private var acknowledgedSequence = 0
     @ObservationIgnored private var sentRevision = 0
     @ObservationIgnored private var session: Session?
+    @ObservationIgnored private var stoppedSessions: [String: String] = [:]
     @ObservationIgnored private var desired: Position?
     @ObservationIgnored private var revision = 0
     @ObservationIgnored private var sender: Task<Void, Never>?
@@ -133,6 +134,8 @@ final class LiveWorshipReader {
                 }
                 let remoteSession = payload["sessionId"].text
                 let standalone = next?.songHash != nil && payload["serviceId"] == .null
+                let stopped = stoppedSessions[path] == remoteSession
+                if stopped { status = .waiting }
                 following = status == .live && session?.id != remoteSession &&
                     (standalone || (!service.isEmpty && payload["serviceId"].text == service)) && next != nil
                 serviceID = following && !standalone ? service : ""
@@ -206,9 +209,9 @@ final class LiveWorshipReader {
     }
 
     private func sendPosition(store: AppStore) {
-        guard sender == nil else { return }
+        guard sender == nil, let started = session?.id else { return }
         sender = Task { [weak self, weak store] in
-            guard let self, let store, let started = self.session?.id else { return }
+            guard let self, let store else { return }
             defer { if self.session?.id == started { self.sender = nil } }
             while !Task.isCancelled, var session = self.session, session.id == started,
                   let current = self.desired, self.revision != self.sentRevision, session.epoch == store.accountEpoch {
@@ -247,15 +250,24 @@ final class LiveWorshipReader {
 
     func stop(store: AppStore) {
         let ending = session
+        let initialSend = starting ? sender : nil
+        if let ending { stoppedSessions[ending.path] = ending.id }
         session = nil; desired = nil; leading = false; starting = false
         clickerTurn = nil; receivedTurn = ""; acknowledgedSequence = 0
-        sender?.cancel(); sender = nil
+        if initialSend == nil { sender?.cancel() }
+        sender = nil
         heartbeat?.cancel(); heartbeat = nil
         guard let ending, ending.epoch == store.accountEpoch else { return }
         clickerServiceID = nil
         clickerStatusAvailable = false
         status = .waiting
-        Task { _ = try? await store.api.request(ending.path, method: "DELETE", body: .object(["sessionId": .string(ending.id)])) }
+        Task {
+            if let initialSend { await initialSend.value }
+            guard ending.epoch == store.accountEpoch else { return }
+            _ = try? await store.api.request(ending.path, method: "DELETE", body: .object(["sessionId": .string(ending.id)]))
+            guard ending.epoch == store.accountEpoch else { return }
+            store.liveReaderUpdates.signal()
+        }
     }
 
     private func endpoint(computer: String, group: String) -> String {

@@ -197,7 +197,7 @@ nonisolated final class NativeReviewProtocol: URLProtocol, @unchecked Sendable {
                 return
             }
             if let result = NativeSendNetworkCheck.response(request) ?? NativeReaderReview.placementResponse(request) ??
-                NativeReview.buildPauseResponse(request) ?? NativeReview.clickerResponse(request) {
+                NativeReview.buildPauseResponse(request) ?? NativeReview.clickerResponse(request) ?? NativeReview15.stopReview(request) {
                 let response = HTTPURLResponse(url: request.url!, statusCode: result.status, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 if let data = try? JSONEncoder().encode(result.body) { client?.urlProtocol(self, didLoad: data) }

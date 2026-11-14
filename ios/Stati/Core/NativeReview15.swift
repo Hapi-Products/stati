@@ -21,6 +21,26 @@ import SwiftUI
         if route == "ipad-search" { settings.largePreviews = true }
         if let data = try? JSONEncoder().encode(settings) { UserDefaults.standard.set(data, forKey: "stati.ipad.reader." + NativeReview.userID) }
     }
+    private static var stopReviewPosition: JSONValue = .null
+    private static var stopReviewDeadline: Date?
+    static func stopReview(_ request: URLRequest) -> (status: Int, body: JSONValue)? {
+        guard NativeReview.route == "ipad-stop-leading", request.url?.path.contains("/worship-live/") == true else { return nil }
+        if request.httpMethod == "PUT", let data = NativeMarkupServer.requestBody(request),
+           let value = try? JSONDecoder().decode(JSONValue.self, from: data) {
+            stopReviewPosition = value
+            stopReviewDeadline = nil
+        } else if request.httpMethod == "DELETE" {
+            stopReviewDeadline = .now.addingTimeInterval(7)
+        } else if request.httpMethod == "GET" {
+            let stopped = stopReviewDeadline.map { $0 <= .now } ?? false
+            if stopReviewPosition != .null, !stopped {
+                return (200, .object(["state": .string("live"), "isLeader": .bool(true), "position": stopReviewPosition,
+                                      "songTitle": .string("Amazing Grace")]))
+            }
+            return (200, .object(["state": .string("idle")]))
+        }
+        return (200, .object(["ok": .bool(true)]))
+    }
     static func response(_ request: URLRequest) -> JSONValue? {
         guard NativeReview.route != nil, request.httpMethod == "GET", let path = request.url?.path else { return nil }
         if NativeReview.route == "ipad-live-follow" {

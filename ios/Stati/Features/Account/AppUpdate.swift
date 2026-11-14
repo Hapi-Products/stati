@@ -11,11 +11,14 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 69, title: "Clearer iPad navigation", highlights: [
-        Highlight(title: "Text tabs on iPad", detail: "Find Groups, Browse, and Service by name in the top navigation.", icon: "textformat"),
-        Highlight(title: "Icon-only actions", detail: "The song toolbar and Live Clicker shortcut use icons.", icon: "cursorarrow.click")
+    static let current = AppUpdate(id: 70, title: "Leave the live reader cleanly", highlights: [
+        Highlight(title: "Stop leading and exit", detail: "Stop Leading closes the song and ignores late updates from the session you ended.", icon: "stop.circle")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 69, title: "Clearer iPad navigation", highlights: [
+        Highlight(title: "Text tabs on iPad", detail: "Find Groups, Browse, and Service by name in the top navigation.", icon: "textformat"),
+        Highlight(title: "Icon-only actions", detail: "The song toolbar and Live Clicker shortcut use icons.", icon: "cursorarrow.click")
+    ], details: []),
         AppUpdate(id: 68, title: "Play in the right key", highlights: [
         Highlight(title: "Transpose chord sheets", detail: "Open a PDF or image as a chord chart. Change the key or correct individual chord notes.", icon: "music.note.list"),
         Highlight(title: "Save a service key", detail: "The service leader can set the default key for each song in the running order.", icon: "person.2")

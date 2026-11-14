@@ -71,12 +71,14 @@ struct IPadWorkspaceView: View {
             .onChange(of: livePlan?.id) { if !liveReader.leadingStandalone { resetLiveScope() } }
             .onChange(of: store.accountEpoch) { resetLiveScope() }
             .onChange(of: liveReader.position) { updateFollowedReader() }
+            .onChange(of: liveReader.followingSession) { updateFollowedReader() }
             .onChange(of: account) { if !account { updateFollowedReader() } }
             .fullScreenCover(item: $liveSong, onDismiss: {
-                if wasFollowing && liveReader.following { mutedService = liveReader.followingSession }
                 wasFollowing = false
             }) { request in
-                SongGalleryView(store: store, request: request, followsLiveSession: wasFollowing)
+                SongGalleryView(store: store, request: request, followsLiveSession: wasFollowing, onClose: {
+                    if wasFollowing && liveReader.following { mutedService = liveReader.followingSession }
+                })
                     .environment(\.worshipLiveContext, liveContext)
             }
     }
