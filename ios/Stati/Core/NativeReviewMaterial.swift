@@ -12,7 +12,9 @@ import SwiftUI
     static let pdf: Data = {
         UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792)).pdfData { context in
             context.beginPage()
-            ("Sample shared notes\nSimulator review only\n\nAmazing Grace\nChoir chord sheet\n\nThis is labelled sample material, not a church upload.").draw(in: CGRect(x: 48, y: 64, width: 516, height: 664), withAttributes: [.font: UIFont.systemFont(ofSize: 20), .foregroundColor: UIColor.black])
+            let chart = "Amazing Grace\nOriginal key: G\n\nG       D/F#       Em7       C\nAmazing grace, how sweet the sound"
+            let text = NativeReview.route == "ipad-chord-chart" ? chart : "Sample shared notes\nSimulator review only\n\nAmazing Grace\nChoir chord sheet\n\nThis is labelled sample material, not a church upload."
+            text.draw(in: CGRect(x: 48, y: 64, width: 516, height: 664), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 20, weight: .regular), .foregroundColor: UIColor.black])
         }
     }()
 }

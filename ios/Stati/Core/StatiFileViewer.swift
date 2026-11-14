@@ -7,6 +7,8 @@ struct StatiFileViewer: View {
     @Environment(\.dismiss) private var dismiss
     let request: FilePreviewRequest
     var navigation: ReaderNavigation? = nil
+    let chordScope: ChordChartView.ServiceSong?
+    @State private var showingChords = false
     @State private var selectedID: String
     @State private var session = FilePreviewSession()
     @State private var retry = UUID()
@@ -19,7 +21,7 @@ struct StatiFileViewer: View {
     @State private var image: UIImage?
     @State private var page = 0
     @AppStorage("stati.files.invertReadingColors") private var inverted = false
-    init(request: FilePreviewRequest, navigation: ReaderNavigation? = nil) { self.request = request; self.navigation = navigation; _selectedID = State(initialValue: request.selectedID) }
+    init(request: FilePreviewRequest, navigation: ReaderNavigation? = nil, chordScope: ChordChartView.ServiceSong? = nil) { self.request = request; self.navigation = navigation; self.chordScope = chordScope; _selectedID = State(initialValue: request.selectedID) }
     private var index: Int { request.items.firstIndex(where: { $0.id == selectedID }) ?? 0 }
     private var item: FilePreviewItem { request.items[index] }
     var body: some View {
@@ -41,6 +43,9 @@ struct StatiFileViewer: View {
                                 }.labelStyle(.iconOnly)
                             }
                             ToolbarItem(placement: .topBarTrailing) {
+                                Button("Open as Chord Chart", systemImage: "music.note.list") { showingChords = true }.labelStyle(.iconOnly)
+                            }
+                            ToolbarItem(placement: .topBarTrailing) {
                                 Button("Open in Quick Look", systemImage: "eye") { reading = false }.labelStyle(.iconOnly)
                             }
                         }
@@ -59,6 +64,11 @@ struct StatiFileViewer: View {
             }
         }.background(Color(.systemBackground))
             .safeAreaInset(edge: .bottom) { footer }
+            .sheet(isPresented: $showingChords) {
+                if let url = markup?.source ?? session.url {
+                    ChordChartView(filename: item.filename, source: url, scope: chordScope)
+                }
+            }
             .task(id: selectedID + retry.uuidString) { await load() }
             .onChange(of: store.accountEpoch) { session.close(); dismiss() }
             .onDisappear { session.close() }
@@ -148,7 +158,7 @@ struct StatiFileViewer: View {
         guard current(), let url = session.url else { return }
         if controller.canEdit && !controller.needsSync { _ = controller.prepare(item: currentItem, url: url) }
         guard current() else { return }
-        if UIDevice.current.userInterfaceIdiom == .pad, !controller.needsSync {
+        if !controller.needsSync {
             let source = controller.source ?? url
             switch source.pathExtension.lowercased() {
             case "pdf":
@@ -159,7 +169,7 @@ struct StatiFileViewer: View {
                 }
             default: break
             }
-            reading = document != nil || image != nil
+            reading = UIDevice.current.userInterfaceIdiom == .pad && (document != nil || image != nil)
             #if DEBUG && targetEnvironment(simulator)
             if NativeReview.route == "ipad-markup" { reading = false }
             #endif

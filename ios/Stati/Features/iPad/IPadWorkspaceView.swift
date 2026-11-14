@@ -36,7 +36,7 @@ struct IPadWorkspaceView: View {
         let route = NativeReview.route ?? ""
         if ["ipad-browse", "ipad-worship-library", "ipad-browse-list", "ipad-browse-list-large", "ipad-sidebar", "ipad-service-sidebar", "ipad-groups-none", "ipad-original", "ipad-search", "ipad-search-ranking", "ipad-reader-dismiss"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "browse")) }
         if route == "ipad-recents" { _showingRecents = State(initialValue: true) }
-        if ["ipad-shared", "ipad-group-switcher", "ipad-scan-review", "ipad-shared-member", "ipad-file-preview", "ipad-scan-pdf", "ipad-scan-form", "ipad-markup", "ipad-group-delete"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared")) }
+        if ["ipad-shared", "ipad-group-switcher", "ipad-scan-review", "ipad-shared-member", "ipad-file-preview", "ipad-chord-chart", "ipad-scan-pdf", "ipad-scan-form", "ipad-markup", "ipad-group-delete"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared")) }
         if route == "ipad-group-selected" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared", groupSelection: .named(NativeReview15.groupID))) }
 
         if ["ipad-service", "ipad-service-reader", "ipad-service-selector", "ipad-service-requests", "ipad-service-share"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "service", serviceID: NativeReview.plan["id"].text)) }
@@ -312,7 +312,7 @@ struct IPadWorkspaceView: View {
         }
         guard let plan = livePlan else { return }
         let request = SongGalleryRequest(computerID: store.selectedComputer, songs: plan["songs"].records,
-                                         selectedID: position.item, service: true)
+                                         selectedID: position.item, service: true, serviceID: plan.id)
         guard let request else { return }
         wasFollowing = follower
         liveSong = request

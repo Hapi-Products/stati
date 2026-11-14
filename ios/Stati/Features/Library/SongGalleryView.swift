@@ -156,7 +156,13 @@ struct SongGalleryView: View {
             guard let live, live.reader.returnRequested else { return }
             if followsLiveSession { live.reader.returnRequested = false }
             else { dismiss() }
-        }) { StatiFileViewer(request: $0) }
+        }) {
+            let scope: ChordChartView.ServiceSong? = model.request.serviceID.flatMap { id in
+                model.request.offline ? nil : ChordChartView.ServiceSong(computer: model.request.computerID,
+                                                                        service: id, item: model.selected)
+            }
+            StatiFileViewer(request: $0, chordScope: scope)
+        }
         .sheet(isPresented: $choosingSong) {
             WorshipReaderSongsView(computerID: model.request.computerID, source: model.request.offline ? .currentService : preferences.settings.selectorSource, offlineRequest: model.request.offline ? model.request : nil, selected: model.selected) { request in
                 choosingSong = false

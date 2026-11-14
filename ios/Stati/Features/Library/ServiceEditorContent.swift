@@ -42,7 +42,7 @@ struct ServiceEditorContent: View {
             }
             Section {
                 ForEach(editor.songs) { song in
-                    Button { readingID = song.id; preview = SongGalleryRequest(computerID: editor.computerID, songs: editor.songs, selectedID: song.id, service: true, offline: offline) }
+                    Button { readingID = song.id; preview = SongGalleryRequest(computerID: editor.computerID, songs: editor.songs, selectedID: song.id, service: true, offline: offline, serviceID: editor.plan.id) }
                     label: {
                         HStack(spacing: 12) {
                             ServiceSongRow(computerID: editor.computerID, song: song).foregroundStyle(.primary)
@@ -116,7 +116,7 @@ struct ServiceEditorContent: View {
             if route == "ipad-service-requests" { showingRequests = true }
             if ["ipad-service-reader", "ipad-service-selector", "ipad-service-share"].contains(route), let first = editor.songs.first {
                 readingID = first.id
-                preview = SongGalleryRequest(computerID: editor.computerID, songs: editor.songs, selectedID: first.id, service: true)
+                preview = SongGalleryRequest(computerID: editor.computerID, songs: editor.songs, selectedID: first.id, service: true, serviceID: editor.plan.id)
             }
         }
         #endif

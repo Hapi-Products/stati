@@ -134,7 +134,7 @@ struct IPadSharedFilesView: View {
                     catch { scanMessage = error.localizedDescription }
                 }
                 if NativeReview.route == "ipad-group-delete" { removing = files.first }
-                if ["ipad-file-preview", "ipad-markup"].contains(NativeReview.route ?? ""), let file = files.first { preview = FilePreviewItem(record: file, pathKey: "fileUrl").flatMap { selected in FilePreviewRequest(items: matching.filter { !$0["removalPending"].flag }.compactMap { FilePreviewItem(record: $0, pathKey: "fileUrl") }, selectedID: selected.id) } }
+                if ["ipad-file-preview", "ipad-markup", "ipad-chord-chart"].contains(NativeReview.route ?? ""), let file = files.first { preview = FilePreviewItem(record: file, pathKey: "fileUrl").flatMap { selected in FilePreviewRequest(items: matching.filter { !$0["removalPending"].flag }.compactMap { FilePreviewItem(record: $0, pathKey: "fileUrl") }, selectedID: selected.id) } }
                 #endif
             }.refreshable { loadScans(); await load() }
     }
