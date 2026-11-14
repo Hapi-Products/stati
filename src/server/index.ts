@@ -1,3 +1,4 @@
+import {serviceSongKey} from './service-song-key';
 import {clickerRehearsal} from './clicker-rehearsal';
 import {readLiveSong,worshipClicker,worshipLiveReader} from './worship-live-reader';
 import {buildPauseAdmin,buildPauseStatus} from './build-pause';
@@ -59,6 +60,12 @@ async function signIn(env:Env,id:string){const raw=token();await env.DB.prepare(
 const webauthnPayload=z.object({response:z.record(z.string(),z.unknown())});
 // These routes check the signed-in member and station access together.
 async function signedInSongRoute(r:Request,env:Env,ctx:ExecutionContext,p:string,m:string):Promise<Response|null>{
+ const sharedKey=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/services\/([0-9a-f-]{36})\/song-key\/([\w-]{20,60})$/i);
+ if(sharedKey&&['GET','PUT'].includes(m)){
+  const response=await serviceSongKey(r,env,sharedKey[1],sharedKey[2],sharedKey[3]);
+  if(response.ok&&m==='PUT')ctx.waitUntil(notifyWorkspaceChange(env,'services-changed'));
+  return response;
+ }
  const readerRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/worship-live\/([0-9a-f-]{36})$/i);
  if(readerRoute&&['GET','PUT','PATCH','DELETE'].includes(m)){
   const response=await worshipLiveReader(r,env,readerRoute[1],readerRoute[2]);
