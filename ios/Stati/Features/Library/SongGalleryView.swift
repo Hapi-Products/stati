@@ -232,7 +232,7 @@ struct SongGalleryView: View {
         .toolbar {
             if iPad {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { toolbarTitle("Close", icon: "xmark") }
+                    Button { dismiss() } label: { toolbarIcon("Close", icon: "xmark") }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarLeading)
                 ToolbarItem(placement: .topBarLeading) {
@@ -240,7 +240,7 @@ struct SongGalleryView: View {
                         preferences.reload()
                         guide.stop()
                         choosingSong = true
-                    } label: { toolbarTitle("Songs", icon: "music.note.list") }
+                    } label: { toolbarIcon("Songs", icon: "music.note.list") }
                     .accessibilityLabel("Song Selector")
                     .worshipGuide(guide, at: .songSelector)
                     .disabled(following)
@@ -257,17 +257,17 @@ struct SongGalleryView: View {
                             Button {
                                 live.reader.returnRequested = true
                                 dismiss()
-                            } label: { toolbarTitle("Back to Live", icon: "dot.radiowaves.left.and.right") }
+                            } label: { toolbarIcon("Back to Live", icon: "dot.radiowaves.left.and.right") }
                         } else if model.request.isService, live.reader.leading {
-                            Button { live.reader.stop(store: store) } label: { toolbarTitle("Stop Leading", icon: "stop.circle") }
+                            Button { live.reader.stop(store: store) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
                                 .accessibilityLabel("Stop leading service")
                         } else if model.request.isService {
                             Button {
                                 if let position = livePosition { live.lead(position) }
-                            } label: { toolbarTitle("Lead Service", icon: "person.wave.2") }
+                            } label: { toolbarIcon("Lead Service", icon: "person.wave.2") }
                             .disabled(live.reader.starting)
                         } else if live.reader.leadingStandalone {
-                            Button { live.reader.stop(store: store) } label: { toolbarTitle("Stop Leading", icon: "stop.circle") }
+                            Button { live.reader.stop(store: store) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
                                 .accessibilityLabel("Stop leading song").disabled(live.reader.starting)
                         } else if !live.reader.leading {
                             Button {
@@ -275,14 +275,14 @@ struct SongGalleryView: View {
                                 if let group = live.selectedGroup ?? (live.availableGroups.count == 1 ? live.availableGroups.first?.id : nil) {
                                     live.chooseGroup?(position, group)
                                 } else { choosingLiveGroup = true }
-                            } label: { toolbarTitle("Lead Song", icon: "person.wave.2") }
+                            } label: { toolbarIcon("Lead Song", icon: "person.wave.2") }
                                 .disabled(live.reader.starting)
                         }
                     }
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu { notesActions } label: { toolbarTitle("Notes", icon: "note.text") }
+                    Menu { notesActions } label: { toolbarIcon("Notes", icon: "note.text") }
                         .worshipGuide(guide, at: .linkNotes)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -297,24 +297,20 @@ struct SongGalleryView: View {
                             }
                             Button("Copy text", systemImage: "doc.on.doc") { UIPasteboard.general.string = song["text"].text }
                         }.disabled(exporting)
-                    } label: { toolbarTitle("Options", icon: "ellipsis") }
+                    } label: { toolbarIcon("Options", icon: "ellipsis") }
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         let hasPages = readerMode == .document || (readerMode == .slides && SongPages(text: song["text"].text).slides.count > 1)
                         guide.start(.reader(hasPages: hasPages, following: following, canLink: store.canPlan && !model.request.offline))
-                    } label: { toolbarTitle("Help", icon: "questionmark") }
+                    } label: { toolbarIcon("Help", icon: "questionmark") }
                 }
             }
         }
     }
-    private func toolbarTitle(_ title: LocalizedStringKey, icon: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon).accessibilityHidden(true)
-            Text(title).font(.subheadline)
-        }
-        .accessibilityElement(children: .combine)
+    private func toolbarIcon(_ title: LocalizedStringKey, icon: String) -> some View {
+        Label(title, systemImage: icon).labelStyle(.iconOnly)
     }
 
     private var showsLeadControl: Bool {

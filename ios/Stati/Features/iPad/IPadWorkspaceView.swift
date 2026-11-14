@@ -136,7 +136,7 @@ struct IPadWorkspaceView: View {
                 } label: { tabLabel("Browse", symbol: "music.note.list") }.accessibilityLabel("Browse")
             }
             if !store.canReadSongs {
-                Tab("Account", systemImage: "person.crop.circle", value: "account") {
+                Tab(value: "account") {
                     ContentUnavailableView {
                         Label("Songs unavailable", systemImage: "music.note")
                     } description: {
@@ -144,7 +144,7 @@ struct IPadWorkspaceView: View {
                     } actions: {
                         Button("Open Account") { account = true }
                     }
-                }
+                } label: { tabLabel("Account", symbol: "person.crop.circle") }.accessibilityLabel("Account")
             }
             if store.canReadSongs {
                 Tab(value: "service") {
@@ -183,7 +183,7 @@ struct IPadWorkspaceView: View {
     }
     @ViewBuilder private func tabLabel(_ title: String, symbol: String) -> some View {
         if preferredPlacement == .sidebar { Label(title, systemImage: symbol) }
-        else { ActionTabSymbol(name: symbol) }
+        else { Text(title) }
     }
 
     private func resetLiveScope() {
