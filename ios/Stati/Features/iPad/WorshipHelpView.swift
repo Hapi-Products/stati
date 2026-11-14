@@ -44,7 +44,7 @@ enum WorshipHelpTopic {
         case .groups:
             [
                 Step(target: .fallback, title: "Open a shared file", instruction: "Tap a file preview to open it. To find a file already linked to a song, open the song and tap Notes."),
-                Step(target: .groupSwitcher, title: "Switch worship groups", instruction: "If you have access to several groups, tap the people icon to switch. Set your default in Account → Worship.")
+                Step(target: .groupSwitcher, title: "Switch worship groups", instruction: "Tap the current group name at the top left to choose another group you can access. Set your default in Account → Worship.")
             ]
         case .service:
             [

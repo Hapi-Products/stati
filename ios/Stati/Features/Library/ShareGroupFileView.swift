@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -6,7 +7,13 @@ struct ShareGroupFileView: View {
     @Environment(\.dismiss) private var dismiss
     let shared: () -> Void
     private let initialScan: GroupScanDraft?
-    private let initialGroupID: String?
+    private let opensPhotos: Bool
+    @State private var pickingPhoto = false
+    @State private var photo: PhotosPickerItem?
+    @State private var stagedPhoto: URL?
+    @State private var photoPreview: UIImage?
+    @State private var photoTask: Task<Void, Never>?
+    @State private var preparingPhoto = false
     @State private var groupID = ""
     @State private var namedGroups: WorshipGroupsModel?
     @State private var scan: GroupScanDraft?
@@ -21,8 +28,8 @@ struct ShareGroupFileView: View {
     @State private var message = ""
     @State private var ownerID = ""
     @State private var epoch = UUID()
-    init(initialScan: GroupScanDraft? = nil, initialGroupID: String? = nil, shared: @escaping () -> Void) {
-        self.initialScan = initialScan; self.initialGroupID = initialGroupID; self.shared = shared
+    init(initialScan: GroupScanDraft? = nil, initialGroupID: String? = nil, opensPhotos: Bool = false, shared: @escaping () -> Void) {
+        self.initialScan = initialScan; self.opensPhotos = opensPhotos; self.shared = shared
         _groupID = State(initialValue: initialScan?.groupID ?? initialGroupID ?? "")
         _scan = State(initialValue: initialScan)
         _title = State(initialValue: initialScan?.title ?? "")
@@ -49,7 +56,14 @@ struct ShareGroupFileView: View {
                 if initialScan != nil {
                     Button("Review scan", systemImage: "doc.viewfinder") { reviewing = true }.disabled(file == nil)
                 } else {
-                    Button(file?.lastPathComponent ?? "Choose PDF or image", systemImage: "doc.badge.plus") { importing = true }.disabled(uncertain)
+                    Button(stagedPhoto != nil ? "Photo selected" : file?.lastPathComponent ?? "Choose PDF or image", systemImage: "doc.badge.plus") { importing = true }.disabled(uncertain || preparingPhoto)
+                    Button("Choose from Photos", systemImage: "photo.on.rectangle") { pickingPhoto = true }.disabled(uncertain || preparingPhoto)
+                    if let photoPreview {
+                        Image(uiImage: photoPreview).resizable().scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: 180)
+                            .accessibilityLabel("Selected photo")
+                    }
+                    if preparingPhoto { ProgressView("Preparing photo…") }
                 }
                 Text(legacyPending ? "This earlier scan was shared with the ministry team. Its original destination is kept while checking the result." : "Visible to the selected group’s members and administrators. PDF, JPG, PNG or WebP · up to 12 MB.").font(.footnote).foregroundStyle(Color.statiSecondary)
                 if uncertain {
@@ -61,10 +75,16 @@ struct ShareGroupFileView: View {
             }.disabled(busy).navigationTitle("Group File").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button(initialScan == nil ? "Cancel" : "Done", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()).disabled(busy) }
-                    ToolbarItem(placement: .confirmationAction) { Button("Share group file", systemImage: "square.and.arrow.up") { Task { await share() } }.labelStyle(.iconOnly).buttonStyle(.borderedProminent).buttonBorderShape(.circle).disabled(!validGroup || !active || !store.canPlan || busy || !shareGate.canShare(scanID: scan?.id, uncertain: uncertain) || file == nil || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || groupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+                    ToolbarItem(placement: .confirmationAction) { Button("Share group file", systemImage: "square.and.arrow.up") { Task { await share() } }.labelStyle(.iconOnly).buttonStyle(.borderedProminent).buttonBorderShape(.circle).disabled(!validGroup || !active || !store.canPlan || busy || preparingPhoto || !shareGate.canShare(scanID: scan?.id, uncertain: uncertain) || file == nil || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || groupName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
                 }
                 .interactiveDismissDisabled(busy)
-                .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf, .jpeg, .png, .webP]) { result in switch result { case .success(let url): file = url; case .failure(let error): message = error.localizedDescription } }
+                .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf, .jpeg, .png, .webP]) { result in switch result { case .success(let url): clearStagedPhoto(); file = url; case .failure(let error): message = error.localizedDescription } }
+                .photosPicker(isPresented: $pickingPhoto, selection: $photo, matching: .images)
+                .onChange(of: photo) { _, selection in
+                    guard let selection else { return }
+                    photoTask?.cancel()
+                    photoTask = Task { await preparePhoto(selection) }
+                }
                 .fullScreenCover(isPresented: $reviewing, onDismiss: { if active, file != nil, let scan { shareGate.finishReview(scanID: scan.id) } }) { if let file { ScanDocumentReview(url: file, title: title) } }
                 .task {
                     ownerID = store.me?.id ?? ""; epoch = store.accountEpoch
@@ -74,6 +94,7 @@ struct ShareGroupFileView: View {
                         if groupID.isEmpty && groups.groups.count == 1 { groupID = groups.groups[0].id }
                         syncDestination()
                     }
+                    if opensPhotos, initialScan == nil, validGroup { pickingPhoto = true }
                     if initialScan != nil && file == nil { message = "This scan could not be verified. Its existing files have been kept." }
                     if initialScan != nil, file != nil, shareGate.reviewedScanID != scan?.id { reviewing = true }
                 }
@@ -82,7 +103,44 @@ struct ShareGroupFileView: View {
                 .onChange(of: title) { persistScan() }.onChange(of: groupName) { persistScan() }
                 .onChange(of: store.accountEpoch) { dismiss() }
         }
+        .onDisappear {
+            photoTask?.cancel()
+            clearStagedPhoto()
+        }
     }
+    private func preparePhoto(_ selection: PhotosPickerItem) async {
+        guard active, !busy, !uncertain else { return }
+        preparingPhoto = true
+        message = ""
+        defer { preparingPhoto = false; photo = nil }
+        do {
+            guard let data = try await selection.loadTransferable(type: Data.self) else {
+                throw APIError(status: 415, message: "This photo could not be opened.")
+            }
+            let url = try await UploadFiles.photo(data: data, maximumPixels: 4096)
+            guard !Task.isCancelled, active else { try? FileManager.default.removeItem(at: url); return }
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            guard (1...(12 * 1024 * 1024)).contains(size) else {
+                try? FileManager.default.removeItem(at: url)
+                throw APIError(status: 413, message: "Choose a photo that can be shared within the 12 MB file limit.")
+            }
+            clearStagedPhoto()
+            stagedPhoto = url
+            photoPreview = PreviewImage.decode(data, maximumPixels: 640)
+            file = url
+            if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { title = "Photo" }
+        } catch is CancellationError { }
+        catch { if active { message = error.localizedDescription } }
+    }
+
+    private func clearStagedPhoto() {
+        guard let url = stagedPhoto else { return }
+        try? FileManager.default.removeItem(at: url)
+        stagedPhoto = nil
+        photoPreview = nil
+        if file == url { file = nil }
+    }
+
     private func syncDestination() {
         guard !uncertain, let group = namedGroups?.groups.first(where: { $0.id == groupID }) else { return }
         groupName = group.name; persistScan()
@@ -93,7 +151,7 @@ struct ShareGroupFileView: View {
         do { try GroupScanStorage.save(value); scan = value; message = "" } catch { message = error.localizedDescription }
     }
     private func share() async {
-        guard active, store.canPlan, validGroup, !busy, shareGate.canShare(scanID: scan?.id, uncertain: uncertain), let file else { return }
+        guard active, store.canPlan, validGroup, !busy, !preparingPhoto, shareGate.canShare(scanID: scan?.id, uncertain: uncertain), let file else { return }
         let scoped = file.startAccessingSecurityScopedResource(); defer { if scoped { file.stopAccessingSecurityScopedResource() } }
         busy = true; defer { busy = false }
         do {

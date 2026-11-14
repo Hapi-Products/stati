@@ -20,7 +20,7 @@ struct IPadWorkspaceView: View {
     private var liveGroup: String? {
         if let chosenLiveGroup, groups.groups.contains(where: { $0.id == chosenLiveGroup }) { return chosenLiveGroup }
         if case .named(let id) = preferences.selection, groups.groups.contains(where: { $0.id == id }) { return id }
-        if groupSelection == .automatic, groups.groups.count == 1 { return groups.groups.first?.id }
+        if preferences.selection == .automatic, groups.groups.count == 1 { return groups.groups.first?.id }
         return nil
     }
     private var liveScope: String {
@@ -53,9 +53,8 @@ struct IPadWorkspaceView: View {
     private var showsGroups: Bool { store.canReadSongs && (store.isAdmin || (!preferences.selection.hidesGroups && !groups.groups.isEmpty)) }
     private var groupSelection: GroupSelection { navigation.groupSelection ?? preferences.selection }
     private var selectedGroupID: String? {
-        if case .named(let id) = groupSelection { return groups.groups.contains(where: { $0.id == id }) ? id : nil }
-        if groupSelection == .automatic && (groups.groups.count == 1 || !store.isAdmin) { return groups.groups.first?.id }
-        return nil
+        if case .named(let id) = groupSelection, groups.groups.contains(where: { $0.id == id }) { return id }
+        return groups.groups.first?.id
     }
     private var legacyFileGroup: String { if case .legacy(let name) = groupSelection { return name }; return "__generic__" }
     var body: some View {
@@ -95,20 +94,20 @@ struct IPadWorkspaceView: View {
         TabView(selection: Binding(get: { navigation.tab }, set: { navigation.select($0) })) {
             if store.canReadSongs {
                 if showsGroups {
-                    Tab(value: "shared") {
+                    Tab("Groups", systemImage: "person.2", value: "shared") {
                         IPadNavigation(store: store) {
                             IPadSharedFilesView(store: store, defaultGroup: legacyFileGroup, groupID: selectedGroupID,
                                                groupTitle: groups.groups.first(where: { $0.id == selectedGroupID })?.name,
                                                groups: groups, switchGroup: { id in
-                                navigation.groupSelection = id.isEmpty ? .allGroups : .named(id)
-                                if !id.isEmpty { chosenLiveGroup = id }
+                                navigation.groupSelection = .named(id)
+                                chosenLiveGroup = id
                             })
                             .id(selectedGroupID ?? legacyFileGroup)
                             .toolbar { if liveReader.following { ToolbarItem(placement: .topBarTrailing) { liveControls } } }
                         }
-                    } label: { tabLabel("Groups", symbol: "person.2") }.accessibilityLabel("Groups")
+                    }
                 }
-                Tab(value: "browse") {
+                Tab("Browse", systemImage: "music.note.list", value: "browse") {
                     IPadNavigation(store: store, path: $navigation.path) {
                         Group {
                             if showingRecents { IPadRecentsView() }
@@ -135,10 +134,10 @@ struct IPadWorkspaceView: View {
                                 }
                             }
                     }
-                } label: { tabLabel("Browse", symbol: "music.note.list") }.accessibilityLabel("Browse")
+                }
             }
             if !store.canReadSongs {
-                Tab(value: "account") {
+                Tab("Account", systemImage: "person.crop.circle", value: "account") {
                     ContentUnavailableView {
                         Label("Songs unavailable", systemImage: "music.note")
                     } description: {
@@ -146,12 +145,12 @@ struct IPadWorkspaceView: View {
                     } actions: {
                         Button("Open Account") { account = true }
                     }
-                } label: { tabLabel("Account", symbol: "person.crop.circle") }.accessibilityLabel("Account")
+                }
             }
             if store.canReadSongs {
-                Tab(value: "service") {
+                Tab("Service", systemImage: "calendar", value: "service") {
                     IPadNavigation(store: store) { services.toolbar { if liveReader.following { ToolbarItem(placement: .topBarTrailing) { liveControls } } } }
-                } label: { tabLabel("Service", symbol: "calendar") }.accessibilityLabel("Service")
+                }
                 TabSection("Song folders") { ForEach(overview.songGroups, id: \.self) { group in Tab(group, systemImage: "folder", value: "group:" + group) { EmptyView() }.tabPlacement(.sidebarOnly) } }.tabPlacement(.sidebarOnly)
             }
         }.tabViewStyle(.sidebarAdaptable).defaultAdaptableTabBarPlacement(preferredPlacement).environment(\.symbolVariants, .none).environment(store)
@@ -182,10 +181,6 @@ struct IPadWorkspaceView: View {
                 navigation.select(allowed ? "browse" : "account")
             }
             .onAppear { if !store.canReadSongs { navigation.select("account") } }
-    }
-    @ViewBuilder private func tabLabel(_ title: String, symbol: String) -> some View {
-        if preferredPlacement == .sidebar { Label(title, systemImage: symbol) }
-        else { Text(title) }
     }
 
     private func resetLiveScope() {

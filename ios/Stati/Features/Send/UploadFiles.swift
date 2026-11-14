@@ -46,11 +46,27 @@ nonisolated enum UploadFiles {
         return job
     }
 
-    @concurrent static func photo(data: Data) async throws -> URL {
+    @concurrent static func photo(data: Data, maximumPixels: Int? = nil) async throws -> URL {
         guard data.count <= 50 * 1024 * 1024, let source = CGImageSourceCreateWithData(data as CFData, nil) else { throw APIError(status: 415, message: "Choose a photo up to 50 MB.") }
+        let scaledImage: CGImage?
+        if let maximumPixels {
+            scaledImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: maximumPixels
+            ] as CFDictionary)
+            guard scaledImage != nil else { throw APIError(status: 415, message: "This photo could not be opened.") }
+        } else {
+            scaledImage = nil
+        }
         let url = URL.temporaryDirectory.appending(path: "Photo-" + UUID().uuidString + ".jpg")
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else { throw APIError(status: 0, message: "The photo could not be prepared.") }
-        CGImageDestinationAddImageFromSource(destination, source, 0, [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary)
+        let properties = [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary
+        if let scaledImage {
+            CGImageDestinationAddImage(destination, scaledImage, properties)
+        } else {
+            CGImageDestinationAddImageFromSource(destination, source, 0, properties)
+        }
         guard CGImageDestinationFinalize(destination) else { try? FileManager.default.removeItem(at: url); throw APIError(status: 0, message: "The photo could not be prepared.") }
         return url
     }

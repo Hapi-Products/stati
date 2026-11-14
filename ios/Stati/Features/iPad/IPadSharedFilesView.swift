@@ -18,7 +18,7 @@ struct IPadSharedFilesView: View {
     @State private var snapshot = GroupFileSnapshot()
     private var files: [APIRecord] { snapshot.files }
     @State private var nextCursor = ""
-    private var canUpload: Bool { snapshot.canUpload }
+    private var canAddFiles: Bool { snapshot.canUpload && groupID != nil }
     @State private var query = ""
     @State private var listMode = false
     @State private var reader: ReaderPreferences?
@@ -27,6 +27,7 @@ struct IPadSharedFilesView: View {
     @State private var message = ""
     @State private var generation = UUID()
     @State private var sharing = false
+    @State private var shareFromPhotos = false
     @State private var scanning = false
     @State private var pendingScan: GroupScanDraft?
     @State private var reviewScan: GroupScanDraft?
@@ -58,22 +59,23 @@ struct IPadSharedFilesView: View {
         .onDisappear { guide.stop() }
         .navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if let switchGroup, let groups, !groups.groups.isEmpty, groups.groups.count > 1 {
-                    ToolbarItemGroup(placement: .topBarLeading) {
-                        Menu("Switch worship group", systemImage: "person.2") {
+                if let switchGroup, let groups, groups.groups.count > 1 {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu {
                             ForEach(groups.groups) { group in
-                                Button {
-                                    switchGroup(group.id)
-                                } label: {
+                                Button { switchGroup(group.id) } label: {
                                     if group.id == groupID { Label(group.name, systemImage: "checkmark") }
                                     else { Text(group.name) }
                                 }
                             }
-                            if store.isAdmin {
-                                Button("All groups") { switchGroup("") }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(groupTitle ?? "Choose group").lineLimit(1)
+                                Image(systemName: "chevron.down").font(.caption2.weight(.semibold)).accessibilityHidden(true)
                             }
                         }
-                        .labelStyle(.iconOnly)
+                        .accessibilityLabel("Worship group")
+                        .accessibilityValue(groupTitle ?? "")
                         .worshipGuide(guide, at: .groupSwitcher)
                     }
                 }
@@ -82,21 +84,23 @@ struct IPadSharedFilesView: View {
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Grid", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
-                if canUpload || groups?.canCreate == true || canManageGroup || (store.isAdmin && groups?.groups.count == 1 && switchGroup != nil) {
+                if canAddFiles || groups?.canCreate == true || canManageGroup || actions?.drafts.isEmpty == false {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Add and manage", systemImage: "plus") {
-                            if canUpload {
-                                Button("Choose PDF or image", systemImage: "doc.badge.plus") { sharing = true }
+                            if canAddFiles {
+                                Button("Choose PDF or image", systemImage: "doc.badge.plus") { shareFromPhotos = false; sharing = true }
+                                Button("Choose from Photos", systemImage: "photo.on.rectangle") { shareFromPhotos = true; sharing = true }
                                 Button("Scan Document", systemImage: "doc.viewfinder") { scanning = true }.disabled(!VNDocumentCameraViewController.isSupported || scanRecoveryError || !savedScans.isEmpty)
                             }
                             if groups?.canCreate == true { Button("New worship group", systemImage: "person.2.badge.plus") { actions?.create() } }
-                            if store.isAdmin, groupID != nil, groups?.groups.count == 1, let switchGroup {
-                                Button("All groups", systemImage: "person.2") { switchGroup("") }
-                            } else if store.isAdmin, groupID == nil, let groups, groups.groups.count == 1, let group = groups.groups.first, let switchGroup {
-                                Button(group.name, systemImage: "person.2") { switchGroup(group.id) }
-                            }
                             if canManageGroup, let groupID { Button("Group members", systemImage: "person.2") { Task { await actions?.edit(groupID) } } }
-                            if let actions { ForEach(actions.drafts) { draft in Button("Continue " + (draft.name.isEmpty ? "group" : draft.name)) { actions.draft = draft } } }
+                            if let actions, !actions.drafts.isEmpty {
+                                Menu("Saved group drafts", systemImage: "doc.badge.clock") {
+                                    ForEach(actions.drafts) { draft in
+                                        Button(draft.name.isEmpty ? "Untitled group draft" : draft.name) { actions.draft = draft }
+                                    }
+                                }
+                            }
                         }.labelStyle(ActionIconLabelStyle())
                     }
                 }
@@ -106,7 +110,7 @@ struct IPadSharedFilesView: View {
             .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in reader?.reload() }
             .searchable(text: $query, placement: .toolbar, prompt: "Search loaded group files").searchToolbarBehavior(.minimize)
             .fullScreenCover(item: $preview, onDismiss: { live?.completeReturnToLive(); Task { await load() } }) { StatiFileViewer(request: $0) }
-            .sheet(isPresented: $sharing, onDismiss: { Task { await load() } }) { ShareGroupFileView(initialGroupID: groupID) { sharing = false; Task { await load() } }.presentationSizing(.form) }
+            .sheet(isPresented: $sharing, onDismiss: { Task { await load() } }) { ShareGroupFileView(initialGroupID: groupID, opensPhotos: shareFromPhotos) { sharing = false; Task { await load() } }.presentationSizing(.form) }
             .sheet(item: $reviewScan, onDismiss: loadScans) { scan in ShareGroupFileView(initialScan: scan) { reviewScan = nil; loadScans(); Task { await load() } }.presentationSizing(.form) }
             .sheet(isPresented: $scanning, onDismiss: { if active, let pendingScan { reviewScan = pendingScan; self.pendingScan = nil }; loadScans() }) { DocumentScanner(finished: scanned) }
             .confirmationDialog("Delete this group file?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), titleVisibility: .visible) {
@@ -165,7 +169,7 @@ struct IPadSharedFilesView: View {
             .contextMenu { if file["canDelete"].flag { Button("Delete", systemImage: "trash", role: .destructive) { removing = file } } }
     }
     private func load(more: Bool = false) async {
-        guard active, !more || !loading && !nextCursor.isEmpty else { return }
+        guard active, switchGroup == nil || groupID != nil, !more || !loading && !nextCursor.isEmpty else { return }
         let scope = UUID(); generation = scope; loading = true; message = ""
         if !more { nextCursor = "" }
         defer { if generation == scope { loading = false } }
