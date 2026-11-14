@@ -66,6 +66,31 @@ function publicPosition(value:string){
  return {position,clickerConnected:typeof clickerUntil==='number'&&clickerUntil>now()};
 }
 
+const liveSongSources = `FROM worship_live_reader live
+   LEFT JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id
+   LEFT JOIN json_each(service.content_json,'$.songs') song ON json_extract(song.value,'$.id')=live.item_id
+   LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash`;
+
+export async function readLiveSong(request:Request,env:Env,deviceId:string){
+ const authority=await requireSongStation(request,env,deviceId);
+ const time=now(), userID=authority.user.id;
+ const guard=stationMinistryGuard(authority,deviceId,'readSongs',time);
+ const live=await env.DB.prepare(`SELECT COALESCE(live.service_id,live.session_id) AS serviceId,
+   COALESCE(service.title,'Live worship') AS serviceTitle,
+   COALESCE(live.song_id,json_extract(song.value,'$.songId')) AS songId,
+   COALESCE(catalog.title,serviceSong.title) AS songTitle, live.expires_at AS expiresAt
+   ${liveSongSources}
+   LEFT JOIN station_catalog serviceSong ON serviceSong.device_id=live.device_id
+    AND serviceSong.song_id=json_extract(song.value,'$.songId') AND serviceSong.content_hash=json_extract(song.value,'$.contentHash')
+   WHERE live.device_id=? AND live.expires_at>? AND ${currentHost} AND ${leaderAccess}
+    AND EXISTS(SELECT 1 FROM worship_groups wg JOIN worship_group_members gm ON gm.group_id=wg.id
+     WHERE wg.id=live.group_id AND wg.archived_at IS NULL AND gm.user_id=?)
+    AND COALESCE(catalog.title,serviceSong.title) IS NOT NULL AND ${guard.sql}
+   ORDER BY (live.leader_id=?) DESC, (live.service_id IS NOT NULL) DESC, live.expires_at DESC, live.session_id LIMIT 1
+ `).bind(deviceId,time,userID,...guard.params,userID).first();
+ return json({live});
+}
+
 export async function worshipClicker(request:Request, env:Env, deviceId:string) {
  const authority = await requireSongStation(request,env,deviceId);
  const time = now(), userId = authority.user.id;
@@ -76,16 +101,13 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
   AND ${guard.sql}`;
  const params = [deviceId,userId,time,...guard.params];
  if (request.method === 'GET') {
-  const live = await env.DB.prepare(`SELECT live.position_json AS position, COALESCE(service.title,'Live worship') AS serviceTitle,
+  const live = await env.DB.prepare(`SELECT live.position_json AS position, live.expires_at AS expiresAt, COALESCE(service.title,'Live worship') AS serviceTitle,
    COALESCE(catalog.title,json_extract(song.value,'$.title')) AS songTitle,
    COALESCE(live.song_id,json_extract(song.value,'$.songId')) AS songId,
    COALESCE(live.song_hash,json_extract(song.value,'$.contentHash')) AS contentHash
-   FROM worship_live_reader live
-   LEFT JOIN station_services service ON service.device_id=live.device_id AND service.id=live.service_id
-   LEFT JOIN json_each(service.content_json,'$.songs') song ON json_extract(song.value,'$.id')=live.item_id
-   LEFT JOIN station_catalog catalog ON catalog.device_id=live.device_id AND catalog.song_id=live.song_id AND catalog.content_hash=live.song_hash
+   ${liveSongSources}
    WHERE ${scope} ORDER BY live.expires_at DESC, live.session_id LIMIT 1`).bind(...params)
-   .first<{position:string;serviceTitle:string;songTitle:string;songId:string;contentHash:string}>();
+   .first<{position:string;expiresAt:number;serviceTitle:string;songTitle:string;songId:string;contentHash:string}>();
   return json({live:live ? {...live,position:publicPosition(live.position).position} : null});
  }
  if (request.method === 'PATCH') {

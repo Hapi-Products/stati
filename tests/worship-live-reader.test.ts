@@ -44,6 +44,18 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await request(memberCookie,'PUT',update)).status).toBe(409);
  expect((await request(f.session,'PUT',update)).status).toBe(200);
  expect(await (await request(memberCookie)).json()).toEqual({state:'live',isLeader:false,position:update});
+ const liveSong = (session?:string) => SELF.fetch('http://localhost:8787/api/computers/'+f.deviceId+'/live-song',{
+  headers:session?{Cookie:'stati_session='+session}:{},
+ });
+ expect((await liveSong()).status).toBe(401);
+ expect(await (await liveSong(outsiderCookie)).json()).toEqual({live:null});
+ expect(await (await liveSong(memberCookie)).json()).toMatchObject({live:{
+  serviceId:plan.id, serviceTitle:plan.title, songId:f.songId, songTitle:'Împreună cântăm', expiresAt:f.timestamp+24,
+ }});
+ await env.DB.prepare("UPDATE station_memberships SET status='denied' WHERE device_id=? AND user_id=?").bind(f.deviceId,member).run();
+ expect((await liveSong(memberCookie)).status).toBe(403);
+ await env.DB.prepare("UPDATE station_memberships SET status='approved' WHERE device_id=? AND user_id=?").bind(f.deviceId,member).run();
+
  // Count remote D1 calls across the actual Worker request, including authentication.
  let databaseCalls = 0;
  const DB = new Proxy(env.DB,{get(target,key) {
@@ -94,7 +106,7 @@ it('syncs the leader’s exact service item and PDF page only within the named g
   .toEqual({state:'live',isLeader:false,position:ready});
 
  expect(await (await clicker(f.session)).json()).toMatchObject({live:{
-  position:ready,songTitle:'Împreună cântăm',songId:f.songId,contentHash:f.contentHash
+  position:ready,songTitle:'Împreună cântăm',songId:f.songId,contentHash:f.contentHash,expiresAt:f.timestamp+24
  }});
  expect(await (await clicker(memberCookie)).json()).toEqual({live:null});
  const move = {sessionId:ready.sessionId,itemId:ready.itemId,sequence:ready.sequence,page:1,turn:null,direction:1};
@@ -147,6 +159,7 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  vi.setSystemTime(new Date((f.timestamp+25)*1000));
  expect(await (await request(memberCookie)).json()).toEqual({state:'waiting'});
  expect(await (await clicker(f.session)).json()).toEqual({live:null});
+ expect(await (await liveSong(memberCookie)).json()).toEqual({live:null});
  expect((await clicker(f.session,{...move,sequence:4,page:0})).status).toBe(409);
  await env.DB.prepare('DELETE FROM worship_group_members WHERE group_id=? AND user_id=?').bind(group,member).run();
  expect((await request(memberCookie)).status).toBe(403);
@@ -159,11 +172,13 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  expect((await request(f.session,'PUT',{...solo,songHash:'0'.repeat(64)})).status).toBe(409);
  expect((await request(f.session,'PUT',solo)).status).toBe(200);
  expect(await (await request(memberCookie)).json()).toMatchObject({state:'live',songTitle:'Împreună cântăm',position:solo});
+ expect(await (await liveSong(memberCookie)).json()).toMatchObject({live:{serviceId:solo.sessionId,serviceTitle:'Live worship',songId:f.songId,songTitle:'Împreună cântăm'}});
  expect(await (await SELF.fetch('http://localhost:8787/api/build-status')).json()).toEqual({version:1,allowed:false});
  expect(await (await clicker(f.session)).json()).toMatchObject({live:{position:solo,songId:f.songId}});
  expect((await clicker(f.session,{sessionId:solo.sessionId,itemId:solo.itemId,sequence:1,page:0,turn:null,direction:1})).status).toBe(200);
  expect((await request(f.session,'PATCH',{sessionId:solo.sessionId})).status).toBe(200);
  expect(await (await request(memberCookie)).json()).toMatchObject({position:{page:1}});
  expect((await request(f.session,'DELETE',{sessionId:solo.sessionId})).status).toBe(200);
+ expect(await (await liveSong(memberCookie)).json()).toEqual({live:null});
  expect(await (await request(memberCookie)).json()).toEqual({state:'idle'});
 });

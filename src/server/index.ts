@@ -1,5 +1,5 @@
 import {clickerRehearsal} from './clicker-rehearsal';
-import {worshipClicker,worshipLiveReader} from './worship-live-reader';
+import {readLiveSong,worshipClicker,worshipLiveReader} from './worship-live-reader';
 import {buildPauseAdmin,buildPauseStatus} from './build-pause';
 import {sendSupportReport} from './support-reports';
 import {issuePhoneEnrollment} from './phone-enrollment';
@@ -67,6 +67,8 @@ async function signedInSongRoute(r:Request,env:Env,ctx:ExecutionContext,p:string
  }
  const rehearsal=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/clicker-rehearsal$/i);
  if(rehearsal&&['GET','POST'].includes(m))return clickerRehearsal(r,env,rehearsal[1]);
+ const liveSong=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/live-song$/i);
+ if(liveSong&&m==='GET')return readLiveSong(r,env,liveSong[1]);
  const clickerRoute=p.match(/^\/api\/computers\/([0-9a-f-]{36})\/live-clicker$/i);
  if(clickerRoute&&['GET','POST','PATCH'].includes(m)){
   const response=await worshipClicker(r,env,clickerRoute[1]);
