@@ -30,7 +30,7 @@ This feature requires build 58 on the iPhone and the leader’s iPad and the upd
 
 1. On iPad, start leading the active service for your worship group and open a song as **Slides** or a **PDF**.
 2. On iPhone, sign in with the same leader profile and select the same computer in **Send**.
-3. Tap **Live Clicker** at the top of **Send**. Build 65 and earlier show a clicker icon there. The screen shows the live song and page. Use the arrows to turn pages on the leader’s iPad and the tablets following it.
+3. Tap the **Live Clicker** icon at the top left of **Send**. The screen shows the live song and page. Use the arrows to turn pages on the leader’s iPad and the tablets following it.
 4. Tap **×** to leave the clicker. The service continues. If iOS Live Activities are enabled, tap the activity on the Lock Screen or Dynamic Island to reopen the clicker. You can also reopen it from **Send**.
 
 In build 59, the clicker previews the live slide or PDF page. The layout icon in the top bar lets you choose **Middle** or **Bottom** for the arrows. Stați remembers your choice. Use the refresh icon in the top bar to retry the connection.

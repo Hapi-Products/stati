@@ -4,6 +4,9 @@
 
 In development build 63, Stați Worship brings together **Browse**, **Groups**, and **Service**. The computer you select and your church role determine the material you can open.
 
+
+Starting with build 69, the top navigation uses the names **Groups**, **Browse**, and **Service**. Toolbar actions use icons.
+
 ## Read songs during a service
 
 1. Open **Service** and choose the plan for the service.

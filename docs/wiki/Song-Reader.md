@@ -7,7 +7,7 @@
 1. Open **Browse** and select a result, or open **Service** and choose the song in the running order.
 2. Use the arrows in the glass page control to move one page at a time. The page counter in the middle opens thumbnails. When there are multiple pages, you can also tap the left or right edge of the reader.
 3. Open the page previews from the page counter. Select a thumbnail to jump to that slide.
-4. Tap **Songs** (the music note list) at the top left to jump to a different song. The selector can show Recents or the active service. The **X** at the far left closes the reader. In build 61, each control has its own glass button.
+4. Tap the **Song Selector** icon (the music note list) at the top left to jump to a different song. The selector can show Recents or the active service. The **X** at the far left closes the reader. In build 61, each control has its own glass button.
 
 ## Link a shared file
 

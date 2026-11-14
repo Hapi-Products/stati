@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 69 | Uses text-only iPad navigation tabs, icon-only iPad reader actions, and an icon-only Live Clicker shortcut on iPhone. Installed and launched on physical iPhone and iPad. |
 | iPhone and iPad development build 68 | Opens PDFs and images as editable chord charts. Transposes the chart and lets the assigned service leader save a default key for a song appearance. Installed and launched on physical iPhone and iPad. |
 | iPhone and iPad development build 67 | Connects Live Activity to the current worship song and refreshes on live changes while Stați is open. Expired clicker activities show Updates paused. File actions use icons. Installed on physical iPhone and iPad. |
 | iPhone and iPad development build 66 | Shows text beside the main iPad song toolbar controls and the iPhone Live Clicker button. Installed and launched on both physical devices. |
