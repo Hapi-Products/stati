@@ -25,9 +25,11 @@ When you search during an active service, results that match the exact version i
 
 ## Worship groups
 
-In development build 74, the current group’s name is the page title. If you can access multiple groups, tap the name to open the dropdown and select a group. Administrators can choose any individual worship group. Tap the two-person icon in the navigation bar to open **Group members**. Eligible group leaders and administrators can edit membership.
+The current group’s name is the page title. If you can access multiple groups, tap the name to pick one. Administrators can choose any individual worship group.
 
-Tap **Group options (•••) → Remove group** to archive a group you manage. Confirm to remove the group and its shared files from members’ view. Stați retains the saved records. **Group options → Manage groups → Unfinished group edits** contains group names and membership edits saved on this iPad, including interrupted saves.
+Tap the two-person icon in the navigation bar for the selected group’s roster. In build 75, **Leaders** identifies the saved lead for this group, and **Members** shows everyone else assigned to it.
+
+Tap **Manage groups (•••)**, then tap a group you manage to edit its name or membership. To remove a group, swipe left on its row or touch and hold it, then confirm **Remove group**. Removal archives the group and takes it out of members’ view. **Drafts** appears below the group list whenever there are edits saved on the device. Open a draft to finish the edit or check an interrupted save.
 
 To share an image, open the **+** menu and choose **Choose from Photos**. Pick a photo, check the preview and group, and tap the share icon. Use **Choose PDF or image** for files or **Scan Document** for paper charts.
 
