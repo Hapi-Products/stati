@@ -6,7 +6,8 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
-| Google Drive song imports | The production server accepts imports from an approved **Statsi Music** folder. The sign-in callback was verified in production. A signed-in Drive selection and delivery from iPad to the presentation computer still need a device test. |
+| iPhone and iPad development build 77 | Adds File Providers in Features. iPhone administrators approve a Google Drive folder and set account limits per person and computer. Installed on both physical development devices. The account limits are live on the server. Signed-in Google selection and delivery to a presentation computer still need a device check. |
+| Google Drive song imports | Direct imports use a folder approved for the selected computer. The sign-in callback was verified in production. Build 77 moves folder approval to File Providers on iPhone. |
 | iPhone and iPad development build 76 | Adds a link button with confirmation for rejoining a live leader and an option to hide the iPhone clicker preview. Installed on a physical iPhone and iPad on November 14, 2026. The clicker server update is pending. |
 | iPad development build 75 | Shows the selected group’s leader and members in a dedicated roster. Edit names or membership and remove groups from Manage groups. Opening the group editor leaves no draft until you make an edit. Verified in the iPad simulator. |
 | iPad development build 74 | Restores Recents to the top navigation and sidebar. The group name becomes the page title, with a members icon in the navigation bar. Group options contains removal and access to unfinished edits. Installed and launched on a physical iPad. Direct Google Drive import requires server and Google OAuth setup. |

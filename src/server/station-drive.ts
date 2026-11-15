@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { body, fileType, HttpError, json, now, safeFilename } from './core';
 import { requireStationMinistry, stationMinistryGuard } from './station-catalog';
 import type { MinistryAuthority } from './ministry-roles';
+import { driveAccounts, driveLimitSql, driveMembers, maxDriveAccounts, registerDriveAccount, removeDriveAccount, setDriveLimit } from './drive-account-policy';
 
 const scope = 'https://www.googleapis.com/auth/drive.file';
 const folderType = 'application/vnd.google-apps.folder';
@@ -18,6 +19,11 @@ const edit = z.discriminatedUnion('action', [
   proof.extend({ action: z.literal('connect'), revision }).strict(),
   z.object({ action: z.literal('allow-members'), revision, allowed: z.boolean() }).strict(),
   z.object({ action: z.literal('disconnect'), revision }).strict(),
+  z.object({ action: z.literal('set-limit'), revision, userId: z.string().uuid(), accountLimit: z.number().int().min(0).max(maxDriveAccounts) }).strict(),
+]);
+const accountChange = z.discriminatedUnion('action', [
+  proof.extend({ action: z.literal('connect'), revision }).strict(),
+  z.object({ action: z.literal('remove'), revision, id: z.string().uuid() }).strict(),
 ]);
 const selection = proof.extend({ serviceId: z.string().uuid(), revision }).strict();
 const metadata = z.object({
@@ -27,7 +33,7 @@ const metadata = z.object({
   version: z.string().regex(/^\d{1,20}$/).optional(),
   capabilities: z.object({ canDownload: z.boolean().optional() }).optional(),
 });
-type Folder = { folder_id: string | null; folder_name: string | null; allow_members: number; revision: number };
+type Folder = { folder_id: string | null; folder_name: string | null; allow_members: number; revision: number; accountLimit: number };
 
 function configured(env: Env) {
   return env.GOOGLE_DRIVE_CLIENT_ID?.endsWith('.apps.googleusercontent.com') &&
@@ -38,23 +44,32 @@ function worshipMember(authority: MinistryAuthority) {
   return authority.ministryRole === 'worship_leader' || authority.ministryRole === 'worship_member';
 }
 
-function driveSettings(env: Env, authority: MinistryAuthority, deviceId: string) {
-  const guard = stationMinistryGuard(authority, deviceId, 'sendFiles');
-  return env.DB.prepare(`SELECT folder_id,folder_name,allow_members,revision FROM station_drive_folders WHERE device_id=? AND ${guard.sql}`)
-    .bind(deviceId, ...guard.params).first<Folder>();
+function canManageDrive(request: Request, authority: MinistryAuthority) {
+  // The header selects the iPhone interface. The session and admin role authorize changes.
+  return authority.user.role === 'admin' && request.headers.get('X-Stati-App') === 'iphone';
 }
 
-async function settingsResponse(env: Env, authority: MinistryAuthority, deviceId: string) {
+function driveSettings(env: Env, authority: MinistryAuthority, deviceId: string) {
+  const guard = stationMinistryGuard(authority, deviceId, 'sendFiles');
+  return env.DB.prepare(`SELECT folder_id,folder_name,allow_members,revision,${driveLimitSql('?', '?')} AS accountLimit
+    FROM station_drive_folders folder WHERE device_id=? AND ${guard.sql}`)
+    .bind(authority.user.id, Number(authority.user.role === 'admin'), deviceId, ...guard.params).first<Folder>();
+}
+
+async function settingsResponse(request: Request, env: Env, authority: MinistryAuthority, deviceId: string) {
   const folder = await driveSettings(env, authority, deviceId);
   const enabled = !!configured(env);
-  const canManage = authority.user.role === 'admin';
-  const canImport = enabled && !!folder?.folder_id && (canManage || (worshipMember(authority) && !!folder?.allow_members));
+  const canManage = canManageDrive(request, authority);
+  const accountLimit = authority.user.role === 'admin' || worshipMember(authority) ? folder?.accountLimit ?? 0 : 0;
+  const canImport = enabled && !!folder?.folder_id && accountLimit > 0;
+  const accounts = folder ? (await driveAccounts(env, deviceId, authority.user.id)).results : [];
+  const members = canManage && folder?.folder_id ? (await driveMembers(env, deviceId)).results : undefined;
   return json({
-    configured: enabled, canManage, canImport,
+    configured: enabled, canManage, canImport, accountLimit, maxAccountLimit: maxDriveAccounts, accounts, members,
+    revision: folder?.revision ?? 0,
     ...(canManage || canImport ? {
       folderName: folder?.folder_name ?? null,
       allowMembers: !!folder?.allow_members,
-      revision: folder?.revision ?? 0,
       clientId: enabled ? env.GOOGLE_DRIVE_CLIENT_ID : null,
       redirectURI: enabled ? env.APP_ORIGIN + callbackPath : null,
     } : {}),
@@ -113,11 +128,29 @@ async function fileMetadata(id: string, token: string) {
   return parsed.data;
 }
 
+async function googleAccount(token: string) {
+  const url = 'https://www.googleapis.com/drive/v3/about?fields=user(permissionId,emailAddress,displayName)';
+  const response = await googleRequest(url, { headers: { Authorization: 'Bearer ' + token } });
+  const user = z.object({
+    permissionId: z.string().min(1).max(255),
+    emailAddress: z.string().min(1).max(320).optional(),
+    displayName: z.string().min(1).max(255).optional(),
+  });
+  const result = z.object({ user }).safeParse(response.ok ? await response.json().catch(() => null) : null);
+  if (!result.success) throw new HttpError(502, 'Google did not confirm which Drive account you selected.');
+  const account = result.data.user;
+  return { permissionId: account.permissionId, label: account.emailAddress ?? account.displayName ?? 'Google Drive' };
+}
+
 async function changeSettings(request: Request, env: Env, authority: MinistryAuthority, deviceId: string) {
-  if (authority.user.role !== 'admin') throw new HttpError(403, 'An administrator must approve a Drive folder for this computer.');
+  if (!canManageDrive(request, authority)) throw new HttpError(403, 'An administrator can manage File Providers in Stați on iPhone.');
   const data = await body(request, edit);
   const prior = await driveSettings(env, authority, deviceId);
   if ((prior?.revision ?? 0) !== data.revision) throw new HttpError(409, 'The Drive settings changed. Refresh them and try again.');
+  if (data.action === 'set-limit') {
+    await setDriveLimit(env, authority, deviceId, data.userId, data.revision, data.accountLimit);
+    return settingsResponse(request, env, authority, deviceId);
+  }
   let id = prior?.folder_id ?? null;
   let name = prior?.folder_name ?? null;
   let allowed = prior?.allow_members ?? 0;
@@ -125,8 +158,8 @@ async function changeSettings(request: Request, env: Env, authority: MinistryAut
     if (!configured(env)) throw new HttpError(503, 'Google Drive setup is pending.');
     const folder = await fileMetadata(data.fileId, await accessToken(env, data));
     if (folder.mimeType !== folderType) throw new HttpError(415, 'Choose a Google Drive folder.');
-    if (!/^(statsi music|statsi|stați music|stați|stati music|stati)$/iu.test(folder.name.trim())) {
-      throw new HttpError(400, 'Name the Drive folder “Statsi Music” or “Statsi”, then choose it again.');
+    if (!/^stati(?:-music|-folder)?$/i.test(folder.name.trim())) {
+      throw new HttpError(400, 'Name the Drive folder “stati-music”, “stati-folder”, or “stati”, then choose it again.');
     }
     id = folder.id;
     name = folder.name.trim();
@@ -150,7 +183,27 @@ async function changeSettings(request: Request, env: Env, authority: MinistryAut
       .bind(crypto.randomUUID(), authority.user.id, 'drive-folder-' + data.action, deviceId, now()),
   ]);
   if (!result[0].meta.changes) throw new HttpError(409, 'This computer or its Drive settings changed. Refresh and try again.');
-  return settingsResponse(env, authority, deviceId);
+  return settingsResponse(request, env, authority, deviceId);
+}
+
+async function changeAccount(request: Request, env: Env, authority: MinistryAuthority, deviceId: string) {
+  const data = await body(request, accountChange);
+  if (data.action === 'remove') {
+    await removeDriveAccount(env, authority, deviceId, data.revision, data.id);
+  } else {
+    if (!configured(env)) throw new HttpError(503, 'Google Drive setup is pending.');
+    const folder = await driveSettings(env, authority, deviceId);
+    const allowed = authority.user.role === 'admin' || worshipMember(authority);
+    if (!allowed || !folder?.folder_id || folder.revision !== data.revision || folder.accountLimit === 0) {
+      throw new HttpError(403, 'An iPhone administrator must approve Google Drive access for you.');
+    }
+    if (data.fileId !== folder.folder_id) throw new HttpError(400, 'Choose the approved folder “' + folder.folder_name + '”.');
+    const token = await accessToken(env, data);
+    const selected = await fileMetadata(data.fileId, token);
+    if (selected.mimeType !== folderType) throw new HttpError(415, 'Choose the approved Drive folder.');
+    await registerDriveAccount(env, authority, deviceId, data.revision, await googleAccount(token));
+  }
+  return settingsResponse(request, env, authority, deviceId);
 }
 
 async function importFolder(env: Env, authority: MinistryAuthority, deviceId: string, serviceId: string, expectedRevision: number) {
@@ -158,10 +211,10 @@ async function importFolder(env: Env, authority: MinistryAuthority, deviceId: st
     throw new HttpError(403, 'This Drive folder is available to authorized worship members.');
   }
   const guard = stationMinistryGuard(authority, deviceId, 'sendFiles');
-  const folder = await env.DB.prepare(`SELECT folder_id FROM station_drive_folders WHERE device_id=? AND revision=?
-    AND folder_id IS NOT NULL AND (allow_members=1 OR ?='admin') AND ${guard.sql}
+  const folder = await env.DB.prepare(`SELECT folder_id FROM station_drive_folders folder WHERE device_id=? AND revision=?
+    AND folder_id IS NOT NULL AND ${driveLimitSql('?', '?')}>0 AND ${guard.sql}
     AND EXISTS(SELECT 1 FROM station_services WHERE device_id=? AND id=? AND archived=0)`)
-    .bind(deviceId, expectedRevision, authority.user.role, ...guard.params, deviceId, serviceId).first<{folder_id: string}>();
+    .bind(deviceId, expectedRevision, authority.user.id, Number(authority.user.role === 'admin'), ...guard.params, deviceId, serviceId).first<{folder_id: string}>();
   if (!folder) throw new HttpError(403, 'The Drive folder, service or your access changed. Refresh Song Requests.');
   return folder.folder_id;
 }
@@ -183,6 +236,7 @@ async function importSelection(request: Request, env: Env, authority: MinistryAu
   if (!Number.isSafeInteger(size) || size <= 0 || size > maxImportBytes) {
     throw new HttpError(413, 'Choose a non-empty Drive file up to 12 MB.');
   }
+  const account = await googleAccount(token);
   const response = await googleRequest('https://www.googleapis.com/drive/v3/files/' + file.id + '?supportsAllDrives=true&alt=media', { headers: { Authorization: 'Bearer ' + token } });
   if (!response.ok || !response.body) throw new HttpError(404, 'Google Drive could not download the selected file.');
   const bytes = new Uint8Array(size);
@@ -205,6 +259,7 @@ async function importSelection(request: Request, env: Env, authority: MinistryAu
     throw new HttpError(409, 'The Drive file changed. Choose it again.');
   }
   await importFolder(env, authority, deviceId, data.serviceId, data.revision);
+  await registerDriveAccount(env, authority, deviceId, data.revision, account);
   return new Response(bytes, { headers: {
     'Content-Type': 'application/octet-stream',
     'Content-Length': String(size),
@@ -213,10 +268,13 @@ async function importSelection(request: Request, env: Env, authority: MinistryAu
   } });
 }
 
-export async function stationDrive(request: Request, env: Env, deviceId: string, selectionRoute: boolean) {
+export async function stationDrive(request: Request, env: Env, deviceId: string, route: string) {
   const authority = await requireStationMinistry(request, env, deviceId, 'sendFiles');
-  if (selectionRoute && request.method === 'POST') return importSelection(request, env, authority, deviceId);
-  if (!selectionRoute && request.method === 'GET') return settingsResponse(env, authority, deviceId);
-  if (!selectionRoute && request.method === 'POST') return changeSettings(request, env, authority, deviceId);
+  if (request.method === 'POST') {
+    if (route === '/select') return importSelection(request, env, authority, deviceId);
+    if (route === '/accounts') return changeAccount(request, env, authority, deviceId);
+    if (!route) return changeSettings(request, env, authority, deviceId);
+  }
+  if (!route && request.method === 'GET') return settingsResponse(request, env, authority, deviceId);
   throw new HttpError(405, 'This Google Drive action is unavailable.');
 }

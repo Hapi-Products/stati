@@ -43,11 +43,11 @@ If you can manage notes, open a song and choose **Reader options (•••) →
 
 ### Choose from an approved Google Drive folder
 
-The direct Drive import server is live. Use Stați Worship development build 74 or later. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
+In development build 77, open **Features → File Providers**, choose the presentation computer, then tap **Add Google Account**. In Google’s picker, choose the folder that your administrator approved. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
 
-An administrator opens **Song requests and uploads**, approves a shared folder named **Statsi Music** for the selected computer, and turns on **Allow worship member uploads**. An approved worship member chooses **Choose from Google Drive**, grants access to one file inside the approved folder, and taps **Send Drive attachment** to send a copy. After the computer receives it, the member taps **Submit song request**. The existing service review determines whether the team adds the song.
+Administrators approve the shared folder and set account limits per person on iPhone. On iPad, open **Service → Song requests and uploads** and tap **Choose from Google Drive**. Choose a file inside the approved folder, then tap **Send Drive attachment**. After the computer receives it, tap **Submit song request** for review. [iPhone administrator setup](https://github.com/Hapi-Products/stati/wiki/iPhone#manage-file-provider-access)
 
-Direct import accepts downloadable PDF, PPTX, DOCX and text files up to 12 MB. The Google account must already be able to open the file. An administrator can turn off member uploads or disconnect the folder in **Google Drive**. Existing requests stay available.
+Direct import accepts downloadable PDF, PPTX, DOCX and text files up to 12 MB. The Google account must already be able to open the file. If it has an available account slot, the first import also links the Google account. Changing access on iPhone preserves earlier song requests.
 
 ## Lead or follow a live service
 
