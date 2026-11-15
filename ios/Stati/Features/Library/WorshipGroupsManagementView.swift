@@ -4,13 +4,24 @@ struct WorshipGroupsManagementView: View {
     @Environment(AppStore.self) private var store
     let groups: WorshipGroupsModel
     @State private var pendingRemoval: APIRecord?
-    @State private var removing = false
-    @State private var removalMessage = ""
     @State private var actions: WorshipGroupActions
     init(store: AppStore, groups: WorshipGroupsModel) { self.groups = groups; _actions = State(initialValue: WorshipGroupActions(store: store, groups: groups)) }
     var body: some View {
         List {
-            if !actions.drafts.isEmpty { Section("On this device") { ForEach(actions.drafts) { draft in Button(draft.name.isEmpty ? "Continue new group" : draft.name, systemImage: draft.pending == nil ? "pencil" : "arrow.clockwise") { actions.draft = draft } } } }
+            if !actions.drafts.isEmpty {
+                Section {
+                    ForEach(actions.drafts) { draft in
+                        Button { actions.draft = draft } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(draft.name.isEmpty ? "Untitled group edit" : draft.name)
+                                Text(draft.pending == nil ? "Continue editing on this device" : "Check interrupted save").font(.footnote).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                } header: { Text("Unfinished group edits") } footer: {
+                    Text("Group names and member edits saved only on this device. Reopen a draft to finish an edit or check the status of an interrupted save.")
+                }
+            }
             Section {
                 ForEach(groups.groups) { group in
                     if group["canManage"].flag {
@@ -27,10 +38,10 @@ struct WorshipGroupsManagementView: View {
                 if groups.loaded && groups.groups.isEmpty { Text("No groups yet").foregroundStyle(Color.statiSecondary) }
                 if groups.loading { ProgressView("Loading groups…") }
             }
-            NoticeView(text: groups.message); NoticeView(text: actions.message); NoticeView(text: removalMessage)
+            NoticeView(text: groups.message); NoticeView(text: actions.message); NoticeView(text: groups.removalMessage)
         }.navigationTitle("Worship groups").navigationBarTitleDisplayMode(.inline)
             .toolbar { if groups.canCreate { Button("New group", systemImage: "plus", action: actions.create).labelStyle(ActionIconLabelStyle()) } }
-            .disabled(removing)
+            .disabled(groups.removing)
             .alert("Remove worship group?", isPresented: Binding(
                 get: { pendingRemoval != nil },
                 set: { if !$0 { pendingRemoval = nil } }
@@ -45,14 +56,6 @@ struct WorshipGroupsManagementView: View {
     }
 
     private func remove(_ group: APIRecord) async {
-        removing = true
-        removalMessage = ""
-        defer { removing = false }
-        do { try await groups.remove(group) }
-        catch is CancellationError {}
-        catch {
-            removalMessage = error.localizedDescription
-            await groups.load()
-        }
+        try? await groups.remove(group)
     }
 }

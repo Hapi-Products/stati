@@ -37,12 +37,17 @@ struct IPadSharedFilesView: View {
     @State private var preview: FilePreviewRequest?
     @State private var removing: APIRecord?
     @State private var discarding: GroupScanDraft?
+    @State private var pendingGroupRemoval: APIRecord?
+    @State private var managingGroups = false
+    @State private var memberDetail: JSONValue?
+    @State private var loadingMembers = false
     init(store: AppStore, defaultGroup: String, groupID: String? = nil, groupTitle: String? = nil, groups: WorshipGroupsModel? = nil, switchGroup: ((String) -> Void)? = nil) { self.store = store; self.defaultGroup = defaultGroup; self.groupID = groupID; self.groupTitle = groupTitle; self.groups = groups; self.switchGroup = switchGroup; ownerID = store.me?.id ?? ""; epoch = store.accountEpoch }
     private var active: Bool { !ownerID.isEmpty && store.me?.id == ownerID && store.accountEpoch == epoch }
     private var canManageGroup: Bool { groupID.map { id in groups?.groups.first(where: { $0.id == id })?["canManage"].flag == true } ?? false }
     private var matching: [APIRecord] { files.filter { (groupID != nil || defaultGroup == "__generic__" || defaultGroup.isEmpty || $0["groupName"].text.localizedStandardCompare(defaultGroup) == .orderedSame) && (query.isEmpty || [$0.title, $0["filename"].text, $0["groupName"].text].contains(where: { $0.localizedStandardContains(query) })) } }
     var body: some View {
         VStack(spacing: 0) {
+            pageTitle
             ScrollView {
                 if listMode || dynamicTypeSize.isAccessibilitySize { fileList }
                 else { LazyVGrid(columns: WorshipPreviewGrid.columns(large: largePreviews), alignment: .leading, spacing: WorshipPreviewGrid.spacing) { ForEach(matching) { file in fileButton(file) { IPadSharedFileTile(store: store, file: file, large: largePreviews, showsGroupName: false) } } }.padding(.top, 16).padding(.leading, 20).padding(.trailing, 36).padding(.bottom, 24) }
@@ -51,40 +56,23 @@ struct IPadSharedFilesView: View {
                 NoticeView(text: scanMessage).padding(.horizontal, 24)
                 NoticeView(text: message).padding(.horizontal, 24)
                 NoticeView(text: actions?.message ?? "").padding(.horizontal, 24)
+                NoticeView(text: groups?.removalMessage ?? "").padding(.horizontal, 24)
                 if !nextCursor.isEmpty { Button("Load older files", systemImage: "arrow.down") { Task { await load(more: true) } }.labelStyle(.iconOnly).disabled(loading).padding() }
             }
             if !savedScans.isEmpty { Menu("Continue a scan", systemImage: "doc.viewfinder") { ForEach(savedScans) { scan in Button(scan.title) { reviewScan = scan }; Button("Discard " + scan.title, role: .destructive) { discarding = scan } } }.labelStyle(.iconOnly).padding(.vertical, 8) }
         }
         .worshipGuide(guide, at: .fallback)
         .onDisappear { guide.stop() }
-        .navigationTitle(groupTitle ?? "Groups").navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if let switchGroup, let groups, groups.groups.count > 1 {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Menu {
-                            ForEach(groups.groups) { group in
-                                Button { switchGroup(group.id) } label: {
-                                    if group.id == groupID { Label(group.name, systemImage: "checkmark") }
-                                    else { Text(group.name) }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Text(groupTitle ?? "Choose group").lineLimit(1)
-                                Image(systemName: "chevron.down").font(.caption2.weight(.semibold)).accessibilityHidden(true)
-                            }
-                        }
-                        .accessibilityLabel("Worship group")
-                        .accessibilityValue(groupTitle ?? "")
-                        .worshipGuide(guide, at: .groupSwitcher)
-                    }
-                }
+                ToolbarItem(placement: .topBarLeading) { memberButton }
+                ToolbarItem(placement: .topBarLeading) { groupManagement }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Groups help", systemImage: "questionmark") { guide.start(.groups) }.labelStyle(.iconOnly)
                 }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 ToolbarItem(placement: .topBarTrailing) { Menu("View options", systemImage: listMode ? "list.bullet" : "square.grid.2x2") { Button("Grid", systemImage: "square.grid.2x2") { listMode = false }; Button("List", systemImage: "list.bullet") { listMode = true }; Toggle("Larger previews", isOn: Binding(get: { reader?.settings.largePreviews == true }, set: { reader?.settings.largePreviews = $0 })) }.labelStyle(ActionIconLabelStyle()) }
-                if canAddFiles || groups?.canCreate == true || canManageGroup || actions?.drafts.isEmpty == false {
+                if canAddFiles || groups?.canCreate == true {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Add and manage", systemImage: "plus") {
                             if canAddFiles {
@@ -93,14 +81,6 @@ struct IPadSharedFilesView: View {
                                 Button("Scan Document", systemImage: "doc.viewfinder") { scanning = true }.disabled(!VNDocumentCameraViewController.isSupported || scanRecoveryError || !savedScans.isEmpty)
                             }
                             if groups?.canCreate == true { Button("New worship group", systemImage: "person.2.badge.plus") { actions?.create() } }
-                            if canManageGroup, let groupID { Button("Group members", systemImage: "person.2") { Task { await actions?.edit(groupID) } } }
-                            if let actions, !actions.drafts.isEmpty {
-                                Menu("Saved group drafts", systemImage: "doc.badge.clock") {
-                                    ForEach(actions.drafts) { draft in
-                                        Button(draft.name.isEmpty ? "Untitled group draft" : draft.name) { actions.draft = draft }
-                                    }
-                                }
-                            }
                         }.labelStyle(ActionIconLabelStyle())
                     }
                 }
@@ -122,6 +102,32 @@ struct IPadSharedFilesView: View {
             .sheet(item: Binding(get: { actions?.draft }, set: { actions?.draft = $0 }), onDismiss: { actions?.loadDrafts() }) { draft in
                 if let groups { WorshipGroupEditorView(store: store, groups: groups, draft: draft) { Task { await actions?.finished(); await load() } } }
             }
+            .sheet(isPresented: $managingGroups, onDismiss: { actions?.loadDrafts() }) {
+                if let groups {
+                    NavigationStack {
+                        WorshipGroupsManagementView(store: store, groups: groups)
+                            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close group management", systemImage: "xmark") { managingGroups = false }.labelStyle(.iconOnly) } }
+                    }.presentationSizing(.form)
+                }
+            }
+            .sheet(isPresented: Binding(get: { memberDetail != nil }, set: { if !$0 { memberDetail = nil } })) {
+                NavigationStack {
+                    List {
+                        Section(memberDetail?["name"].text ?? "") {
+                            ForEach(memberDetail?["members"].records ?? []) { member in Text(member.name) }
+                        }
+                        Section { Text("You can view this group’s members. Only its authorized managers can change them.").foregroundStyle(.secondary) }
+                    }
+                    .navigationTitle("Group members").navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close members", systemImage: "xmark") { memberDetail = nil }.labelStyle(.iconOnly) } }
+                }.presentationSizing(.form)
+            }
+            .alert("Remove worship group?", isPresented: Binding(get: { pendingGroupRemoval != nil }, set: { if !$0 { pendingGroupRemoval = nil } }), presenting: pendingGroupRemoval) { group in
+                Button("Remove group", role: .destructive) { Task { try? await groups?.remove(group) } }
+                Button("Cancel", role: .cancel) {}
+            } message: { group in
+                Text("Members will lose access to \(group.name) and its shared files. Stați keeps the saved records.")
+            }
             .onChange(of: snapshot.accessRevision) { preview = nil; store.resources.clear() }
             .onChange(of: groups?.revision) {
                 generation = UUID()
@@ -141,6 +147,73 @@ struct IPadSharedFilesView: View {
                 if ["ipad-file-preview", "ipad-markup", "ipad-chord-chart"].contains(NativeReview.route ?? ""), let file = files.first { preview = FilePreviewItem(record: file, pathKey: "fileUrl").flatMap { selected in FilePreviewRequest(items: matching.filter { !$0["removalPending"].flag }.compactMap { FilePreviewItem(record: $0, pathKey: "fileUrl") }, selectedID: selected.id) } }
                 #endif
             }.refreshable { loadScans(); await load() }
+    }
+    private var pageTitle: some View {
+        Group {
+            if let switchGroup, let groups, let groupID, groups.groups.count > 1 {
+                Menu {
+                    Picker("Worship group", selection: Binding(get: { groupID }, set: switchGroup)) {
+                        ForEach(groups.groups) { group in Text(group.name).tag(group.id) }
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        titleText
+                        Image(systemName: "chevron.down").font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary).accessibilityHidden(true)
+                    }
+                    .padding(.trailing, 10)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Switch worship groups")
+                .worshipGuide(guide, at: .groupSwitcher)
+            } else { titleText }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    private var titleText: some View {
+        Text(groupTitle ?? "Worship groups")
+            .font(.largeTitle.bold())
+            .foregroundStyle(.primary)
+            .frame(minHeight: 44)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder private var memberButton: some View {
+        if let groupID {
+            Button("Group members", systemImage: "person.2") {
+                Task {
+                    if canManageGroup { await actions?.edit(groupID) }
+                    else { await showMembers(groupID) }
+                }
+            }.labelStyle(.iconOnly).disabled(loadingMembers || actions == nil || groups?.removing == true)
+        }
+    }
+    @ViewBuilder private var groupManagement: some View {
+        if let groups {
+            Menu("Group options", systemImage: "ellipsis") {
+                Button("Manage groups", systemImage: "person.2") { managingGroups = true }
+                if canManageGroup, let group = groups.groups.first(where: { $0.id == groupID }) {
+                    Button("Remove group", systemImage: "trash", role: .destructive) { pendingGroupRemoval = group }
+                }
+            }
+            .labelStyle(.iconOnly).disabled(groups.removing)
+        }
+    }
+    private func showMembers(_ id: String) async {
+        guard active, let groups, !loadingMembers else { return }
+        loadingMembers = true
+        defer { loadingMembers = false }
+        do {
+            let detail = try await groups.detail(id)
+            guard active, id == groupID else { return }
+            memberDetail = detail
+        } catch is CancellationError { }
+        catch { if active { message = error.localizedDescription } }
     }
     private var fileList: some View {
         LazyVStack(spacing: 10) {

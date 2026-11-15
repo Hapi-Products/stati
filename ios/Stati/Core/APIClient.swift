@@ -49,7 +49,19 @@ final class APIClient {
     func upload(_ path: String, file: URL, headers: [String: String]) async throws -> Data {
         try await bytes(path, method: "POST", headers: headers, file: file)
     }
+    func driveFile(_ path: String, body: JSONValue) async throws -> (data: Data, filename: String) {
+        let result = try await responseBytes(path, method: "POST", body: JSONEncoder().encode(body), headers: ["Content-Type": "application/json"])
+        guard (1...(12 * 1024 * 1024)).contains(result.data.count),
+              let filename = result.response.value(forHTTPHeaderField: "X-Stati-Filename")?.removingPercentEncoding,
+              !filename.isEmpty, TransferFilename.safe(filename) == filename else {
+            throw APIError(status: 0, message: "The Drive file could not be verified.")
+        }
+        return (result.data, filename)
+    }
     func bytes(_ path: String, method: String = "GET", body: Data? = nil, headers: [String: String] = [:], file: URL? = nil) async throws -> Data {
+        try await responseBytes(path, method: method, body: body, headers: headers, file: file).data
+    }
+    private func responseBytes(_ path: String, method: String, body: Data? = nil, headers: [String: String] = [:], file: URL? = nil) async throws -> (data: Data, response: HTTPURLResponse) {
         let scope = generation
         var request = URLRequest(url: url(path)); request.httpMethod = method; request.httpBody = body
         request.setValue(origin.absoluteString, forHTTPHeaderField: "Origin")
@@ -81,6 +93,6 @@ final class APIClient {
         for value in HTTPCookie.cookies(withResponseHeaderFields: responseHeaders, for: origin) where value.name == "stati_session" {
             try SessionKeychain.save(value.value); if cookie != value.value { generation += 1 }; cookie = value.value
         }
-        return data
+        return (data, http)
     }
 }

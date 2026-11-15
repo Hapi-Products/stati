@@ -8,7 +8,6 @@ struct IPadWorkspaceView: View {
     @State private var groups: WorshipGroupsModel
     @State private var navigation = IPadWorkspaceSelection(tab: "browse")
     @State private var account = false
-    @State private var showingRecents = false
     @State private var liveReader = LiveWorshipReader()
     @State private var liveSong: SongGalleryRequest?
     @State private var liveError = ""
@@ -35,7 +34,7 @@ struct IPadWorkspaceView: View {
         #if DEBUG && targetEnvironment(simulator)
         let route = NativeReview.route ?? ""
         if ["ipad-browse", "ipad-worship-library", "ipad-browse-list", "ipad-browse-list-large", "ipad-sidebar", "ipad-service-sidebar", "ipad-groups-none", "ipad-original", "ipad-search", "ipad-search-ranking", "ipad-reader-dismiss"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "browse")) }
-        if route == "ipad-recents" { _showingRecents = State(initialValue: true) }
+        if route == "ipad-recents" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "recents")) }
         if ["ipad-shared", "ipad-group-switcher", "ipad-scan-review", "ipad-shared-member", "ipad-file-preview", "ipad-chord-chart", "ipad-scan-pdf", "ipad-scan-form", "ipad-markup", "ipad-group-delete"].contains(route) { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared")) }
         if route == "ipad-group-selected" { _navigation = State(initialValue: IPadWorkspaceSelection(tab: "shared", groupSelection: .named(NativeReview15.groupID))) }
 
@@ -93,6 +92,13 @@ struct IPadWorkspaceView: View {
     private var tabs: some View {
         TabView(selection: Binding(get: { navigation.tab }, set: { navigation.select($0) })) {
             if store.canReadSongs {
+                Tab("Recents", systemImage: "clock", value: "recents") {
+                    IPadNavigation(store: store) {
+                        IPadRecentsView().toolbar {
+                            ToolbarItem(placement: .topBarTrailing) { liveControls }
+                        }
+                    }
+                }
                 if showsGroups {
                     Tab("Groups", systemImage: "person.2", value: "shared") {
                         IPadNavigation(store: store) {
@@ -109,23 +115,12 @@ struct IPadWorkspaceView: View {
                 }
                 Tab("Browse", systemImage: "music.note.list", value: "browse") {
                     IPadNavigation(store: store, path: $navigation.path) {
-                        Group {
-                            if showingRecents { IPadRecentsView() }
-                            else {
-                                IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Browse",
-                                              group: preferences.selection == .originalSongs ? "__generic__" : "",
-                                              serviceSongs: livePlan?["songs"].records ?? [])
+                        IPadSongsView(title: preferences.selection == .originalSongs ? "Original Songs" : "Browse",
+                                      group: preferences.selection == .originalSongs ? "__generic__" : "",
+                                      serviceSongs: livePlan?["songs"].records ?? [])
+                            .toolbar {
+                                ToolbarItem(placement: .topBarTrailing) { liveControls }
                             }
-                        }
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button(showingRecents ? "Browse library" : "Recents", systemImage: showingRecents ? "music.note.list" : "clock") {
-                                    showingRecents.toggle()
-                                }
-                                .labelStyle(.iconOnly)
-                            }
-                            ToolbarItem(placement: .topBarTrailing) { liveControls }
-                        }
                             .navigationDestination(for: IPadSidebarRoute.self) { page in
                                 switch page {
                                 case .service(let id): ServiceRouteView(computerID: store.selectedComputer, serviceID: id).id(store.accountEpoch.uuidString + store.selectedComputer + id)
@@ -160,7 +155,7 @@ struct IPadWorkspaceView: View {
             #if DEBUG && targetEnvironment(simulator)
             .sheet(item: $reviewGroup) { draft in WorshipGroupEditorView(store: store, groups: groups, draft: draft) { } }
             #endif
-            .onChange(of: store.selectedComputer) { overview.reset(); showingRecents = false; chosenLiveGroup = nil; resetLiveScope(); navigation = IPadWorkspaceSelection(tab: "browse") }
+            .onChange(of: store.selectedComputer) { overview.reset(); chosenLiveGroup = nil; resetLiveScope(); navigation = IPadWorkspaceSelection(tab: "browse") }
             .onChange(of: store.serviceChangeRevision) { Task { await overview.loadServices(); if let id = navigation.serviceID, !overview.services.contains(where: { $0.id == id }) { navigation.serviceID = nil } } }
             .onChange(of: store.catalogChangeRevision) { Task { await overview.load() } }
             .onChange(of: store.groupChangeRevision) { Task { await groups.load() } }

@@ -11,12 +11,18 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 73, title: "Find your worship group", highlights: [
+    static let current = AppUpdate(id: 74, title: "Recents and worship groups", highlights: [
+        Highlight(title: "Recents is back", detail: "Open Recents from the top navigation or the sidebar.", icon: "clock"),
+        Highlight(title: "The group name is the page title", detail: "The current group is the page title. Tap it to switch groups when you have more than one.", icon: "person.2"),
+        Highlight(title: "Group members in the toolbar", detail: "Tap the two-person icon in the toolbar to see the group’s members. Authorized managers can edit members or remove the group after confirmation.", icon: "person.2"),
+        Highlight(title: "Continue unfinished edits", detail: "Open Manage groups to find group names and member edits saved on this device, including interrupted saves.", icon: "pencil")
+    ], details: [])
+    static let previous: [AppUpdate] = [
+        AppUpdate(id: 73, title: "Find your worship group", highlights: [
         Highlight(title: "Clearer iPad navigation", detail: "Use text in the top tabs and icons with names in the sidebar.", icon: "sidebar.left"),
         Highlight(title: "See your current group", detail: "Switch between named groups from the top left of Groups.", icon: "person.2"),
         Highlight(title: "Add from Photos", detail: "Choose a photo from your library and review it before sharing to a group.", icon: "photo.on.rectangle")
-    ], details: [])
-    static let previous: [AppUpdate] = [
+    ], details: []),
         AppUpdate(id: 70, title: "Leave the live reader cleanly", highlights: [
         Highlight(title: "Stop leading and exit", detail: "Stop Leading closes the song and ignores late updates from the session you ended.", icon: "stop.circle")
     ], details: []),

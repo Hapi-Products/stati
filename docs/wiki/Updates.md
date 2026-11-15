@@ -1,11 +1,23 @@
 # Stați updates
 
-**Updated on** November 13, 2026 · **Updated by** Codex for Stați
+**Updated on** November 14, 2026 · **Updated by** Codex for Stați
 
 Published downloads are listed at [Stați releases](https://github.com/markusciani/stati-releases/releases). This page also documents development builds so you can tell when the instructions require a preview.
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPad development build 74 | Restores Recents to the top navigation and sidebar. The group name becomes the page title, with a members icon in the navigation bar. Group options contains removal and access to unfinished edits. Installed and launched on a physical iPad. Direct Google Drive import requires server and Google OAuth setup. |
+| iPad development build 73 | Shows text in the top tabs and icons with names in the sidebar. The Groups page names the current group and supports choosing a photo before sharing. Installed and launched on a physical iPad. |
+| iPhone and iPad development build 70 | Stop Leading closes the iPad song reader, and late updates from the session you stopped no longer reopen it. Installed and launched on a physical iPad. |
+| iPhone and iPad development build 69 | Uses text-only iPad navigation tabs, icon-only iPad reader actions, and an icon-only Live Clicker shortcut on iPhone. Installed and launched on physical iPhone and iPad. |
+| iPhone and iPad development build 68 | Opens PDFs and images as editable chord charts. Transposes the chart and lets the assigned service leader save a default key for a song appearance. Installed and launched on physical iPhone and iPad. |
+| iPhone and iPad development build 67 | Connects Live Activity to the current worship song and refreshes on live changes while Stați is open. Expired clicker activities show Updates paused. File actions use icons. Installed on physical iPhone and iPad. |
+| iPhone and iPad development build 66 | Shows text beside the main iPad song toolbar controls and the iPhone Live Clicker button. Installed and launched on both physical devices. |
+| iPhone and iPad development build 65 | Opens, links, and unlinks files from one Notes menu. Shortens the live page fallback and reduces the tablet’s live page read to one database call with the updated server. Installed on both physical devices. |
+| iPhone and iPad development build 64 | Adds the ten-second Clicker Test, swipe and page jump on iPhone, green and red changes to saved sets, and paged PDF and inverted file reading on iPad. The test and page jumps require the updated server. The server update is live, and build 64 was installed and launched on a physical iPhone and iPad on November 13, 2026. |
+| iPhone and iPad development build 63 | Adds the iPad Service ready check, offline running orders, Back to Live, and search that prioritizes exact versions from the current service. Moves Recents into Browse, Link Notes into Reader options, and Pause Builds into Profile → Features on iPhone. Clicker connection status requires the accompanying server update. |
+| iPhone and iPad development build 62 | Uses the confirmed page immediately after a clicker tap. The accompanying server update reduces database round trips for live pages and individual songs. |
+| iPhone and iPad development build 61 | Places Close at the far left of the iPad song reader, with a gap before the separate Song Selector button. |
 | iPhone and iPad development build 60 | Delivers live reader changes over Stați’s existing connection, with periodic checks as a fallback. Requires the updated server. |
 | iPhone and iPad development build 59 | Adds live page previews, arrow placement and toolbar Retry on iPhone. On iPad, lead a song from Browse without an active service, use the larger live dot and separate glass Help button, and choose whether Focus hides the status bar. |
 | iPhone and iPad development build 58 | Adds an iPhone clicker for the live worship reader and a Live Activity that reopens it. Requires the updated server. [Live Clicker guide](https://github.com/Hapi-Products/stati/wiki/iPhone#use-iphone-as-a-live-clicker) |

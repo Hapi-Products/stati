@@ -38,7 +38,7 @@ enum WorshipHelpTopic {
             readerSteps(hasPages: hasPages, following: following, canLink: canLink)
         case .browse:
             [
-                Step(target: .fallback, title: "Browse your song library", instruction: "Tap a first-slide preview to open the song. Use the magnifying glass to search by title or lyrics, or tap the clock for Recents."),
+                Step(target: .fallback, title: "Browse your song library", instruction: "Tap a first-slide preview to open the song. Use the magnifying glass to search by title or lyrics. Open Recents from the top navigation or sidebar."),
                 Step(target: .fallback, title: "Check live service status", instruction: "The dot is gray with no active service, red when you’re waiting or disconnected, and green when live. Tap it for details.")
             ]
         case .groups:

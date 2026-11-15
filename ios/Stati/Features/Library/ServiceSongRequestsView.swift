@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -18,8 +19,17 @@ struct ServiceSongRequestsView: View {
     @State private var attachmentID = ""
     @State private var requestID = UUID().uuidString.lowercased()
     @State private var pendingRequest: JSONValue?
+    @State private var drivePicker = GoogleDrivePicker()
+    @State private var drive = JSONValue.null
+    @State private var driveBusy = false
+    @State private var disconnectingDrive = false
+    @State private var stagedDrive: (data: Data, filename: String, revision: JSONValue)?
 
     private var path: String { "/computers/" + computerID + "/services/" + serviceID + "/requests" }
+    private var drivePath: String { "/computers/" + computerID + "/google-drive" }
+    private var cannotChooseFile: Bool {
+        preparing || submitting || driveBusy || store.uploads.busy || store.uploads.availableSlots == 0 || pendingRequest != nil
+    }
     private var attachments: [APIRecord] { snapshot["attachments"].records }
     private var transfer: UploadJob? { store.uploads.jobs.first { $0.id == attachmentID && $0.deviceID == computerID } }
     private var attachment: APIRecord? { attachments.first { $0["transferId"].text == attachmentID && $0["available"].flag } }
@@ -48,7 +58,18 @@ struct ServiceSongRequestsView: View {
                             .disabled(preparing || pendingRequest != nil)
                         }
                         Button("Upload song file", systemImage: "tray.and.arrow.up") { choosingFile = true }
-                            .disabled(preparing || submitting || store.uploads.busy || store.uploads.availableSlots == 0 || pendingRequest != nil)
+                            .disabled(cannotChooseFile)
+                        if drive["canImport"].flag {
+                            Button("Choose from Google Drive", systemImage: "externaldrive") { Task { await chooseDrive(folder: false) } }
+                                .disabled(cannotChooseFile)
+                        }
+                        if let stagedDrive {
+                            Label(stagedDrive.filename, systemImage: "doc").foregroundStyle(.secondary)
+                            Button("Send Drive attachment", systemImage: "tray.and.arrow.up") { Task { await sendDriveAttachment() } }
+                                .disabled(cannotChooseFile)
+                            Button("Clear selection", systemImage: "xmark.circle") { self.stagedDrive = nil }
+                                .disabled(driveBusy)
+                        }
                         if let transfer, attachment == nil {
                             Text(transfer.status).font(.footnote).foregroundStyle(.secondary)
                             if transfer.receipt == nil, !store.uploads.busy {
@@ -57,12 +78,28 @@ struct ServiceSongRequestsView: View {
                                 Button("Check delivery") { Task { await refresh() } }
                             }
                         }
-                        if preparing { ProgressView("Preparing file…") }
+                        if preparing || driveBusy { ProgressView("Preparing file…") }
                         Button(pendingRequest == nil ? "Submit song request" : "Retry song request", systemImage: "paperplane") { Task { await submit() } }
-                            .disabled(submitting || preparing || !validText || (!attachmentID.isEmpty && attachment == nil))
+                            .disabled(submitting || preparing || !validText || driveBusy || stagedDrive != nil || (!attachmentID.isEmpty && attachment == nil))
                     } header: { Text("Request a song") } footer: {
                         Text("The presentation computer must save an uploaded file before you can attach it. Submit the request for the team to review and add to the running order.")
                     }
+                }
+                if drive["canManage"].flag && drive["configured"].flag {
+                    Section {
+                        Button(drive["folderName"].text.isEmpty ? "Approve Drive folder" : "Change Drive folder", systemImage: "folder") {
+                            Task { await chooseDrive(folder: true) }
+                        }
+                        if !drive["folderName"].text.isEmpty {
+                            Toggle("Allow worship member uploads", isOn: Binding(get: { drive["allowMembers"].flag }, set: { allowed in
+                                Task { await changeDrive(["action": .string("allow-members"), "allowed": .bool(allowed)]) }
+                            }))
+                            Button("Disconnect folder", systemImage: "link.badge.minus", role: .destructive) { disconnectingDrive = true }
+                        }
+                    } header: { Text("Google Drive · This computer") } footer: {
+                        Text(drive["folderName"].text.isEmpty ? "Choose a shared folder named Statsi Music." : drive["folderName"].text)
+                    }
+                    .disabled(driveBusy || preparing || submitting)
                 }
                 Section("Requests for " + title) {
                     if snapshot["items"].items.isEmpty && !loading { Text("No song requests yet.").foregroundStyle(.secondary) }
@@ -82,16 +119,21 @@ struct ServiceSongRequestsView: View {
             .navigationTitle("Song Requests")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly).disabled(submitting) }
+                ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly).disabled(submitting || driveBusy) }
             }
-            .refreshable { await refresh() }
+            .interactiveDismissDisabled(submitting || driveBusy)
+            .confirmationDialog("Disconnect Google Drive?", isPresented: $disconnectingDrive, titleVisibility: .visible) {
+                Button("Disconnect folder", role: .destructive) { Task { await changeDrive(["action": .string("disconnect")]) } }
+            } message: { Text("Members will lose Drive access for this computer. Previous song requests stay available.") }
+            .refreshable { await refresh(); await refreshDrive() }
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.data]) { result in
                 switch result {
-                case .success(let url): Task { await upload(url) }
+                case .success(let url): stagedDrive = nil; Task { await upload(url) }
                 case .failure(let error): message = error.localizedDescription
                 }
             }
-            .task { await refresh() }
+            .task { await refresh(); await refreshDrive() }
+            .onDisappear { drivePicker.cancel(); stagedDrive = nil }
             .task(id: attachmentID) {
                 guard let transfer, attachment == nil, !transfer.isFinished else { return }
                 while !Task.isCancelled {
@@ -126,6 +168,85 @@ struct ServiceSongRequestsView: View {
         catch { if epoch == store.accountEpoch { message = error.localizedDescription } }
     }
 
+    private func refreshDrive() async {
+        guard UIDevice.current.userInterfaceIdiom == .pad, canSubmit else { return }
+        let epoch = store.accountEpoch
+        if let result = try? await store.api.request(drivePath), current(epoch) { drive = result }
+    }
+
+    private func current(_ epoch: UUID) -> Bool {
+        epoch == store.accountEpoch && computerID == store.selectedComputer
+    }
+
+    private func chooseDrive(folder: Bool) async {
+        guard !driveBusy, folder ? drive["canManage"].flag : drive["canImport"].flag else { return }
+        let epoch = store.accountEpoch
+        let revision = drive["revision"]
+        driveBusy = true
+        defer { driveBusy = false }
+        do {
+            var proof = try await drivePicker.choose(folder: folder, configuration: drive, origin: store.api.origin)
+            guard current(epoch) else { return }
+            proof["revision"] = revision
+            if folder {
+                proof["action"] = .string("connect")
+                let result = try await store.api.request(drivePath, method: "POST", body: .object(proof))
+                guard current(epoch) else { return }
+                drive = result
+                stagedDrive = nil
+                message = "Drive folder approved."
+            } else {
+                proof["serviceId"] = .string(serviceID)
+                let file = try await store.api.driveFile(drivePath + "/select", body: .object(proof))
+                guard current(epoch) else { return }
+                stagedDrive = (file.data, file.filename, revision)
+                message = ""
+            }
+        } catch is CancellationError { }
+        catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin { }
+        catch { if current(epoch) { message = error.localizedDescription; await refreshDrive() } }
+    }
+
+    private func changeDrive(_ action: [String: JSONValue]) async {
+        guard !driveBusy, drive["canManage"].flag else { return }
+        let epoch = store.accountEpoch
+        driveBusy = true
+        defer { driveBusy = false }
+        var fields = action
+        fields["revision"] = drive["revision"]
+        do {
+            let result = try await store.api.request(drivePath, method: "POST", body: .object(fields))
+            guard current(epoch) else { return }
+            drive = result
+            stagedDrive = nil
+            message = ""
+        } catch { if current(epoch) { message = error.localizedDescription; await refreshDrive() } }
+    }
+
+    private func sendDriveAttachment() async {
+        guard !cannotChooseFile, let stagedDrive else { return }
+        let epoch = store.accountEpoch
+        driveBusy = true
+        defer { driveBusy = false }
+        let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        do {
+            let result = try await store.api.request(drivePath)
+            guard current(epoch) else { return }
+            drive = result
+            guard drive["canImport"].flag, drive["revision"] == stagedDrive.revision else {
+                self.stagedDrive = nil
+                throw APIError(status: 403, message: "Drive access changed. Choose a file again.")
+            }
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.complete])
+            defer { try? FileManager.default.removeItem(at: folder) }
+            let url = folder.appending(path: stagedDrive.filename)
+            try stagedDrive.data.write(to: url, options: .atomic)
+            let previousID = attachmentID
+            await upload(url)
+            if attachmentID != previousID { self.stagedDrive = nil }
+        } catch { if current(epoch) { message = error.localizedDescription } }
+    }
+
     private func upload(_ url: URL) async {
         guard canSubmit, !preparing, !store.uploads.busy, let owner = store.me?.id, computerID == store.selectedComputer else { return }
         let epoch = store.accountEpoch
@@ -150,7 +271,7 @@ struct ServiceSongRequestsView: View {
     }
 
     private func submit() async {
-        guard canSubmit, validText, !submitting, computerID == store.selectedComputer,
+        guard canSubmit, validText, !submitting, !driveBusy, stagedDrive == nil, computerID == store.selectedComputer,
               attachmentID.isEmpty || attachment != nil else { return }
         let epoch = store.accountEpoch
         let note = details.trimmingCharacters(in: .whitespacesAndNewlines)

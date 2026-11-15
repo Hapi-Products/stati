@@ -7,6 +7,8 @@ import SwiftUI
     private(set) var loading = false
     private(set) var message = ""
     private(set) var revision = 0
+    private(set) var removing = false
+    private(set) var removalMessage = ""
     @ObservationIgnored private let store: AppStore
     private let ownerID: String
     private let epoch: UUID
@@ -17,7 +19,7 @@ import SwiftUI
         fetch = request ?? { path, method, body in try await store.api.request(path, method: method, body: body) }
     }
     var active: Bool { !ownerID.isEmpty && store.me?.id == ownerID && store.accountEpoch == epoch && store.api.signedIn }
-    func reset() { generation = UUID(); groups = []; canCreate = false; loaded = false; loading = false; message = ""; revision += 1 }
+    func reset() { generation = UUID(); groups = []; canCreate = false; loaded = false; loading = false; message = ""; removalMessage = ""; revision += 1 }
     func load() async {
         guard active else { reset(); return }
         let scope = UUID(); generation = scope; loading = true; message = ""
@@ -84,16 +86,30 @@ import SwiftUI
         return value["group"]
     }
     func remove(_ group: APIRecord) async throws {
-        guard active, group["canManage"].flag, UUID(uuidString: group.id) != nil else { throw CancellationError() }
-        let value = try await fetch("/worship-groups/" + group.id, "DELETE", .object(["revision": group["revision"]]))
-        guard active else { reset(); throw CancellationError() }
-        guard value["ok"].flag else { throw invalid() }
-        generation = UUID()
-        loading = false
-        groups.removeAll { $0.id == group.id }
-        store.resources.clear()
-        revision += 1
-        store.filesChanged()
+        guard active, !removing else { throw CancellationError() }
+        removing = true
+        removalMessage = ""
+        defer { removing = false }
+        do {
+            guard group["canManage"].flag, groups.contains(where: { $0.id == group.id && $0["canManage"].flag }) else {
+                throw APIError(status: 403, message: "You can view this group, but you no longer have permission to remove it. Refresh Groups to check your access.")
+            }
+            let value = try await fetch("/worship-groups/" + group.id, "DELETE", .object(["revision": group["revision"]]))
+            guard active else { reset(); throw CancellationError() }
+            guard value["ok"].flag else { throw invalid() }
+            generation = UUID()
+            loading = false
+            groups.removeAll { $0.id == group.id }
+            store.resources.clear()
+            revision += 1
+            store.filesChanged()
+        } catch is CancellationError { throw CancellationError() }
+        catch {
+            guard active else { reset(); throw CancellationError() }
+            removalMessage = error.localizedDescription
+            await load()
+            throw error
+        }
     }
 
     private static func validated(_ group: APIRecord) throws -> APIRecord {

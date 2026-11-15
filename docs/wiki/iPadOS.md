@@ -1,8 +1,10 @@
 # Stați Worship for iPad
 
-**Updated on** November 13, 2026 · **Updated by** Codex for Stați
+**Updated on** November 14, 2026 · **Updated by** Codex for Stați
 
-Stați Worship gives iPad users **Recents**, **Groups**, **Browse**, and **Service**. The computer you select and your church role determine the material you can open.
+Stați Worship brings together **Recents**, **Groups**, **Browse**, and **Service**. The computer you select and your church role determine the material you can open.
+
+The top tabs use text. Open the sidebar to see the same destinations with their names and icons. Reader and file actions use icons.
 
 ## Read songs during a service
 
@@ -15,19 +17,41 @@ Stați Worship gives iPad users **Recents**, **Groups**, **Browse**, and **Servi
 
 Tap the first-slide preview to open a song, or use the magnifying glass to search by title or lyrics. For live service details, tap the status dot in the toolbar. The gray dot stays neutral even if your app accent is blue.
 
+Starting with build 74, tap **Recents** in the top navigation or choose the clock icon and **Recents** in the sidebar. Song Selector can still open recent songs directly.
+
+When you search during an active service, results that match the exact version in the running order appear first under **In this service**. Compare the first slide and language to tell similar versions apart.
+
 **Recents** is a quick way back to a song or file you already opened. Tap the trash icon and confirm **Yes, clear recents** to clear this iPad’s history. Songs, files and offline copies stay on the device.
 
 ## Worship groups
 
-**Groups** gives you access to shared files. Tap a preview to open a file. Use the people icon inside Groups to pick a group. Administrators can see every worship group and can choose All groups. Leaving the tab clears your temporary selection. To change the default, use **Account → Worship**.
+In development build 74, the current group’s name is the page title. If you can access multiple groups, tap the name to open the dropdown and select a group. Administrators can choose any individual worship group. Tap the two-person icon in the navigation bar to open **Group members**. Eligible group leaders and administrators can edit membership.
 
-If you can manage notes, open a song and use the chain link in its toolbar to attach an eligible shared file. [Link a shared file](https://github.com/Hapi-Products/stati/wiki/Song-Reader#link-a-shared-file)
+Tap **Group options (•••) → Remove group** to archive a group you manage. Confirm to remove the group and its shared files from members’ view. Stați retains the saved records. **Group options → Manage groups → Unfinished group edits** contains group names and membership edits saved on this iPad, including interrupted saves.
+
+To share an image, open the **+** menu and choose **Choose from Photos**. Pick a photo, check the preview and group, and tap the share icon. Use **Choose PDF or image** for files or **Scan Document** for paper charts.
+
+If you can manage notes, open a song and choose **Reader options (•••) → Link shared notes** to attach an eligible shared file. [Link a shared file](https://github.com/Hapi-Products/stati/wiki/Song-Reader#link-a-shared-file)
+
+## Send a song file for service review
+
+1. In **Service**, open the plan and tap **Song requests and uploads** under the running order.
+2. Enter the title and choose **Upload song file**. If Google Drive is enabled in Apple’s Files app, browse to **Google Drive** and choose the file from your music folder. [Set up Google Drive in Files](https://support.apple.com/en-ca/102238)
+3. After the presentation computer receives the attachment, tap **Submit song request** for review. Check the request’s status in the same view.
+
+### Choose from an approved Google Drive folder
+
+Direct Drive import is in development. It requires the updated server and Google OAuth configuration. The Files picker steps above remain available.
+
+An administrator opens **Song requests and uploads**, approves a shared folder named **Statsi Music** for the selected computer, and turns on **Allow worship member uploads**. An approved worship member chooses **Choose from Google Drive**, grants access to one file inside the approved folder, and taps **Send Drive attachment** to send a copy. After the computer receives it, the member taps **Submit song request**. The existing service review determines whether the team adds the song.
+
+Direct import accepts downloadable PDF, PPTX, DOCX and text files up to 12 MB. The Google account must already be able to open the file. An administrator can turn off member uploads or disconnect the folder in **Google Drive**. Existing requests stay available.
 
 ## Lead or follow a live service
 
 1. Select the same presentation computer and worship group as the leader. The service must be active on that computer.
 2. As the leader, open **Service**, select the active service, and tap a song in its running order. Confirm **Yes, Lead** when Stați asks. If the prompt does not appear, open **Browse**, tap the live status dot, and choose **Lead service**. If you belong to multiple worship groups, choose the group in that same menu first.
-3. On another iPad in the group, open Stați. It opens the current song and follows page changes. Close the live reader to browse on your own. To rejoin, tap the indicator in **Browse** and select **Open live song**.
+3. On another iPad in the group, open Stați. It opens the current song and follows page changes. Close the live reader to browse on your own. Tap **Back to Live** (the radio-wave icon) to return to the leader’s current song and page. The button is also available while viewing another song or a group file.
 4. The indicator is green when connected, red when the active service is waiting for a leader or the connection is unavailable, and gray when there is no active service for the selected group.
 
 Stați sends the song, page and reader format. Each iPad renders it locally. PDF page turns use the leader’s selected transition, subject to Reduce Motion. Keep the leader’s app open during the service.
@@ -38,9 +62,11 @@ Build 59 makes the status dot larger and gives the Help button its own Liquid Gl
 
 Build 60 lets the iPad react to a live page turn as soon as a change arrives from Stați. The reader checks periodically if the live connection drops.
 
+The server update prepared with development build 62 shortens the requests that fetch the current live page and load a newly opened song.
+
 ### Lead a song without an active service
 
-In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Use the stop icon or close the iPad reader to end the session.
+In build 59, open any song from **Browse** and tap the **Lead song** icon (the person with sound waves) in the reader toolbar. Choose your worship group if asked. Eligible leaders must belong to the group. The group can follow the song and the leader’s iPhone can turn its pages. Tap the stop icon to end the session and close the song. Closing the reader with the X also ends a standalone song you were leading. The reader toolbar uses icons.
 
 ### Hide the status bar in Focus
 
@@ -51,6 +77,15 @@ Tap the diagonal arrows at the bottom right of a song to enter Focus. It hides t
 In the song reader, open the menu and choose **Add to service**, or use the Siri shortcut. Pick an active service, drag the song into place and tap **Done**. The selected computer sees the updated order in its shared plan. [Siri and Shortcuts](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts)
 
 ## Services
+
+### Prepare the set
+
+Open the service and look for **Ready check**. It shows which versions of the songs are saved on this iPad. Expand **Songs to save** to see what is missing. Tap **Prepare set for offline use** to download the songs and save the running order. An updated server and phone report whether the leader’s clicker is connected during an active service.
+
+In development build 64, **Changes since preparation** shows additions with a green plus and removals with a red minus. A replacement shows the old and new entries. A move shows both positions. Tap **Update saved set** to save the new order and download the song versions that are missing. Use **Clicker Test** in the same section to receive rehearsal pages from the phone.
+
+If the iPad loses internet access, open **Service** to find saved running orders. Open one to read the prepared songs. The offline copy is for reading. Live following and clicker commands require a connection.
+
 
 Open a service to see its running order in the Service tab. Use the refresh icon in the navigation bar for the latest order. The person icon appears when your role allows you to lead, take over, or leave leadership. Use the back arrow to return to the service list. Switching tabs closes the current service detail.
 
