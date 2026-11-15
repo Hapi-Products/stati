@@ -39,6 +39,7 @@ struct IPadFeaturesView: View {
                 Toggle(isOn: $preferences.settings.clickerEnabled) { Label("Clicker", systemImage: "cursorarrow.click") }
                 Toggle(isOn: $liveSong) { Label("Live song on Lock Screen", systemImage: "waveform") }
             }
+            FileProvidersSection()
             SiriFeaturesSection()
             Section("Recents") {
                 Picker(selection: $preferences.settings.retention) {

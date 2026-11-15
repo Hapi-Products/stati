@@ -7,6 +7,7 @@ struct PhoneFeaturesView: View {
     var body: some View {
         Form {
             if store.isAdmin { BuildPauseControl() }
+            FileProvidersSection()
             SiriFeaturesSection()
             Section("Service") {
                 Toggle(isOn: $liveSong) { Label("Live song on Lock Screen", systemImage: "waveform") }

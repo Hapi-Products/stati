@@ -27,7 +27,7 @@ final class GoogleDrivePicker: NSObject, ASWebAuthenticationPresentationContextP
             "redirect_uri": configuration["redirectURI"].text,
             "response_type": "code",
             "scope": "https://www.googleapis.com/auth/drive.file",
-            "prompt": "consent",
+            "prompt": "consent select_account",
             "trigger_onepick": "true",
             "state": state,
             "code_challenge": challenge,

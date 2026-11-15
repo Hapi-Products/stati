@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import UIKit
 
 @MainActor
 final class APIClient {
@@ -68,6 +69,10 @@ final class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let cookie { request.setValue("stati_session=" + cookie, forHTTPHeaderField: "Cookie") }
         for (key, value) in headers { request.setValue(value, forHTTPHeaderField: key) }
+        if path.contains("/google-drive") {
+            request.setValue(UIDevice.current.userInterfaceIdiom == .phone ? "iphone" : "ipad",
+                             forHTTPHeaderField: "X-Stati-App")
+        }
         let (data, response): (Data, URLResponse)
         do {
             if let file { (data, response) = try await session.upload(for: request, fromFile: file) }

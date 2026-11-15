@@ -22,7 +22,6 @@ struct ServiceSongRequestsView: View {
     @State private var drivePicker = GoogleDrivePicker()
     @State private var drive = JSONValue.null
     @State private var driveBusy = false
-    @State private var disconnectingDrive = false
     @State private var stagedDrive: (data: Data, filename: String, revision: JSONValue)?
 
     private var path: String { "/computers/" + computerID + "/services/" + serviceID + "/requests" }
@@ -60,7 +59,7 @@ struct ServiceSongRequestsView: View {
                         Button("Upload song file", systemImage: "tray.and.arrow.up") { choosingFile = true }
                             .disabled(cannotChooseFile)
                         if drive["canImport"].flag {
-                            Button("Choose from Google Drive", systemImage: "externaldrive") { Task { await chooseDrive(folder: false) } }
+                            Button("Choose from Google Drive", systemImage: "externaldrive") { Task { await chooseDrive() } }
                                 .disabled(cannotChooseFile)
                         }
                         if let stagedDrive {
@@ -85,22 +84,6 @@ struct ServiceSongRequestsView: View {
                         Text("The presentation computer must save an uploaded file before you can attach it. Submit the request for the team to review and add to the running order.")
                     }
                 }
-                if drive["canManage"].flag && drive["configured"].flag {
-                    Section {
-                        Button(drive["folderName"].text.isEmpty ? "Approve Drive folder" : "Change Drive folder", systemImage: "folder") {
-                            Task { await chooseDrive(folder: true) }
-                        }
-                        if !drive["folderName"].text.isEmpty {
-                            Toggle("Allow worship member uploads", isOn: Binding(get: { drive["allowMembers"].flag }, set: { allowed in
-                                Task { await changeDrive(["action": .string("allow-members"), "allowed": .bool(allowed)]) }
-                            }))
-                            Button("Disconnect folder", systemImage: "link.badge.minus", role: .destructive) { disconnectingDrive = true }
-                        }
-                    } header: { Text("Google Drive · This computer") } footer: {
-                        Text(drive["folderName"].text.isEmpty ? "Choose a shared folder named Statsi Music." : drive["folderName"].text)
-                    }
-                    .disabled(driveBusy || preparing || submitting)
-                }
                 Section("Requests for " + title) {
                     if snapshot["items"].items.isEmpty && !loading { Text("No song requests yet.").foregroundStyle(.secondary) }
                     ForEach(snapshot["items"].records) { request in
@@ -122,9 +105,6 @@ struct ServiceSongRequestsView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Close", systemImage: "xmark") { dismiss() }.labelStyle(.iconOnly).disabled(submitting || driveBusy) }
             }
             .interactiveDismissDisabled(submitting || driveBusy)
-            .confirmationDialog("Disconnect Google Drive?", isPresented: $disconnectingDrive, titleVisibility: .visible) {
-                Button("Disconnect folder", role: .destructive) { Task { await changeDrive(["action": .string("disconnect")]) } }
-            } message: { Text("Members will lose Drive access for this computer. Previous song requests stay available.") }
             .refreshable { await refresh(); await refreshDrive() }
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.data]) { result in
                 switch result {
@@ -178,49 +158,24 @@ struct ServiceSongRequestsView: View {
         epoch == store.accountEpoch && computerID == store.selectedComputer
     }
 
-    private func chooseDrive(folder: Bool) async {
-        guard !driveBusy, folder ? drive["canManage"].flag : drive["canImport"].flag else { return }
+    private func chooseDrive() async {
+        guard !driveBusy, drive["canImport"].flag else { return }
         let epoch = store.accountEpoch
         let revision = drive["revision"]
         driveBusy = true
         defer { driveBusy = false }
         do {
-            var proof = try await drivePicker.choose(folder: folder, configuration: drive, origin: store.api.origin)
+            var proof = try await drivePicker.choose(folder: false, configuration: drive, origin: store.api.origin)
             guard current(epoch) else { return }
             proof["revision"] = revision
-            if folder {
-                proof["action"] = .string("connect")
-                let result = try await store.api.request(drivePath, method: "POST", body: .object(proof))
-                guard current(epoch) else { return }
-                drive = result
-                stagedDrive = nil
-                message = "Drive folder approved."
-            } else {
-                proof["serviceId"] = .string(serviceID)
-                let file = try await store.api.driveFile(drivePath + "/select", body: .object(proof))
-                guard current(epoch) else { return }
-                stagedDrive = (file.data, file.filename, revision)
-                message = ""
-            }
+            proof["serviceId"] = .string(serviceID)
+            let file = try await store.api.driveFile(drivePath + "/select", body: .object(proof))
+            guard current(epoch) else { return }
+            stagedDrive = (file.data, file.filename, revision)
+            message = ""
         } catch is CancellationError { }
         catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin { }
         catch { if current(epoch) { message = error.localizedDescription; await refreshDrive() } }
-    }
-
-    private func changeDrive(_ action: [String: JSONValue]) async {
-        guard !driveBusy, drive["canManage"].flag else { return }
-        let epoch = store.accountEpoch
-        driveBusy = true
-        defer { driveBusy = false }
-        var fields = action
-        fields["revision"] = drive["revision"]
-        do {
-            let result = try await store.api.request(drivePath, method: "POST", body: .object(fields))
-            guard current(epoch) else { return }
-            drive = result
-            stagedDrive = nil
-            message = ""
-        } catch { if current(epoch) { message = error.localizedDescription; await refreshDrive() } }
     }
 
     private func sendDriveAttachment() async {
