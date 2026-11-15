@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPad development build 75 | Shows the selected group’s leader and members in a dedicated roster. Edit names or membership and remove groups from Manage groups. Opening the group editor leaves no draft until you make an edit. Verified in the iPad simulator. Physical installation is held while builds are paused. |
 | iPad development build 74 | Restores Recents to the top navigation and sidebar. The group name becomes the page title, with a members icon in the navigation bar. Group options contains removal and access to unfinished edits. Installed and launched on a physical iPad. Direct Google Drive import requires server and Google OAuth setup. |
 | iPad development build 73 | Shows text in the top tabs and icons with names in the sidebar. The Groups page names the current group and supports choosing a photo before sharing. Installed and launched on a physical iPad. |
 | iPhone and iPad development build 70 | Stop Leading closes the iPad song reader, and late updates from the session you stopped no longer reopen it. Installed and launched on a physical iPad. |

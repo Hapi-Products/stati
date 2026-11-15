@@ -11,24 +11,23 @@ struct WorshipGroupEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { TextField("Group name", text: $model.draft.name).disabled(model.busy || model.draft.pending != nil || !model.canManage).onChange(of: model.draft.name) { model.persist() } }
-                Section {
-                    ForEach(model.members.filter { query.isEmpty || $0.name.localizedStandardContains(query) }) { member in
-                        Button { model.toggle(member) } label: {
-                            HStack(spacing: 12) {
-                                MemberAvatar(api: store.api, path: member["photoUrl"].text, initials: String(member.name.prefix(1)), size: 30)
-                                Text(member.name).foregroundStyle(.primary); Spacer()
-                                if model.draft.memberIDs.contains(member.id) { Image(systemName: "checkmark").foregroundStyle(AppIconAppearance.shared.accent) }
-                            }.frame(minHeight: 44)
-                        }.disabled(model.busy || model.draft.pending != nil || member.id == model.draft.groupOwnerID || !model.canManage)
-                        .accessibilityLabel(member.name + (member.id == model.draft.groupOwnerID ? ", included" : model.draft.memberIDs.contains(member.id) ? ", selected" : ""))
-                    }
+                Section("Group name") {
+                    TextField("Group name", text: $model.draft.name)
+                        .disabled(model.busy || model.draft.pending != nil || !model.canManage)
+                        .onChange(of: model.draft.name) { model.persist() }
+                }
+                Section("In this group") {
+                    ForEach(matchingPeople.filter { model.draft.memberIDs.contains($0.id) }, content: memberRow)
                     if model.busy { ProgressView("Checking group…") }
-                } header: { Text("Members") } footer: { Text("Members and admins only.") }
+                }
+                let candidates = matchingPeople.filter { !model.draft.memberIDs.contains($0.id) }
+                if !candidates.isEmpty {
+                    Section("Available to add") { ForEach(candidates, content: memberRow) }
+                }
                 if !model.message.isEmpty { Section { NoticeView(text: model.message) } }
                 if model.draft.pending != nil { Section { Button("Check saved group", systemImage: "arrow.clockwise") { Task { await model.reconcile() } }.disabled(model.busy) } }
                 if model.conflict { Section { Button("Use saved version", systemImage: "arrow.counterclockwise") { reloading = true }.disabled(model.busy) } }
-            }.contentMargins(.top, 8, for: .scrollContent).navigationTitle(model.draft.revision == nil ? "New group" : "Group members").navigationBarTitleDisplayMode(.inline)
+            }.contentMargins(.top, 8, for: .scrollContent).navigationTitle(model.draft.revision == nil ? "New group" : "Edit group").navigationBarTitleDisplayMode(.inline)
                 .searchable(text: $query, placement: .toolbar, prompt: "Find a member").searchToolbarBehavior(.minimize)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Close group", systemImage: "xmark") { dismiss() }.labelStyle(ActionIconLabelStyle()).disabled(model.busy) }
@@ -41,4 +40,26 @@ struct WorshipGroupEditorView: View {
                 .onChange(of: store.accountEpoch) { dismiss() }
         }.presentationSizing(.form)
     }
+
+    private var matchingPeople: [APIRecord] {
+        model.members.filter { query.isEmpty || $0.name.localizedStandardContains(query) }
+    }
+
+    private func memberRow(_ member: APIRecord) -> some View {
+        let selected = model.draft.memberIDs.contains(member.id)
+        let leader = member.id == model.draft.groupOwnerID
+        return Button { model.toggle(member) } label: {
+            HStack(spacing: 12) {
+                MemberAvatar(api: store.api, path: member["photoUrl"].text, initials: String(member.name.prefix(1)), size: 30)
+                Text(member.name).foregroundStyle(.primary)
+                Spacer()
+                if leader { Text("Group leader").font(.footnote).foregroundStyle(.secondary) }
+                else if selected { Image(systemName: "checkmark").foregroundStyle(AppIconAppearance.shared.accent) }
+            }
+            .frame(minHeight: 44)
+        }
+        .disabled(model.busy || model.draft.pending != nil || leader || !model.canManage)
+        .accessibilityLabel(member.name + (leader ? ", group leader" : selected ? ", selected" : ""))
+    }
+
 }

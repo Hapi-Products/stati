@@ -11,13 +11,17 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 74, title: "Recents and worship groups", highlights: [
+    static let current = AppUpdate(id: 75, title: "See who’s in your group", highlights: [
+        Highlight(title: "A roster for each group", detail: "Tap the two-person icon to see the selected group’s leaders and members.", icon: "person.2"),
+        Highlight(title: "Rename or manage groups", detail: "Use Manage groups to edit a group’s name or membership, remove a group, or reopen a draft.", icon: "pencil")
+    ], details: [])
+    static let previous: [AppUpdate] = [
+        AppUpdate(id: 74, title: "Recents and worship groups", highlights: [
         Highlight(title: "Recents is back", detail: "Open Recents from the top navigation or the sidebar.", icon: "clock"),
         Highlight(title: "The group name is the page title", detail: "The current group is the page title. Tap it to switch groups when you have more than one.", icon: "person.2"),
         Highlight(title: "Group members in the toolbar", detail: "Tap the two-person icon in the toolbar to see the group’s members. Authorized managers can edit members or remove the group after confirmation.", icon: "person.2"),
         Highlight(title: "Continue unfinished edits", detail: "Open Manage groups to find group names and member edits saved on this device, including interrupted saves.", icon: "pencil")
-    ], details: [])
-    static let previous: [AppUpdate] = [
+    ], details: []),
         AppUpdate(id: 73, title: "Find your worship group", highlights: [
         Highlight(title: "Clearer iPad navigation", detail: "Use text in the top tabs and icons with names in the sidebar.", icon: "sidebar.left"),
         Highlight(title: "See your current group", detail: "Switch between named groups from the top left of Groups.", icon: "person.2"),

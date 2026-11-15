@@ -8,24 +8,17 @@ struct WorshipGroupsManagementView: View {
     init(store: AppStore, groups: WorshipGroupsModel) { self.groups = groups; _actions = State(initialValue: WorshipGroupActions(store: store, groups: groups)) }
     var body: some View {
         List {
-            if !actions.drafts.isEmpty {
-                Section {
-                    ForEach(actions.drafts) { draft in
-                        Button { actions.draft = draft } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(draft.name.isEmpty ? "Untitled group edit" : draft.name)
-                                Text(draft.pending == nil ? "Continue editing on this device" : "Check interrupted save").font(.footnote).foregroundStyle(.secondary)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                } header: { Text("Unfinished group edits") } footer: {
-                    Text("Group names and member edits saved only on this device. Reopen a draft to finish an edit or check the status of an interrupted save.")
-                }
-            }
             Section {
                 ForEach(groups.groups) { group in
                     if group["canManage"].flag {
-                        Button(group.name, systemImage: "person.2") { Task { await actions.edit(group.id) } }
+                        Button { Task { await actions.edit(group.id) } } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(group.name).foregroundStyle(.primary)
+                                    Text("Edit name and members").font(.footnote).foregroundStyle(.secondary)
+                                }
+                            } icon: { Image(systemName: "pencil") }
+                        }
                             .swipeActions(allowsFullSwipe: false) {
                                 Button("Remove", systemImage: "trash", role: .destructive) { pendingRemoval = group }
                             }
@@ -37,6 +30,20 @@ struct WorshipGroupsManagementView: View {
                 }
                 if groups.loaded && groups.groups.isEmpty { Text("No groups yet").foregroundStyle(Color.statiSecondary) }
                 if groups.loading { ProgressView("Loading groups…") }
+            }
+            if !actions.drafts.isEmpty {
+                Section {
+                    ForEach(actions.drafts) { draft in
+                        Button { actions.draft = draft } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(draft.name.isEmpty ? "Untitled group edit" : draft.name)
+                                Text(draft.pending == nil ? "Continue editing on this device" : "Check interrupted save").font(.footnote).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                } header: { Text("Drafts") } footer: {
+                    Text("Drafts are saved on this device. Open one to finish editing or check an interrupted save.")
+                }
             }
             NoticeView(text: groups.message); NoticeView(text: actions.message); NoticeView(text: groups.removalMessage)
         }.navigationTitle("Worship groups").navigationBarTitleDisplayMode(.inline)

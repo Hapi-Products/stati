@@ -29,9 +29,9 @@ import SwiftUI
             for (id, name) in draft.memberNames ?? [:] where draft.memberIDs.contains(id) { known.append(APIRecord(raw: ["id": .string(id), "name": .string(name)])) }
             var seen: Set<String> = []
             members = known.filter { seen.insert($0.id).inserted }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            draft.memberIDs.insert(draft.groupOwnerID)
+            if draft.pending == nil { draft.memberIDs.insert(draft.groupOwnerID) }
             if let current, draft.pending == nil, current["revision"].number > Double(draft.revision ?? 0) { conflict = true; message = "The saved group changed. Your membership draft is kept." }
-            try storage.save(draft); ready = true
+            ready = true
             busy = false
             if draft.pending != nil { await reconcile() }
         } catch { message = error.localizedDescription }

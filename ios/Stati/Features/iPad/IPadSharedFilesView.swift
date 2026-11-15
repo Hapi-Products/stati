@@ -37,13 +37,10 @@ struct IPadSharedFilesView: View {
     @State private var preview: FilePreviewRequest?
     @State private var removing: APIRecord?
     @State private var discarding: GroupScanDraft?
-    @State private var pendingGroupRemoval: APIRecord?
     @State private var managingGroups = false
-    @State private var memberDetail: JSONValue?
-    @State private var loadingMembers = false
+    @State private var showingMembers = false
     init(store: AppStore, defaultGroup: String, groupID: String? = nil, groupTitle: String? = nil, groups: WorshipGroupsModel? = nil, switchGroup: ((String) -> Void)? = nil) { self.store = store; self.defaultGroup = defaultGroup; self.groupID = groupID; self.groupTitle = groupTitle; self.groups = groups; self.switchGroup = switchGroup; ownerID = store.me?.id ?? ""; epoch = store.accountEpoch }
     private var active: Bool { !ownerID.isEmpty && store.me?.id == ownerID && store.accountEpoch == epoch }
-    private var canManageGroup: Bool { groupID.map { id in groups?.groups.first(where: { $0.id == id })?["canManage"].flag == true } ?? false }
     private var matching: [APIRecord] { files.filter { (groupID != nil || defaultGroup == "__generic__" || defaultGroup.isEmpty || $0["groupName"].text.localizedStandardCompare(defaultGroup) == .orderedSame) && (query.isEmpty || [$0.title, $0["filename"].text, $0["groupName"].text].contains(where: { $0.localizedStandardContains(query) })) } }
     var body: some View {
         VStack(spacing: 0) {
@@ -110,23 +107,10 @@ struct IPadSharedFilesView: View {
                     }.presentationSizing(.form)
                 }
             }
-            .sheet(isPresented: Binding(get: { memberDetail != nil }, set: { if !$0 { memberDetail = nil } })) {
-                NavigationStack {
-                    List {
-                        Section(memberDetail?["name"].text ?? "") {
-                            ForEach(memberDetail?["members"].records ?? []) { member in Text(member.name) }
-                        }
-                        Section { Text("You can view this group’s members. Only its authorized managers can change them.").foregroundStyle(.secondary) }
-                    }
-                    .navigationTitle("Group members").navigationBarTitleDisplayMode(.inline)
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close members", systemImage: "xmark") { memberDetail = nil }.labelStyle(.iconOnly) } }
-                }.presentationSizing(.form)
-            }
-            .alert("Remove worship group?", isPresented: Binding(get: { pendingGroupRemoval != nil }, set: { if !$0 { pendingGroupRemoval = nil } }), presenting: pendingGroupRemoval) { group in
-                Button("Remove group", role: .destructive) { Task { try? await groups?.remove(group) } }
-                Button("Cancel", role: .cancel) {}
-            } message: { group in
-                Text("Members will lose access to \(group.name) and its shared files. Stați keeps the saved records.")
+            .sheet(isPresented: $showingMembers) {
+                if let groups, let groupID {
+                    WorshipGroupRosterView(groups: groups, groupID: groupID, title: groupTitle ?? "Group members")
+                }
             }
             .onChange(of: snapshot.accessRevision) { preview = nil; store.resources.clear() }
             .onChange(of: groups?.revision) {
@@ -143,6 +127,8 @@ struct IPadSharedFilesView: View {
                     do { reviewScan = try savedScans.first ?? GroupScanStorage.create(data: NativeScanChecks.pdf, ownerID: ownerID, group: "Choir") }
                     catch { scanMessage = error.localizedDescription }
                 }
+                if NativeReview.route == "ipad-group-roster", groupID != nil { showingMembers = true }
+                if NativeReview.route == "ipad-group-management" { managingGroups = true }
                 if NativeReview.route == "ipad-group-delete" { removing = files.first }
                 if ["ipad-file-preview", "ipad-markup", "ipad-chord-chart"].contains(NativeReview.route ?? ""), let file = files.first { preview = FilePreviewItem(record: file, pathKey: "fileUrl").flatMap { selected in FilePreviewRequest(items: matching.filter { !$0["removalPending"].flag }.compactMap { FilePreviewItem(record: $0, pathKey: "fileUrl") }, selectedID: selected.id) } }
                 #endif
@@ -184,37 +170,19 @@ struct IPadSharedFilesView: View {
     }
 
     @ViewBuilder private var memberButton: some View {
-        if let groupID {
-            Button("Group members", systemImage: "person.2") {
-                Task {
-                    if canManageGroup { await actions?.edit(groupID) }
-                    else { await showMembers(groupID) }
-                }
-            }.labelStyle(.iconOnly).disabled(loadingMembers || actions == nil || groups?.removing == true)
+        if groupID != nil {
+            Button("Group members", systemImage: "person.2") { showingMembers = true }
+                .labelStyle(.iconOnly)
         }
     }
+
     @ViewBuilder private var groupManagement: some View {
-        if let groups {
-            Menu("Group options", systemImage: "ellipsis") {
-                Button("Manage groups", systemImage: "person.2") { managingGroups = true }
-                if canManageGroup, let group = groups.groups.first(where: { $0.id == groupID }) {
-                    Button("Remove group", systemImage: "trash", role: .destructive) { pendingGroupRemoval = group }
-                }
-            }
-            .labelStyle(.iconOnly).disabled(groups.removing)
+        if groups != nil {
+            Button("Manage groups", systemImage: "ellipsis") { managingGroups = true }
+                .labelStyle(.iconOnly)
         }
     }
-    private func showMembers(_ id: String) async {
-        guard active, let groups, !loadingMembers else { return }
-        loadingMembers = true
-        defer { loadingMembers = false }
-        do {
-            let detail = try await groups.detail(id)
-            guard active, id == groupID else { return }
-            memberDetail = detail
-        } catch is CancellationError { }
-        catch { if active { message = error.localizedDescription } }
-    }
+
     private var fileList: some View {
         LazyVStack(spacing: 10) {
             ForEach(matching) { file in
