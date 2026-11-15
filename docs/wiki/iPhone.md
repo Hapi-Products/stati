@@ -32,7 +32,7 @@ In development build 77, open **Profile → Features → File Providers** and se
 2. In **Member Access**, tap a person and set how many Google accounts they can use with this computer. Zero turns off access. Lowering the limit removes the most recently linked accounts that exceed it.
 3. An approved person can open **File Providers** and tap **Add Google Account**. Starting with build 78, Google’s picker shows the exact approved folder. Sign in with an account that can open it, then confirm the folder. The count shows how many accounts are linked and how many are allowed. Removing one frees a slot.
 
-Only administrators using the iPhone app see **Folder Approval** and **Member Access**. The approved folder and account limits apply to the selected computer. [iPad song requests](https://github.com/Hapi-Products/stati/wiki/iPadOS#choose-from-an-approved-google-drive-folder)
+Starting with development build 79, the selected computer is above the **Google Drive** card. An iPhone administrator can open the card’s options menu to change or disconnect an approved folder. **Member Access** is below the Google accounts. The approved folder and account limits apply to the selected computer. [iPad song requests](https://github.com/Hapi-Products/stati/wiki/iPadOS#choose-from-an-approved-google-drive-folder)
 
 If you encountered “Google Drive did not respond” after selecting a folder before the November 14 server fix, return to **Approve Drive Folder** and make a fresh selection. Build 78 can use the server fix.
 

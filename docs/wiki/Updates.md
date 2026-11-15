@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 79 | Redesigns File Providers with the selected computer at the top, a dedicated Google Drive card, and a clear primary action. On iPhone, administrators can change or disconnect an approved folder from the card’s options menu. Installed on both physical development devices. |
 | Google Drive server fix | Fixes a Cloudflare request error that blocked folder approval and other Drive requests. Build 78 can use the fix. |
 | iPhone and iPad development build 78 | When linking a Google account, File Providers opens Google’s picker filtered to the exact folder approved for the selected computer. An administrator chooses the folder on iPhone for its first approval. The server is live and build 78 is installed on both physical development devices. A signed-in picker test is pending. |
 | iPhone and iPad development build 77 | Adds File Providers in Features. iPhone administrators approve a Google Drive folder and set account limits per person and computer. Installed on both physical development devices. The account limits are live on the server. Signed-in Google selection and delivery to a presentation computer still need a device check. |

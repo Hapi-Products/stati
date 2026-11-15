@@ -45,6 +45,8 @@ If you can manage notes, open a song and choose **Reader options (•••) →
 
 Open **Features → File Providers**, choose the presentation computer, then tap **Add Google Account**. Starting with build 78, Google’s picker shows the exact approved folder for that computer. Confirm it with a Google account that can open it. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
 
+In development build 79, the computer picker is above the **Google Drive** card. Tap **Add Google Account** on the card and check the **Google Accounts** section for the number of linked accounts.
+
 Administrators approve the shared folder and set account limits per person on iPhone. On iPad, open **Service → Song requests and uploads** and tap **Choose from Google Drive**. Choose a file inside the approved folder, then tap **Send Drive attachment**. After the computer receives it, tap **Submit song request** for review. [iPhone administrator setup](https://github.com/Hapi-Products/stati/wiki/iPhone#manage-file-provider-access)
 
 Direct import accepts downloadable PDF, PPTX, DOCX and text files up to 12 MB. The Google account must already be able to open the file. If it has an available account slot, the first import also links the Google account. Changing access on iPhone preserves earlier song requests.
