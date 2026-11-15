@@ -1,10 +1,10 @@
 # Stați Worship for iPad
 
-**Updated on** November 13, 2026 · **Updated by** Codex for Stați
+**Updated on** November 14, 2026 · **Updated by** Codex for Stați
 
-Stați Worship brings together **Browse**, **Groups**, and **Service**. The computer you select and your church role determine the material you can open.
+Stați Worship brings together **Recents**, **Groups**, **Browse**, and **Service**. The computer you select and your church role determine the material you can open.
 
-In development build 73, the top tabs use text. Open the sidebar to see the same destinations with their names and icons. Reader and file actions use icons.
+The top tabs use text. Open the sidebar to see the same destinations with their names and icons. Reader and file actions use icons.
 
 ## Read songs during a service
 
@@ -17,7 +17,7 @@ In development build 73, the top tabs use text. Open the sidebar to see the same
 
 Tap the first-slide preview to open a song, or use the magnifying glass to search by title or lyrics. For live service details, tap the status dot in the toolbar. The gray dot stays neutral even if your app accent is blue.
 
-Tap the clock in **Browse** to open **Recents**. Tap the music-list icon to return to the library. Song Selector can still open recent songs directly.
+Starting with build 74, tap **Recents** in the top navigation or choose the clock icon and **Recents** in the sidebar. Song Selector can still open recent songs directly.
 
 When you search during an active service, results that match the exact version in the running order appear first under **In this service**. Compare the first slide and language to tell similar versions apart.
 
@@ -25,9 +25,11 @@ When you search during an active service, results that match the exact version i
 
 ## Worship groups
 
-Open **Groups** and look at the top left for the current group’s name. If you can access multiple worship groups, tap the name to choose a specific group. The choices are based on your group access. Administrators can choose any worship group. Tap a file preview to open it. To change the default group, use **Account → Worship**.
+In development build 74, the current group’s name is the page title. If you can access multiple groups, tap the name to open the dropdown and select a group. Administrators can choose any individual worship group. Tap the two-person icon in the navigation bar to open **Group members**. Eligible group leaders and administrators can edit membership.
 
-To share an image, open the **+** menu and choose **Choose from Photos**. Pick a photo, check the preview and group, and tap the share icon. Use **Choose PDF or image** for files or **Scan Document** for paper charts. Find unfinished group drafts under **Saved group drafts** in the add menu.
+Tap **Group options (•••) → Remove group** to archive a group you manage. Confirm to remove the group and its shared files from members’ view. Stați retains the saved records. **Group options → Manage groups → Unfinished group edits** contains group names and membership edits saved on this iPad, including interrupted saves.
+
+To share an image, open the **+** menu and choose **Choose from Photos**. Pick a photo, check the preview and group, and tap the share icon. Use **Choose PDF or image** for files or **Scan Document** for paper charts.
 
 If you can manage notes, open a song and choose **Reader options (•••) → Link shared notes** to attach an eligible shared file. [Link a shared file](https://github.com/Hapi-Products/stati/wiki/Song-Reader#link-a-shared-file)
 
@@ -37,7 +39,13 @@ If you can manage notes, open a song and choose **Reader options (•••) →
 2. Enter the title and choose **Upload song file**. If Google Drive is enabled in Apple’s Files app, browse to **Google Drive** and choose the file from your music folder. [Set up Google Drive in Files](https://support.apple.com/en-ca/102238)
 3. After the presentation computer receives the attachment, tap **Submit song request** for review. Check the request’s status in the same view.
 
-Files opens your selected document from Drive. A direct Google Drive folder connection for the presentation computer is a separate feature.
+### Choose from an approved Google Drive folder
+
+Direct Drive import is in development. It requires the updated server and Google OAuth configuration. The Files picker steps above remain available.
+
+An administrator opens **Song requests and uploads**, approves a shared folder named **Statsi Music** for the selected computer, and turns on **Allow worship member uploads**. An approved worship member chooses **Choose from Google Drive**, grants access to one file inside the approved folder, and taps **Send Drive attachment** to send a copy. After the computer receives it, the member taps **Submit song request**. The existing service review determines whether the team adds the song.
+
+Direct import accepts downloadable PDF, PPTX, DOCX and text files up to 12 MB. The Google account must already be able to open the file. An administrator can turn off member uploads or disconnect the folder in **Google Drive**. Existing requests stay available.
 
 ## Lead or follow a live service
 

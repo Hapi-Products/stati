@@ -1,11 +1,12 @@
 # Stați updates
 
-**Updated on** November 13, 2026 · **Updated by** Codex for Stați
+**Updated on** November 14, 2026 · **Updated by** Codex for Stați
 
 Published downloads are listed at [Stați releases](https://github.com/markusciani/stati-releases/releases). This page also documents development builds so you can tell when the instructions require a preview.
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPad development build 74 | Restores Recents to the top navigation and sidebar. The group name becomes the page title, with a members icon in the navigation bar. Group options contains removal and access to unfinished edits. Installed and launched on a physical iPad. Direct Google Drive import requires server and Google OAuth setup. |
 | iPad development build 73 | Shows text in the top tabs and icons with names in the sidebar. The Groups page names the current group and supports choosing a photo before sharing. Installed and launched on a physical iPad. |
 | iPhone and iPad development build 70 | Stop Leading closes the iPad song reader, and late updates from the session you stopped no longer reopen it. Installed and launched on a physical iPad. |
 | iPhone and iPad development build 69 | Uses text-only iPad navigation tabs, icon-only iPad reader actions, and an icon-only Live Clicker shortcut on iPhone. Installed and launched on physical iPhone and iPad. |
