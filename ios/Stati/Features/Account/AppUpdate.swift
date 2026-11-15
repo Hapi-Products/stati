@@ -11,10 +11,13 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 78, title: "Find the approved Drive folder", highlights: [
-        Highlight(title: "Open the matching folder", detail: "When you add a Google account, the picker shows the folder your administrator approved.", icon: "folder.badge.checkmark")
+    static let current = AppUpdate(id: 79, title: "A clearer File Providers screen", highlights: [
+        Highlight(title: "See your computer and Drive folder", detail: "The selected computer is at the top. Approve a folder or add an account from the Google Drive card.", icon: "externaldrive")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 78, title: "Find the approved Drive folder", highlights: [
+        Highlight(title: "Open the matching folder", detail: "When you add a Google account, the picker shows the folder your administrator approved.", icon: "folder.badge.checkmark")
+    ], details: []),
         AppUpdate(id: 77, title: "Add your file providers", highlights: [
         Highlight(title: "Google Drive in Features", detail: "Add or remove Google accounts for the presentation computer from File Providers.", icon: "externaldrive"),
         Highlight(title: "Approve access on iPhone", detail: "Administrators can approve a Drive folder and choose how many accounts each member can use.", icon: "person.badge.key")

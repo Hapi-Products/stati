@@ -31,32 +31,48 @@ private struct FileProvidersView: View {
     }
     private var folderName: String { settings["folderName"].text }
     private var accounts: [APIRecord] { settings["accounts"].records }
+    private var members: [APIRecord] { settings["members"].records }
     private var accountLimit: Int { Int(settings["accountLimit"].number) }
+    private var driveAvailable: Bool { settings["configured"].flag }
+    private var canImport: Bool { settings["canImport"].flag }
     private var canManage: Bool {
         UIDevice.current.userInterfaceIdiom == .phone && store.isAdmin && settings["canManage"].flag
     }
 
     var body: some View {
-        Form {
-            if computerID.isEmpty {
-                ContentUnavailableView("No presentation computers", systemImage: "desktopcomputer",
-                                       description: Text("Connect to a computer to set up Google Drive."))
-            } else {
-                Picker("Presentation computer", selection: Binding(get: { computerID }, set: { selectedComputer = $0 })) {
-                    ForEach(store.computers) { Text($0["name"].text).tag($0.id) }
-                }
-                .disabled(busy)
-                if !message.isEmpty { NoticeView(text: message) }
-                if settings == .null {
-                    if message.isEmpty { ProgressView("Loading file providers…") }
-                    else { Button("Try Again", systemImage: "arrow.clockwise") { Task { await load() } } }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                Text("File Providers")
+                    .font(.system(.largeTitle, design: .serif))
+                    .accessibilityAddTraits(.isHeader)
+                if computerID.isEmpty {
+                    ContentUnavailableView("No presentation computers", systemImage: "desktopcomputer",
+                                           description: Text("Connect to a computer to set up Google Drive."))
                 } else {
-                    accountSection
-                    if canManage { managementSections }
+                    computerPicker
+                    if settings == .null {
+                        if message.isEmpty { ProgressView("Loading file providers…") }
+                        else {
+                            driveNotice
+                            Button("Try Again", systemImage: "arrow.clockwise") { Task { await load() } }
+                        }
+                    } else {
+                        driveCard
+                        if canImport || !accounts.isEmpty { accountSection }
+                        if canManage && !members.isEmpty { memberSection }
+                    }
                 }
             }
+            .frame(maxWidth: 560, alignment: .leading)
+            .padding(.horizontal, 22)
+            .padding(.top, 14)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
         }
-        .navigationTitle("File Providers")
+        .background(alignment: .top) {
+            FileProvidersBackdrop()
+                .ignoresSafeArea(edges: .top)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .task(id: computerID) {
             settings = .null
@@ -89,12 +105,135 @@ private struct FileProvidersView: View {
         }
     }
 
+    private var computerPicker: some View {
+        Menu {
+            Picker("Presentation computer", selection: Binding(get: { computerID }, set: { selectedComputer = $0 })) {
+                ForEach(store.computers) { Text($0["name"].text).tag($0.id) }
+            }
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: "desktopcomputer")
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Presentation computer").font(.caption).foregroundStyle(.secondary)
+                    Text(store.computers.first { $0.id == computerID }?["name"].text ?? "")
+                        .font(.subheadline.weight(.semibold))
+                }
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(minHeight: 44)
+            .background(.thinMaterial, in: .rect(cornerRadius: 14))
+        }
+        .foregroundStyle(.primary)
+        .disabled(busy)
+    }
+
+    private var driveCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "externaldrive")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(AppIconAppearance.shared.fill, in: .rect(cornerRadius: 13))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Google Drive")
+                        .font(.title3.bold())
+                        .accessibilityAddTraits(.isHeader)
+                    if !folderName.isEmpty {
+                        Label(folderName, systemImage: "folder")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(driveAvailable ? "No folder approved" : "Setup pending")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if canManage && !folderName.isEmpty { driveOptions }
+            }
+            if !message.isEmpty { driveNotice }
+            if busy {
+                ProgressView("Updating Google Drive…")
+                    .font(.footnote)
+            } else if canManage && driveAvailable && folderName.isEmpty {
+                Text("Choose a shared folder named stati-music, stati-folder, or stati.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                driveButton("Approve Drive Folder", icon: "folder.badge.plus", forApproval: true)
+            } else if canImport {
+                driveButton("Add Google Account", icon: "plus", forApproval: false)
+                    .disabled(accounts.count >= accountLimit)
+            } else if driveAvailable && !canManage {
+                Text("Ask an administrator to approve your access on iPhone.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(.regularMaterial, in: .rect(cornerRadius: 23))
+        .overlay {
+            RoundedRectangle(cornerRadius: 23).strokeBorder(.primary.opacity(0.1), lineWidth: 1)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var driveNotice: some View {
+        Label(message, systemImage: "exclamationmark.circle")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func driveButton(_ title: String, icon: String, forApproval: Bool) -> some View {
+        Button {
+            Task { await chooseFolder(forApproval: forApproval) }
+        } label: {
+            Label(title, systemImage: icon)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.roundedRectangle(radius: 13))
+        .controlSize(.large)
+        .tint(AppIconAppearance.shared.fill)
+        .foregroundStyle(.white)
+    }
+
+    private var driveOptions: some View {
+        Menu {
+            if driveAvailable {
+                Button("Change Drive Folder", systemImage: "folder") { Task { await chooseFolder(forApproval: true) } }
+            }
+            Button("Disconnect Folder", systemImage: "link.badge.minus", role: .destructive) { removingFolder = true }
+        } label: {
+            Label("Google Drive options", systemImage: "ellipsis")
+                .labelStyle(.iconOnly)
+                .frame(width: 44, height: 44)
+        }
+        .disabled(busy)
+    }
+
     private var accountSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Google Accounts").font(.headline).accessibilityAddTraits(.isHeader)
+            if canImport {
+                Text("\(accounts.count) of \(accountLimit) linked")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             ForEach(accounts) { account in
-                HStack {
+                Divider()
+                HStack(spacing: 8) {
                     Label(account["label"].text, systemImage: "person.crop.circle")
-                    Spacer()
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Button("Remove account", systemImage: "minus.circle", role: .destructive) {
                         removingAccount = account
                     }
@@ -103,64 +242,34 @@ private struct FileProvidersView: View {
                     .frame(minWidth: 44, minHeight: 44)
                 }
             }
-            if settings["canImport"].flag {
-                Button("Add Google Account", systemImage: "plus.circle") { Task { await chooseFolder(forApproval: false) } }
-                    .disabled(accounts.count >= accountLimit)
-            }
-        } header: {
-            Text("Google Drive")
-        } footer: {
-            if !settings["configured"].flag {
-                Text("Google Drive setup is pending on the Stați server.")
-            } else if settings["canImport"].flag {
-                Text("\(accounts.count) of \(accountLimit) accounts linked. Google Drive will show \(folderName) if your Google account can access it.")
-            } else {
-                Text("An administrator can approve Drive access in Stați on iPhone.")
-            }
         }
         .disabled(busy)
     }
 
-    @ViewBuilder private var managementSections: some View {
-        Section {
-            if !folderName.isEmpty {
-                LabeledContent("Approved folder", value: folderName)
-            }
-            if settings["configured"].flag {
-                Button(folderName.isEmpty ? "Approve Drive Folder" : "Change Drive Folder", systemImage: "folder") {
-                    Task { await chooseFolder(forApproval: true) }
+    private var memberSection: some View {
+        LazyVStack(alignment: .leading, spacing: 4) {
+            Text("Member Access")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.bottom, 4)
+            ForEach(members) { member in
+                Divider()
+                Button {
+                    editingMember = member
+                } label: {
+                    LabeledContent(member["name"].text) {
+                        let limit = Int(member["accountLimit"].number)
+                        if limit == 0 { Text("Off") }
+                        else { Text("\(Int(member["linkedAccounts"].number)) of \(limit) linked") }
+                        Image(systemName: "chevron.right").font(.caption).accessibilityHidden(true)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
-            if !folderName.isEmpty {
-                Button("Disconnect Folder", systemImage: "link.badge.minus", role: .destructive) { removingFolder = true }
-            }
-        } header: {
-            Text("Folder Approval")
-        } footer: {
-            Text("Choose a shared folder named stati-music, stati-folder, or stati.")
         }
         .disabled(busy)
-
-        if !folderName.isEmpty {
-            Section {
-                ForEach(settings["members"].records) { member in
-                    Button {
-                        editingMember = member
-                    } label: {
-                        LabeledContent(member["name"].text) {
-                            let limit = Int(member["accountLimit"].number)
-                            if limit == 0 { Text("Off") }
-                            else { Text("\(Int(member["linkedAccounts"].number)) of \(limit) linked") }
-                            Image(systemName: "chevron.right").font(.footnote).accessibilityHidden(true)
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                }
-            } header: { Text("Member Access") } footer: {
-                Text("Choose how many Google accounts each person can use with this computer. Set the limit to zero to turn off access.")
-            }
-            .disabled(busy)
-        }
     }
 
     private func path(_ id: String, accounts: Bool = false) -> String {
@@ -233,6 +342,34 @@ private struct FileProvidersView: View {
             }
             return error.localizedDescription
         }
+    }
+}
+
+private struct FileProvidersBackdrop: View {
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color(uiColor: .systemBackground)
+            ZStack {
+                RadialGradient(colors: [AppIconAppearance.shared.accent.opacity(0.2), .clear],
+                               center: .topTrailing, startRadius: 12, endRadius: 420)
+                Canvas { context, size in
+                    var grid = Path()
+                    for x in stride(from: 0.0, to: size.width, by: 40) {
+                        grid.move(to: CGPoint(x: x, y: 0))
+                        grid.addLine(to: CGPoint(x: x, y: size.height))
+                    }
+                    for y in stride(from: 0.0, to: size.height, by: 40) {
+                        grid.move(to: CGPoint(x: 0, y: y))
+                        grid.addLine(to: CGPoint(x: size.width, y: y))
+                    }
+                    context.stroke(grid, with: .color(.primary.opacity(0.065)), lineWidth: 0.5)
+                }
+            }
+            .frame(height: 430)
+            .mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom))
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
