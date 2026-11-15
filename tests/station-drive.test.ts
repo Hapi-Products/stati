@@ -94,9 +94,12 @@ it('lets only an admin approve a folder and explicitly enable submissions for ap
   await expect(f.run('member', { action: 'connect', revision: 0, fileId: folderId, ...proof })).rejects.toMatchObject({ status: 403 });
   expect(mock).not.toHaveBeenCalled();
   expect(await (await f.connect()).json()).toMatchObject({ folderName: 'stati-music', allowMembers: false, revision: 1, canImport: true });
-  expect(await (await f.run('member')).json()).toMatchObject({ canImport: false });
+  const denied = await (await f.run('member')).json();
+  expect(denied).toMatchObject({ canImport: false });
+  expect(denied).not.toHaveProperty('approvedFolderId');
   await expect(f.select(1)).rejects.toMatchObject({ status: 403 });
   await f.allow(true, 1);
+  expect(await (await f.run('member')).json()).toMatchObject({ canImport: true, approvedFolderId: folderId });
   const result = await f.select(2);
   expect(result.headers.get('x-stati-filename')).toBe('Synthetic%20song.txt');
   expect(new TextDecoder().decode(await result.arrayBuffer())).toBe(song);

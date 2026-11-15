@@ -6,6 +6,7 @@ Published downloads are listed at [Stați releases](https://github.com/markuscia
 
 | Build or platform | Change and status |
 | --- | --- |
+| iPhone and iPad development build 78 | When linking a Google account, File Providers opens Google’s picker filtered to the exact folder approved for the selected computer. An administrator chooses the folder on iPhone for its first approval. The server is live and build 78 is installed on both physical development devices. A signed-in picker test is pending. |
 | iPhone and iPad development build 77 | Adds File Providers in Features. iPhone administrators approve a Google Drive folder and set account limits per person and computer. Installed on both physical development devices. The account limits are live on the server. Signed-in Google selection and delivery to a presentation computer still need a device check. |
 | Google Drive song imports | Direct imports use a folder approved for the selected computer. The sign-in callback was verified in production. Build 77 moves folder approval to File Providers on iPhone. |
 | iPhone and iPad development build 76 | Adds a link button with confirmation for rejoining a live leader and an option to hide the iPhone clicker preview. Installed on a physical iPhone and iPad on November 14, 2026. The clicker server update is pending. |

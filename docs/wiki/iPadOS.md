@@ -43,7 +43,7 @@ If you can manage notes, open a song and choose **Reader options (•••) →
 
 ### Choose from an approved Google Drive folder
 
-In development build 77, open **Features → File Providers**, choose the presentation computer, then tap **Add Google Account**. In Google’s picker, choose the folder that your administrator approved. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
+Open **Features → File Providers**, choose the presentation computer, then tap **Add Google Account**. Starting with build 78, Google’s picker shows the exact approved folder for that computer. Confirm it with a Google account that can open it. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
 
 Administrators approve the shared folder and set account limits per person on iPhone. On iPad, open **Service → Song requests and uploads** and tap **Choose from Google Drive**. Choose a file inside the approved folder, then tap **Send Drive attachment**. After the computer receives it, tap **Submit song request** for review. [iPhone administrator setup](https://github.com/Hapi-Products/stati/wiki/iPhone#manage-file-provider-access)
 

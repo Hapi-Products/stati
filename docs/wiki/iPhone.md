@@ -30,7 +30,7 @@ In development build 77, open **Profile → Features → File Providers** and se
 
 1. As an administrator, tap **Approve Drive Folder** and choose a shared Google Drive folder named **stati-music**, **stati-folder**, or **stati**.
 2. In **Member Access**, tap a person and set how many Google accounts they can use with this computer. Zero turns off access. Lowering the limit removes the most recently linked accounts that exceed it.
-3. An approved person can open **File Providers**, tap **Add Google Account**, and select that same folder with their own Google account. The count shows how many accounts are linked and how many are allowed. Removing one frees a slot.
+3. An approved person can open **File Providers** and tap **Add Google Account**. Starting with build 78, Google’s picker shows the exact approved folder. Sign in with an account that can open it, then confirm the folder. The count shows how many accounts are linked and how many are allowed. Removing one frees a slot.
 
 Only administrators using the iPhone app see **Folder Approval** and **Member Access**. The approved folder and account limits apply to the selected computer. [iPad song requests](https://github.com/Hapi-Products/stati/wiki/iPadOS#choose-from-an-approved-google-drive-folder)
 

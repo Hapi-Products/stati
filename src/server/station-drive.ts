@@ -68,6 +68,7 @@ async function settingsResponse(request: Request, env: Env, authority: MinistryA
     configured: enabled, canManage, canImport, accountLimit, maxAccountLimit: maxDriveAccounts, accounts, members,
     revision: folder?.revision ?? 0,
     ...(canManage || canImport ? {
+      approvedFolderId: folder?.folder_id ?? null,
       folderName: folder?.folder_name ?? null,
       allowMembers: !!folder?.allow_members,
       clientId: enabled ? env.GOOGLE_DRIVE_CLIENT_ID : null,
