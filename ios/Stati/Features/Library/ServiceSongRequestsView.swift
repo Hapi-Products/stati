@@ -165,7 +165,7 @@ struct ServiceSongRequestsView: View {
         driveBusy = true
         defer { driveBusy = false }
         do {
-            var proof = try await drivePicker.choose(folder: false, configuration: drive, origin: store.api.origin)
+            var proof = try await drivePicker.choose(.file, configuration: drive, origin: store.api.origin)
             guard current(epoch) else { return }
             proof["revision"] = revision
             proof["serviceId"] = .string(serviceID)

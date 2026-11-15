@@ -11,11 +11,14 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 77, title: "Add your file providers", highlights: [
-        Highlight(title: "Google Drive in Features", detail: "Add or remove Google accounts for the presentation computer from File Providers.", icon: "externaldrive"),
-        Highlight(title: "Approve access on iPhone", detail: "Administrators can approve a Drive folder and choose how many accounts each member can use.", icon: "person.badge.key")
+    static let current = AppUpdate(id: 78, title: "Find the approved Drive folder", highlights: [
+        Highlight(title: "Open the matching folder", detail: "When you add a Google account, the picker shows the folder your administrator approved.", icon: "folder.badge.checkmark")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 77, title: "Add your file providers", highlights: [
+        Highlight(title: "Google Drive in Features", detail: "Add or remove Google accounts for the presentation computer from File Providers.", icon: "externaldrive"),
+        Highlight(title: "Approve access on iPhone", detail: "Administrators can approve a Drive folder and choose how many accounts each member can use.", icon: "person.badge.key")
+    ], details: []),
         AppUpdate(id: 76, title: "Follow the live leader", highlights: [
         Highlight(title: "Link to the leader", detail: "Tap the link icon and confirm to rejoin the leader’s song and follow along.", icon: "link"),
         Highlight(title: "Hide the clicker preview", detail: "Open Clicker options and turn off Show slide preview to keep the page controls.", icon: "cursorarrow.click")

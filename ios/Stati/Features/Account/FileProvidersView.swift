@@ -113,7 +113,7 @@ private struct FileProvidersView: View {
             if !settings["configured"].flag {
                 Text("Google Drive setup is pending on the Stați server.")
             } else if settings["canImport"].flag {
-                Text("\(accounts.count) of \(accountLimit) accounts linked. When adding an account, select the approved folder \(folderName).")
+                Text("\(accounts.count) of \(accountLimit) accounts linked. Google Drive will show \(folderName) if your Google account can access it.")
             } else {
                 Text("An administrator can approve Drive access in Stați on iPhone.")
             }
@@ -185,12 +185,23 @@ private struct FileProvidersView: View {
 
     private func chooseFolder(forApproval: Bool) async {
         guard !busy, !computerID.isEmpty else { return }
+        let selection: GoogleDrivePicker.Selection
+        if forApproval {
+            selection = .folder
+        } else {
+            let folderID = settings["approvedFolderId"].text
+            guard !folderID.isEmpty else {
+                message = "Pull down to refresh the approved Drive folder and try again."
+                return
+            }
+            selection = .approvedFolder(folderID)
+        }
         let id = computerID
         let epoch = store.accountEpoch
         busy = true
         defer { busy = false }
         do {
-            var proof = try await drivePicker.choose(folder: true, configuration: settings, origin: store.api.origin)
+            var proof = try await drivePicker.choose(selection, configuration: settings, origin: store.api.origin)
             guard current(id, epoch) else { return }
             proof["action"] = .string("connect")
             _ = await save(proof, computer: id, epoch: epoch, accounts: !forApproval)

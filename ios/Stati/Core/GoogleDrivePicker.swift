@@ -5,10 +5,16 @@ import UIKit
 
 @MainActor
 final class GoogleDrivePicker: NSObject, ASWebAuthenticationPresentationContextProviding {
+    enum Selection {
+        case file
+        case folder
+        case approvedFolder(String)
+    }
+
     private var session: ASWebAuthenticationSession?
     private var anchor: ASPresentationAnchor?
 
-    func choose(folder: Bool, configuration: JSONValue, origin: URL) async throws -> [String: JSONValue] {
+    func choose(_ selection: Selection, configuration: JSONValue, origin: URL) async throws -> [String: JSONValue] {
         guard configuration["configured"].flag,
               configuration["clientId"].text.hasSuffix(".apps.googleusercontent.com"),
               configuration["redirectURI"].text == origin.appending(path: "/api/google-drive/callback").absoluteString,
@@ -33,9 +39,14 @@ final class GoogleDrivePicker: NSObject, ASWebAuthenticationPresentationContextP
             "code_challenge": challenge,
             "code_challenge_method": "S256",
         ]
-        if folder {
+        switch selection {
+        case .file: break
+        case .folder, .approvedFolder:
             parameters["allow_folder_selection"] = "true"
             parameters["mimetypes"] = "application/vnd.google-apps.folder"
+        }
+        if case let .approvedFolder(id) = selection {
+            parameters["file_ids"] = id
         }
         url.queryItems = parameters.map { URLQueryItem(name: $0.key, value: $0.value) }
         anchor = window
