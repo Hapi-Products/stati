@@ -34,6 +34,8 @@ In development build 77, open **Profile → Features → File Providers** and se
 
 Only administrators using the iPhone app see **Folder Approval** and **Member Access**. The approved folder and account limits apply to the selected computer. [iPad song requests](https://github.com/Hapi-Products/stati/wiki/iPadOS#choose-from-an-approved-google-drive-folder)
 
+If you encountered “Google Drive did not respond” after selecting a folder before the November 14 server fix, return to **Approve Drive Folder** and make a fresh selection. Build 78 can use the server fix.
+
 ## Use iPhone as a live clicker
 
 This feature requires build 58 on the iPhone and the leader’s iPad and the updated Stați server.

@@ -53,6 +53,7 @@ async function fixture() {
 function google(options: { parent?: string; account?: string; distinctCodes?: boolean; folderName?: string; duringDownload?: () => Promise<unknown> } = {}) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = new URL(String(input));
+    expect(new Request(url, init).redirect).toBe('manual');
     if (url.hostname === 'oauth2.googleapis.com') {
       expect(init?.body).toBeInstanceOf(URLSearchParams);
       expect((init?.body as URLSearchParams).get('code_verifier')).toBe(proof.verifier);
@@ -74,6 +75,17 @@ function google(options: { parent?: string; account?: string; distinctCodes?: bo
     return Response.json(options.parent ? { ...file, parents: [options.parent] } : file);
   });
 }
+
+it('rejects redirects from Google before sending any other requests', async () => {
+  const f = await fixture();
+  const fetchGoogle = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    expect(new Request(String(input), init).redirect).toBe('manual');
+    return Response.redirect('https://redirect.example.test', 307);
+  });
+  await expect(f.connect()).rejects.toMatchObject({ status: 502, message: expect.stringContaining('redirect') });
+  expect(fetchGoogle).toHaveBeenCalledTimes(1);
+  expect(await (await f.run('admin')).json()).toMatchObject({ folderName: null, revision: 0 });
+});
 
 it('returns to the fixed native app with one selected item and strict OAuth scope', () => {
   const params = new URLSearchParams({ state: '_A-'.repeat(14) + 'B', code: proof.code, picked_file_ids: songId, scope });

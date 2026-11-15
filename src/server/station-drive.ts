@@ -94,11 +94,16 @@ export function googleDriveCallback(request: Request) {
 }
 
 async function googleRequest(url: string, options: RequestInit) {
+  let response: Response;
   try {
-    return await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
+    response = await fetch(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(15000) });
   } catch {
-    throw new HttpError(502, 'Google Drive did not respond. Try choosing the file again.');
+    throw new HttpError(502, 'Google Drive did not respond. Try the selection again.');
   }
+  if (response.status >= 300 && response.status < 400) {
+    throw new HttpError(502, 'Google Drive returned an unexpected redirect. Try the selection again.');
+  }
+  return response;
 }
 
 async function accessToken(env: Env, fields: z.infer<typeof proof>) {
