@@ -123,10 +123,19 @@ it('syncs the leader’s exact service item and PDF page only within the named g
  try {
   expect(JSON.parse(await next())).toEqual({type:'tasks-ready'});
   const updateArrived=next(),ctx=createExecutionContext();
+  let databaseQueries = 0;
+  const DB = new Proxy(env.DB, {
+   get(target, key) {
+    if (key === 'prepare') return (sql: string) => { databaseQueries++; return target.prepare(sql); };
+    const value = Reflect.get(target, key);
+    return typeof value === 'function' ? value.bind(target) : value;
+   },
+  });
   const accepted = await worker.fetch(new Request('http://localhost:8787/api/computers/'+f.deviceId+'/live-clicker',{
    method:'POST',headers:{...followerHeaders,Cookie:'stati_session='+f.session},body:JSON.stringify(move)
-  }),env,ctx);
+  }),{...env,DB},ctx);
   expect(accepted.status).toBe(200);
+  expect(databaseQueries).toBe(1);
   moved = await accepted.json();
   await waitOnExecutionContext(ctx);
   expect(JSON.parse(await updateArrived)).toEqual({type:'live-reader-changed'});

@@ -92,6 +92,7 @@ export async function readLiveSong(request:Request,env:Env,deviceId:string){
 }
 
 export async function worshipClicker(request:Request, env:Env, deviceId:string) {
+ if (request.method === 'POST') return turnClickerPage(request, env, deviceId);
  const authority = await requireSongStation(request,env,deviceId);
  const time = now(), userId = authority.user.id;
  const guard = stationMinistryGuard(authority,deviceId,'readSongs',time);
@@ -119,17 +120,35 @@ export async function worshipClicker(request:Request, env:Env, deviceId:string) 
   if (!result.meta.changes) throw new HttpError(409,'The live reader is no longer available.');
   return json({ok:true});
  }
- const input = await body(request,click,512), page = input.targetPage ?? input.page + (input.direction ?? 0);
+ throw new HttpError(405, 'Choose a supported clicker action.');
+}
+
+async function turnClickerPage(request: Request, env: Env, deviceId: string) {
+ const viewer = await songStationAccess(request, deviceId);
+ const input = await body(request, click, 512);
+ const page = input.targetPage ?? input.page + (input.direction ?? 0);
  const turn = crypto.randomUUID();
- const updated = await env.DB.prepare(`UPDATE worship_live_reader AS live
+ // Authenticate the current session and apply the compare-and-swap in one write.
+ const updated = await env.DB.prepare(`WITH viewer AS (${viewer.sql})
+  UPDATE worship_live_reader AS live
   SET position_json=json_set(position_json,'$.page',?,'$.clickerTurn',?,'$.clickerUntil',?)
-  WHERE ${scope} AND live.session_id=? AND live.item_id=? AND live.sequence=?
+  WHERE live.device_id=? AND live.expires_at>? AND ${currentHost}
+    AND EXISTS(SELECT 1 FROM viewer WHERE viewer.id=live.leader_id AND viewer.status='active'
+      AND viewer.stationAccess=1 AND (viewer.role='admin' OR viewer.ministryRole IS NOT NULL))
+    AND EXISTS(SELECT 1 FROM worship_groups wg JOIN worship_group_members gm ON gm.group_id=wg.id
+      WHERE wg.id=live.group_id AND wg.archived_at IS NULL AND gm.user_id=live.leader_id)
+    AND live.session_id=? AND live.item_id=? AND live.sequence=?
     AND json_extract(position_json,'$.page')=? AND json_extract(position_json,'$.clickerTurn') IS ?
     AND json_extract(position_json,'$.mode')<>'text'
     AND ? >=0 AND ? < json_extract(position_json,'$.pageCount') AND ?<>json_extract(position_json,'$.page')
-  RETURNING position_json AS position`).bind(page,turn,time+clickerPresenceSeconds,...params,input.sessionId,input.itemId,input.sequence,
-   input.page,input.turn,page,page,page).first<{position:string}>();
- if (!updated) throw new HttpError(409,'The live page changed or is unavailable. Try again after it refreshes.');
+  RETURNING position_json AS position`).bind(
+    ...viewer.params, page, turn, viewer.time + clickerPresenceSeconds, deviceId, viewer.time,
+    input.sessionId, input.itemId, input.sequence, input.page, input.turn, page, page, page
+  ).first<{position:string}>();
+ if (!updated) {
+   await requireSongStation(request, env, deviceId);
+   throw new HttpError(409, 'The live page changed or is unavailable. Try again after it refreshes.');
+ }
  return json({position:publicPosition(updated.position).position});
 }
 
