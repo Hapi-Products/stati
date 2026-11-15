@@ -43,7 +43,7 @@ If you can manage notes, open a song and choose **Reader options (•••) →
 
 ### Choose from an approved Google Drive folder
 
-Direct Drive import is in development. It requires the updated server and Google OAuth configuration. The Files picker steps above remain available.
+The direct Drive import server is live. Use Stați Worship development build 74 or later. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
 
 An administrator opens **Song requests and uploads**, approves a shared folder named **Statsi Music** for the selected computer, and turns on **Allow worship member uploads**. An approved worship member chooses **Choose from Google Drive**, grants access to one file inside the approved folder, and taps **Send Drive attachment** to send a copy. After the computer receives it, the member taps **Submit song request**. The existing service review determines whether the team adds the song.
 
