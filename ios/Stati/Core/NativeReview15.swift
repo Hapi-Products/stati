@@ -43,7 +43,7 @@ import SwiftUI
     }
     static func response(_ request: URLRequest) -> JSONValue? {
         guard NativeReview.route != nil, request.httpMethod == "GET", let path = request.url?.path else { return nil }
-        if NativeReview.route == "ipad-live-follow" {
+        if ["ipad-live-follow", "ipad-live-link"].contains(NativeReview.route ?? "") {
             let itemID = "87130dc6-42f2-4872-a1aa-f2e51623f8cf"
             let serviceID = NativeReview.plan["id"].text
             if path.hasSuffix("/services") {

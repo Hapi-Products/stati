@@ -1,6 +1,6 @@
 # Stați for iPhone
 
-**Updated on** November 13, 2026 · **Updated by** Codex for Stați
+**Updated on** November 14, 2026 · **Updated by** Codex for Stați
 
 The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where your role allows it. The current development builds target iOS 26.3 or later. Check [Updates](https://github.com/Hapi-Products/stati/wiki/Updates) for the status of a specific build.
 
@@ -36,6 +36,8 @@ This feature requires build 58 on the iPhone and the leader’s iPad and the upd
 4. Tap **×** to leave the clicker. The service continues. If iOS Live Activities are enabled, tap the activity on the Lock Screen or Dynamic Island to reopen the clicker. You can also reopen it from **Send**.
 
 In build 59, the clicker previews the live slide or PDF page. The layout icon in the top bar lets you choose **Middle** or **Bottom** for the arrows. Stați remembers your choice. Use the refresh icon in the top bar to retry the connection.
+
+In development build 76, open **Clicker options** and turn off **Show slide preview** to use the page controls without loading the preview. The clicker Live Activity starts when you open Live Clicker. Starting it on a closed iPhone requires a remote push integration.
 
 The iPad leader can also open a song from **Browse** and tap **Lead song** without an active service. Connect from the same iPhone clicker as usual.
 

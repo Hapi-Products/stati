@@ -186,6 +186,7 @@ struct LiveClickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("stati.clicker.arrowsAtBottom") private var arrowsAtBottom = true
+    @AppStorage("stati.clicker.showSlidePreview") private var showSlidePreview = true
     @State private var previewRetry = 0
     @State private var showingPages = false
     @State private var testing = false
@@ -208,7 +209,7 @@ struct LiveClickerView: View {
                             }
                         }
                         if !arrowsAtBottom { arrows(live) }
-                        if live.count != nil {
+                        if showSlidePreview && live.count != nil {
                             LiveClickerPreview(live: live, computer: store.selectedComputer, retry: previewRetry,
                                                enabled: !clicker.turning) { jump(to: $0, in: live) }
                         }
@@ -263,6 +264,7 @@ struct LiveClickerView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu("Clicker options", systemImage: "slider.horizontal.3") {
                         Button("Clicker Test", systemImage: "stopwatch") { testing = true }
+                        Toggle("Show slide preview", isOn: $showSlidePreview)
                         Picker("Arrow position", selection: $arrowsAtBottom) {
                             Text("Middle").tag(false)
                             Text("Bottom").tag(true)

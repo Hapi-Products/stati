@@ -11,11 +11,15 @@ struct AppUpdate: Identifiable {
     let title: String
     let highlights: [Highlight]
     let details: [String]
-    static let current = AppUpdate(id: 75, title: "See who’s in your group", highlights: [
-        Highlight(title: "A roster for each group", detail: "Tap the two-person icon to see the selected group’s leaders and members.", icon: "person.2"),
-        Highlight(title: "Rename or manage groups", detail: "Use Manage groups to edit a group’s name or membership, remove a group, or reopen a draft.", icon: "pencil")
+    static let current = AppUpdate(id: 76, title: "Follow the live leader", highlights: [
+        Highlight(title: "Link to the leader", detail: "Tap the link icon and confirm to rejoin the leader’s song and follow along.", icon: "link"),
+        Highlight(title: "Hide the clicker preview", detail: "Open Clicker options and turn off Show slide preview to keep the page controls.", icon: "cursorarrow.click")
     ], details: [])
     static let previous: [AppUpdate] = [
+        AppUpdate(id: 75, title: "See who’s in your group", highlights: [
+        Highlight(title: "A roster for each group", detail: "Tap the two-person icon to see the selected group’s leaders and members.", icon: "person.2"),
+        Highlight(title: "Rename or manage groups", detail: "Use Manage groups to edit a group’s name or membership, remove a group, or reopen a draft.", icon: "pencil")
+    ], details: []),
         AppUpdate(id: 74, title: "Recents and worship groups", highlights: [
         Highlight(title: "Recents is back", detail: "Open Recents from the top navigation or the sidebar.", icon: "clock"),
         Highlight(title: "The group name is the page title", detail: "The current group is the page title. Tap it to switch groups when you have more than one.", icon: "person.2"),

@@ -187,6 +187,9 @@ struct IPadWorkspaceView: View {
     }
 
     private func updateFollowedReader() {
+        #if DEBUG && targetEnvironment(simulator)
+        if NativeReview.route == "ipad-live-link" { return }
+        #endif
         if liveReader.following, mutedService != liveReader.followingSession, !account, liveSong == nil,
            let position = liveReader.position {
             openLive(position, follower: true)
@@ -226,8 +229,7 @@ struct IPadWorkspaceView: View {
 
     @ViewBuilder private var liveControls: some View {
         if liveReader.following {
-            Button("Back to Live", systemImage: "dot.radiowaves.left.and.right", action: returnToLive)
-                .labelStyle(.iconOnly)
+            FollowLeaderButton(session: liveReader.followingSession, follow: returnToLive)
         } else {
             liveMenu
         }

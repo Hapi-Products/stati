@@ -256,10 +256,11 @@ struct SongGalleryView: View {
                 if let live, (live.reader.following && !followsLiveSession) || showsLeadControl {
                     ToolbarItem(placement: .topBarTrailing) {
                         if live.reader.following && !followsLiveSession {
-                            Button {
+                            FollowLeaderButton(session: live.reader.followingSession) {
+                                guard live.reader.following else { return }
                                 live.reader.returnRequested = true
                                 closeReader()
-                            } label: { toolbarIcon("Back to Live", icon: "dot.radiowaves.left.and.right") }
+                            }
                         } else if model.request.isService, live.reader.leading {
                             Button { stopLeading(live.reader) } label: { toolbarIcon("Stop Leading", icon: "stop.circle") }
                                 .accessibilityLabel("Stop leading service")

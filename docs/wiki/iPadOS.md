@@ -53,7 +53,7 @@ Direct import accepts downloadable PDF, PPTX, DOCX and text files up to 12 MB. T
 
 1. Select the same presentation computer and worship group as the leader. The service must be active on that computer.
 2. As the leader, open **Service**, select the active service, and tap a song in its running order. Confirm **Yes, Lead** when Stați asks. If the prompt does not appear, open **Browse**, tap the live status dot, and choose **Lead service**. If you belong to multiple worship groups, choose the group in that same menu first.
-3. On another iPad in the group, open Stați. It opens the current song and follows page changes. Close the live reader to browse on your own. Tap **Back to Live** (the radio-wave icon) to return to the leader’s current song and page. The button is also available while viewing another song or a group file.
+3. On another iPad in the group, open Stați. It opens the current song and follows page changes. Close the live reader to browse on your own. In development build 76, tap the link icon and confirm **Follow leader** to return to the leader’s song and page. You can also rejoin while viewing another song.
 4. The indicator is green when connected, red when the active service is waiting for a leader or the connection is unavailable, and gray when there is no active service for the selected group.
 
 Stați sends the song, page and reader format. Each iPad renders it locally. PDF page turns use the leader’s selected transition, subject to Reduce Motion. Keep the leader’s app open during the service.

@@ -292,3 +292,26 @@ struct WorshipLiveContext {
 extension EnvironmentValues {
     @Entry var worshipLiveContext: WorshipLiveContext?
 }
+
+
+struct FollowLeaderButton: View {
+    let session: String
+    let follow: () -> Void
+    @State private var requestedSession: String?
+
+    var body: some View {
+        Button("Follow leader", systemImage: "link") { requestedSession = session }
+            .labelStyle(.iconOnly)
+            .confirmationDialog("Link to the leader?", isPresented: Binding(
+                get: { requestedSession != nil },
+                set: { if !$0 { requestedSession = nil } }
+            ), titleVisibility: .visible, presenting: requestedSession) { confirmed in
+                Button("Follow leader") {
+                    if confirmed == session { follow() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("Your iPad will open the leader’s song and follow their page changes.")
+            }
+    }
+}
