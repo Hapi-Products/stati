@@ -36,7 +36,7 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Scan a Stați computer QR code or a paper document to share with your ministry group.</string>
+	<string>Scan Stați computer and Ilumin8 clicker QR codes, or scan paper documents to share with your ministry group.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

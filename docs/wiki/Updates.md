@@ -1,11 +1,13 @@
 # Stați updates
 
-**Updated on** November 14, 2026 · **Updated by** Codex for Stați
+**Updated on** November 21, 2026 · **Updated by** Codex for Stați
 
 Published downloads are listed at [Stați releases](https://github.com/markusciani/stati-releases/releases). This page also documents development builds so you can tell when the instructions require a preview.
 
 | Build or platform | Change and status |
 | --- | --- |
+| Ilumin8 profile and service access preview | The signed-in Stați scanner verifies the first name and profile photo for Ilumin8. The operator can grant song, slide, or stage-timer access and restrict a participant for the current service. The phone and tablet build requires physical verification. [Connection guide](https://github.com/Hapi-Products/stati/wiki/Connect-a-Computer#use-the-ilumin8-clicker) |
+| Ilumin8 connection | Ilumin8 0.1.7 can pair a Stați account, import an approved song library, and publish lyrics for worship phones and tablets. The Stați web scanner can open Ilumin8’s approved local clicker. Native iPhone and iPad scanner changes are in development. The physical-device workflow still needs verification. [Connection guide](https://github.com/Hapi-Products/stati/wiki/Connect-a-Computer#connect-ilumin8) |
 | iPhone and iPad development build 79 | Redesigns File Providers with the selected computer at the top, a dedicated Google Drive card, and a clear primary action. On iPhone, administrators can change or disconnect an approved folder from the card’s options menu. Installed on both physical development devices. |
 | Google Drive server fix | Fixes a Cloudflare request error that blocked folder approval and other Drive requests. Build 78 can use the fix. |
 | iPhone and iPad development build 78 | When linking a Google account, File Providers opens Google’s picker filtered to the exact folder approved for the selected computer. An administrator chooses the folder on iPhone for its first approval. The server is live and build 78 is installed on both physical development devices. A signed-in picker test is pending. |

@@ -34,10 +34,11 @@ export async function requireMinistryCapability(request:Request,env:Env,capabili
  if(!authority.capabilities[capability])throw new HttpError(403,'Your role does not allow this action.');
  return authority;
 }
+export const accountSongReadSql=`(actor.role='admin' OR ministry.role IN (${ministryRoles.map(role=>"'"+role+"'").join(',')}))`;
 function capabilitySql(capability:MinistryCapability,authority:MinistryAuthority){
  switch(capability){
-  case 'readSongs':return authority.kind==='operator'?"1=1":"(actor.role='admin' OR ministry.role IN ('worship_leader','worship_member','pastor','choir_director','commenter'))";
-  case 'commentSongs':return "(actor.role='admin' OR ministry.role IN ('worship_leader','worship_member','pastor','choir_director','commenter'))";
+  case 'readSongs':return authority.kind==='operator'?"1=1":accountSongReadSql;
+  case 'commentSongs':return accountSongReadSql;
   case 'createSlides':return authority.kind==='operator'?'1=1':'0=1';
   case 'planServices':return "(actor.role='admin' OR ministry.role IN ('worship_leader','worship_member','choir_director'))";
   case 'editLyrics':case 'manageTeam':return "actor.role='admin'";

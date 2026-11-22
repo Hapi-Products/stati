@@ -5,6 +5,7 @@ import VisionKit
 struct ConnectComputerView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var phase
     @State private var cameraAllowed = false
     @State private var code = ""
@@ -16,13 +17,15 @@ struct ConnectComputerView: View {
     @State private var pendingPairToken: String?
     @State private var pendingPairOwner: String?
     @State private var pendingPairEpoch: UUID?
+    @State private var confirmingClicker = false
+    @State private var pendingClicker: Ilumin8ClickerLink?
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
                 if finished { ContentUnavailableView(resultTitle, systemImage: "checkmark.circle", description: Text(message)) }
                 else {
                     if cameraAllowed && DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
-                        NativeComputerScanner(active: phase == .active && !busy && !confirmingPair, detected: receive, failed: { message = $0 }).frame(maxHeight: .infinity).clipShape(.rect(cornerRadius: 16)).accessibilityLabel("Scan a Stați computer QR code")
+                        NativeComputerScanner(active: phase == .active && !busy && !confirmingPair && !confirmingClicker, detected: receive, failed: { message = $0 }).frame(maxHeight: .infinity).clipShape(.rect(cornerRadius: 16)).accessibilityLabel("Scan a Stați computer or Ilumin8 clicker QR code")
                     } else { ContentUnavailableView("Scan a computer code", systemImage: "qrcode.viewfinder", description: Text(cameraAllowed ? "Enter the six-digit code shown on the computer." : "Allow camera access to scan, or enter the computer code below.")) }
                     if AVCaptureDevice.authorizationStatus(for: .video) == .denied {
                         Link("Camera settings", destination: URL(string: UIApplication.openSettingsURLString)!).frame(minHeight: 44)
@@ -32,6 +35,7 @@ struct ConnectComputerView: View {
                         Button("Connect", systemImage: "checkmark") { receive(code) }.labelStyle(ActionIconLabelStyle()).frame(width: 44, height: 44).buttonStyle(.glass).buttonBorderShape(.circle).disabled(code.count != 6 || busy)
                     }
                     Text("New computers use a pairing QR. Six-digit codes are available after setup.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Scan an Ilumin8 clicker QR to open the presentation remote.").font(.footnote).foregroundStyle(.secondary)
                     if busy { ProgressView("Connecting…") }
                     if !message.isEmpty { NoticeView(text: message) }
                 }
@@ -44,7 +48,21 @@ struct ConnectComputerView: View {
             }
             Button("Cancel", role: .cancel) { pendingPairToken = nil }
         } message: { Text("Only pair a computer you recognize. It will be registered with your signed-in Stați account.") }
-        .onChange(of: store.accountEpoch) { confirmingPair = false; pendingPairToken = nil }
+        .alert("Open Ilumin8 clicker?", isPresented: $confirmingClicker, presenting: pendingClicker) { clicker in
+            if clicker.stationID != nil {
+                if store.api.signedIn { Button("Open with Stați") { connectClicker(clicker) } }
+            } else { Button("Open in browser") { presentClicker(clicker.url) } }
+            Button("Cancel", role: .cancel) {
+                pendingClicker = nil
+                dismiss()
+            }
+        } message: { clicker in
+            Text("\(clicker.computerAddress)\n\n" + (clicker.stationID == nil
+                 ? "Continue if you recognize this computer, then approve this phone in Ilumin8."
+                 : store.api.signedIn ? "Open with Stați to share your first name and profile photo with this operator."
+                 : "Sign in to Stați before scanning this code again."))
+        }
+        .onChange(of: store.accountEpoch) { confirmingPair = false; pendingPairToken = nil; confirmingClicker = false; pendingClicker = nil }
         .onChange(of: phase) { _, value in if value == .active { cameraAllowed = AVCaptureDevice.authorizationStatus(for: .video) == .authorized } }.task {
             #if DEBUG && targetEnvironment(simulator)
             if NativeReview.route != nil { if NativeReview.route == "computers-pair-confirm" { receive("https://stati.ciani01.org/pair/aBcDef0123_-4567") }; return }
@@ -53,9 +71,46 @@ struct ConnectComputerView: View {
             if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined { cameraAllowed = await AVCaptureDevice.requestAccess(for: .video) }
         }
     }
+    private func presentClicker(_ url: URL) {
+        pendingClicker = nil
+        openURL(url) { accepted in
+            if accepted { dismiss() }
+            else { message = "The browser could not open the Ilumin8 clicker link." }
+        }
+    }
+
+    private func connectClicker(_ link: Ilumin8ClickerLink) {
+        guard let station = link.stationID, let binding = link.binding,
+              let owner = store.me?.id, store.api.signedIn else { return }
+        let epoch = store.accountEpoch
+        busy = true
+        message = ""
+        Task { @MainActor in
+            defer { busy = false }
+            do {
+                let response = try await store.api.request("/ilumin8/participant-ticket", method: "POST",
+                    body: .object(["stationId": .string(station), "binding": .string(binding)]))
+                try Task.checkCancellation()
+                guard owner == store.me?.id, epoch == store.accountEpoch else { return }
+                guard let url = link.sharingProfile(ticket: response["ticket"].text) else {
+                    throw APIError(status: 409, message: "Stați returned an invalid profile code.")
+                }
+                presentClicker(url)
+            } catch {
+                if owner == store.me?.id, epoch == store.accountEpoch { message = error.localizedDescription }
+            }
+        }
+    }
+
     private func receive(_ value: String) {
-        guard !busy, !finished, !confirmingPair else { return }
-        guard let target = ComputerScanTarget(value) else { message = "Scan a Stați computer QR code, or enter its six-digit code."; return }
+        guard !busy, !finished, !confirmingPair, !confirmingClicker else { return }
+        if let clicker = Ilumin8ClickerLink(value) {
+            message = ""
+            pendingClicker = clicker
+            confirmingClicker = true
+            return
+        }
+        guard let target = ComputerScanTarget(value) else { message = "Scan a Stați computer or Ilumin8 clicker QR code, or enter the Stați computer’s six-digit code."; return }
         if case .pairing(let token) = target {
             guard let owner = store.me?.id else { message = "Sign in before pairing a computer."; return }
             pendingPairToken = token; pendingPairOwner = owner; pendingPairEpoch = store.accountEpoch; confirmingPair = true; return
