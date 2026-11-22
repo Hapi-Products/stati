@@ -94,7 +94,11 @@ export async function publishStationCatalog(request:Request,env:Env,device:Devic
   const result=await env.DB.batch([
    env.DB.prepare(`UPDATE station_catalog_snapshots SET status='committing',updated_at=? WHERE device_id=? AND generation=? AND status='pending' AND updated_at>? AND expected_count=(SELECT COUNT(*) FROM station_catalog_staging song WHERE song.device_id=? AND song.generation=?) AND (expected_count>0 OR unreadable=0) AND ${deviceAccess.sql}`).bind(time,device.id,data.generation,time-3600,device.id,data.generation,...deviceAccess.params),
    env.DB.prepare('DELETE FROM station_catalog WHERE device_id=? AND '+committing.sql).bind(device.id,...committing.params),
-   env.DB.prepare('INSERT INTO station_catalog SELECT * FROM station_catalog_staging WHERE device_id=? AND generation=? AND '+committing.sql).bind(device.id,data.generation,...committing.params),
+   // A committed revision identifies exactly one set of rows, even when a
+   // publisher repeats a staging generation or updates twice in one second.
+   env.DB.prepare(`INSERT INTO station_catalog(device_id,song_id,title,content_hash,filename,category,language,font_size,text,first_slide,added_at,modified_at,generation,search_text,payload_bytes,group_name,source_song_id)
+    SELECT device_id,song_id,title,content_hash,filename,category,language,font_size,text,first_slide,added_at,modified_at,?,search_text,payload_bytes,group_name,source_song_id
+    FROM station_catalog_staging WHERE device_id=? AND generation=? AND ${committing.sql}`).bind(crypto.randomUUID(),device.id,data.generation,...committing.params),
    env.DB.prepare("UPDATE station_catalog_snapshots SET status='ready',ready_at=updated_at,ready_unreadable=unreadable WHERE device_id=? AND generation=? AND status='committing'").bind(device.id,data.generation),
    env.DB.prepare("DELETE FROM station_catalog_staging WHERE device_id=? AND generation=? AND EXISTS(SELECT 1 FROM station_catalog_snapshots snapshot WHERE snapshot.device_id=? AND snapshot.generation=? AND snapshot.status='ready')").bind(device.id,data.generation,device.id,data.generation),
   ]);

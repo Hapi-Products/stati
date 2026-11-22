@@ -1,6 +1,7 @@
-import {env,SELF} from 'cloudflare:test';
+import {createExecutionContext,env,SELF} from 'cloudflare:test';
 import {expect,it,vi} from 'vitest';
 import {hash,now,token,type Device} from '../src/server/core';
+import worker from '../src/server/index';
 import {publishStationCatalog,readStationCatalog} from '../src/server/station-catalog';
 import type {MinistryRole} from '../src/server/ministry-roles';
 
@@ -179,4 +180,193 @@ it('supports bounded larger native pages while preserving the default page and e
  expect((await list(await f.read())).items).toHaveLength(50);
  expect((await(await read('250',100)).json() as{items:{id:string}[]}).items.map(row=>row.id)).toEqual(songs.slice(100).map(row=>row.id));
  expect((await read('501')).status).toBe(400);expect((await read('0')).status).toBe(400);expect((await read('250',0,await person())).status).toBe(403);
+});
+
+
+const ilumin8Path='/station/ilumin8';
+type CatalogPage={items:{id:string;contentHash:string;title:string;text:string;language:string;firstSlide:string}[];nextCursor:string|null;generation:string};
+type CatalogSource={id:string;name:string};
+
+async function ilumin8Request(path:string,options:{credential?:string;method?:string;data?:unknown;cookie?:string;bindings?:Env}={}){
+ const {credential,method='GET',data,cookie,bindings=env}=options;
+ const response=await worker.fetch(new Request('http://localhost:8787/api'+path,{method,headers:{
+  ...(credential?{Authorization:'Bearer '+credential}:{}),
+  ...(cookie?{Cookie:'stati_access=isolated-test-access; '+cookie,Origin:'http://localhost:8787'}:{}),
+  ...(data===undefined?{}:{'Content-Type':'application/json'}),
+ },body:data===undefined?undefined:JSON.stringify(data)}),bindings,createExecutionContext());
+ return response;
+}
+
+async function ilumin8Pair(owner:Awaited<ReturnType<typeof person>>,purpose?:'ilumin8'){
+ const pending=await ilumin8Request('/devices/pair',{method:'POST',data:{name:'Ilumin8 fixture',purpose}});
+ expect(pending.status).toBe(200);
+ const {id,credential,code}=await pending.json<{id:string;credential:string;code:string}>();
+ const claimed=await ilumin8Request('/devices/claim',{method:'POST',cookie:owner.cookie,data:{code}});
+ expect(claimed.status).toBe(200);
+ return{id,credential,owner};
+}
+
+function importSongs(destination:{credential:string},source:string,after?:string,bindings=env){
+ const query=new URLSearchParams({source});
+ if(after!==undefined)query.set('after',after);
+ return ilumin8Request(ilumin8Path+'/songs?'+query,{credential:destination.credential,bindings});
+}
+
+async function importSources(destination:{credential:string},bindings=env){
+ const response=await ilumin8Request(ilumin8Path+'/sources',{credential:destination.credential,bindings});
+ expect(response.status).toBe(200);
+ return(await response.json<{sources:CatalogSource[]}>()).sources;
+}
+
+async function catalogPage(response:Response){
+ expect(response.status).toBe(200);
+ expect(response.headers.get('Cache-Control')).toBe('no-store');
+ return response.json<CatalogPage>();
+}
+
+it('imports only completed catalogs from owned or approved sources using an Ilumin8 pairing',async()=>{
+ const owned=await fixture(),shared=await fixture(),unrelated=await fixture(),unpublished=await fixture();
+ const destination=await ilumin8Pair(owned.owner,'ilumin8'),regular=await ilumin8Pair(owned.owner);
+ await approve(shared.id,owned.owner.id);
+ await approve(unpublished.id,owned.owner.id);
+ await owned.commit([song(1)]);
+ await shared.commit([song(2)]);
+ await unrelated.commit([song(3)]);
+ await env.DB.prepare('UPDATE devices SET last_seen=? WHERE id=?').bind(now()-86400,shared.id).run();
+ const sources=await importSources(destination);
+ expect(sources.map(source=>source.id).sort()).toEqual([owned.id,shared.id].sort());
+ expect(sources.every(source=>source.name==='Isolated catalog PC')).toBe(true);
+ const page=await catalogPage(await importSongs(destination,shared.id));
+ const {id,contentHash,title,text,language,firstSlide}=song(2);
+ expect(page.items).toEqual([{id,contentHash,title,text,language,firstSlide}]);
+ expect(page.nextCursor).toBeNull();
+ expect(page.generation).toBeTruthy();
+ for(const source of [unrelated.id,destination.id,crypto.randomUUID()])expect((await importSongs(destination,source)).status).toBe(404);
+ expect((await importSongs(destination,unpublished.id)).status).toBe(409);
+ expect((await importSongs(destination,'not-a-uuid')).status).toBe(400);
+ expect((await importSongs(destination,shared.id,'')).status).toBe(400);
+ expect((await importSongs(destination,shared.id,'not-a-song-id')).status).toBe(400);
+ expect((await importSongs(regular,owned.id)).status).toBe(403);
+ expect((await ilumin8Request(ilumin8Path+'/sources',{cookie:owned.owner.cookie})).status).toBe(401);
+});
+
+it('rechecks current song-reading rights and source disconnections for Ilumin8',async()=>{
+ const source=await fixture(),reader=await person(null),destination=await ilumin8Pair(reader,'ilumin8');
+ await source.commit([song(1)]);
+ await approve(source.id,reader.id);
+ expect(await importSources(destination)).toEqual([]);
+ expect((await importSongs(destination,source.id)).status).toBe(404);
+ await env.DB.prepare("INSERT INTO user_ministry_roles VALUES(?,'worship_member',NULL,?)").bind(reader.id,now()).run();
+ expect((await catalogPage(await importSongs(destination,source.id))).items).toHaveLength(1);
+ await approve(source.id,reader.id,'denied');
+ expect((await importSongs(destination,source.id)).status).toBe(404);
+ await approve(source.id,reader.id);
+ await env.DB.prepare('INSERT INTO station_disconnections VALUES(?,?,?,?)').bind(source.id,reader.id,now(),crypto.randomUUID()).run();
+ expect(await importSources(destination)).toEqual([]);
+ expect((await importSongs(destination,source.id)).status).toBe(404);
+ await env.DB.prepare('DELETE FROM station_disconnections WHERE device_id=? AND user_id=?').bind(source.id,reader.id).run();
+ await env.DB.prepare("UPDATE users SET status='removed' WHERE id=?").bind(source.owner.id).run();
+ expect(await importSources(destination)).toEqual([]);
+ expect((await importSongs(destination,source.id)).status).toBe(404);
+});
+
+it('paginates imported songs by key and generation while pending replacements remain hidden',async()=>{
+ const source=await fixture(),destination=await ilumin8Pair(source.owner,'ilumin8');
+ const songs=Array.from({length:43},(_,index)=>song(index+1));
+ const published=await source.commit(songs.slice().reverse());
+ const first=await catalogPage(await importSongs(destination,source.id));
+ expect(first.items.map(item=>item.id)).toEqual(songs.slice(0,40).map(item=>item.id));
+ expect(first.nextCursor).toBe(songs[39].id);
+ expect((await source.publish({action:'begin',generation:published,count:1,unreadable:0})).status).toBe(200);
+ expect((await source.publish({action:'chunk',generation:published,songs:[song(100)]})).status).toBe(200);
+ const pending=await catalogPage(await importSongs(destination,source.id,first.nextCursor!));
+ expect(pending).toMatchObject({generation:first.generation,nextCursor:null});
+ expect(pending.items.map(item=>item.id)).toEqual(songs.slice(40).map(item=>item.id));
+ expect((await source.publish({action:'finish',generation:published})).status).toBe(200);
+ const replacement=await catalogPage(await importSongs(destination,source.id,first.nextCursor!));
+ expect(replacement.generation).not.toBe(first.generation);
+ expect(replacement.items.map(item=>item.id)).toEqual([song(100).id]);
+ await source.commit([]);
+ const empty=await catalogPage(await importSongs(destination,source.id));
+ expect(empty).toEqual({generation:expect.any(String),items:[],nextCursor:null});
+ expect(empty.generation).not.toBe(replacement.generation);
+});
+
+it('bounds Ilumin8 lyric pages by serialized bytes and resumes at the last returned song',async()=>{
+ const source=await fixture(),destination=await ilumin8Pair(source.owner,'ilumin8');
+ const text='ă'.repeat(100000),songs=Array.from({length:3},(_,index)=>song(index+1,{text}));
+ const generation=crypto.randomUUID();
+ expect((await source.publish({action:'begin',generation,count:3,unreadable:0})).status).toBe(200);
+ for(const entry of songs)expect((await source.publish({action:'chunk',generation,songs:[entry]})).status).toBe(200);
+ expect((await source.publish({action:'finish',generation})).status).toBe(200);
+ const response=await importSongs(destination,source.id);
+ expect((await response.clone().arrayBuffer()).byteLength).toBeLessThanOrEqual(512*1024);
+ const first=await catalogPage(response);
+ expect(first.items.map(item=>item.id)).toEqual([songs[0].id,songs[1].id]);
+ expect(first.items[0].text).toBe(text);
+ expect(first.nextCursor).toBe(songs[1].id);
+ const second=await catalogPage(await importSongs(destination,source.id,first.nextCursor!));
+ expect(second.items.map(item=>item.id)).toEqual([songs[2].id]);
+ expect(second.nextCursor).toBeNull();
+ expect(second.generation).toBe(first.generation);
+});
+
+function beforeCatalogRead(change:()=>Promise<unknown>){
+ let injected=false;
+ const DB=new Proxy(env.DB,{get(target,property){
+  if(property!=='prepare'){const value=Reflect.get(target,property);return typeof value==='function'?value.bind(target):value;}
+  return(query:string)=>{
+   const statement=target.prepare(query);
+   if(!query.includes('station_catalog'))return statement;
+   return new Proxy(statement,{get(unbound,key){
+    const value=Reflect.get(unbound,key);
+    if(key!=='bind')return typeof value==='function'?value.bind(unbound):value;
+    return(...values:unknown[])=>new Proxy(unbound.bind(...values),{get(bound,operation){
+     if(operation==='all')return async()=>{if(!injected){injected=true;await change();}return bound.all();};
+     const method=Reflect.get(bound,operation);return typeof method==='function'?method.bind(bound):method;
+    }});
+   }});
+  };
+ }});
+ return{bindings:{...env,DB},injected:()=>injected};
+}
+
+it.each(['credential','paired owner','source membership','source device'] as const)('authoritatively rechecks Ilumin8 %s after initial device authentication',async changed=>{
+ const source=await fixture(),reader=await person(),destination=await ilumin8Pair(reader,'ilumin8');
+ await source.commit([song(1)]);
+ await approve(source.id,reader.id);
+ const race=beforeCatalogRead(async()=>{
+  if(changed==='credential')await env.DB.prepare('UPDATE devices SET token_hash=? WHERE id=?').bind(await hash(token()),destination.id).run();
+  if(changed==='paired owner')await env.DB.prepare("UPDATE users SET status='removed' WHERE id=?").bind(reader.id).run();
+  if(changed==='source membership')await approve(source.id,reader.id,'denied');
+  if(changed==='source device')await env.DB.prepare('UPDATE devices SET revoked_at=? WHERE id=?').bind(now(),source.id).run();
+ });
+ expect((await importSongs(destination,source.id,undefined,race.bindings)).status).toBe(changed.startsWith('source')?404:403);
+ expect(race.injected()).toBe(true);
+});
+
+it('lets an Ilumin8 pairing revoke only itself and close its own receiver',async()=>{
+ const source=await fixture(),destination=await ilumin8Pair(source.owner,'ilumin8');
+ await source.commit([song(1)]);
+ for(const computer of [source,destination]){
+  const response=await ilumin8Request('/station/receiver',{method:'POST',credential:computer.credential});
+  expect(response.status).toBe(200);
+ }
+ const disconnect=(credential:string)=>ilumin8Request(ilumin8Path+'/connection',{method:'DELETE',credential,data:{id:source.id}});
+ expect((await disconnect(source.credential)).status).toBe(403);
+ expect((await disconnect(destination.credential)).status).toBe(200);
+ const records=await env.DB.prepare('SELECT devices.id,devices.revoked_at,receivers.closed_at FROM devices JOIN receivers ON receivers.device_id=devices.id WHERE devices.id IN (?,?)').bind(source.id,destination.id).all();
+ expect(records.results).toEqual(expect.arrayContaining([
+  {id:destination.id,revoked_at:expect.any(Number),closed_at:expect.any(Number)},
+  {id:source.id,revoked_at:null,closed_at:null},
+ ]));
+ expect((await importSongs(destination,source.id)).status).toBe(401);
+ expect((await ilumin8Request('/devices/pair/status',{credential:destination.credential})).status).toBe(410);
+});
+
+it('advertises the Ilumin8 pairing protocol before creating a device',async()=>{
+ const response=await ilumin8Request('/ilumin8/compatibility');
+ expect(response.status).toBe(200);
+ expect(response.headers.get('Cache-Control')).toBe('no-store');
+ expect(await response.json()).toEqual({protocol:'ilumin8-stati-v1'});
 });

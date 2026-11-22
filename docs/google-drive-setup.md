@@ -11,7 +11,7 @@ The iPad chooses an individual Drive item using Google Picker and sends its auth
 5. In Stați on iPhone, sign in as an administrator and open **Profile → Features → File Providers**. Choose a computer and approve a shared folder named **stati-music**, **stati-folder**, or **stati**. Under **Member Access**, give a test member one account slot. Check that the member can add an account from Features on iPad or iPhone. On iPad, select a synthetic song from the folder and send it to the test computer for review. Check cancellation, a second Google account, a file outside the approved folder, and revocation.
 6. Review the OAuth branding and privacy disclosures for the actual deployment before submitting the app to Google for production verification. Use Verification Center to check the result.
 
-For account linking, Stați passes the approved folder ID to Google Picker using `file_ids`. The Google account must already be able to open the folder. The first approval uses Google’s folder picker. Test OAuth and Picker behavior with a signed-in account in the configured Google project.
+Beginning with build 81, the user can search the signed-in Google Drive in Google Picker to find a folder. Account linking still requires selecting the exact approved folder. The Google account must already be able to open it. Test OAuth and Picker behavior with a signed-in account in the configured Google project.
 
 [Google Picker for desktop and mobile apps](https://developers.google.com/workspace/drive/picker/guides/desktop-mobile-picker)
 [Google OAuth branding verification](https://developers.google.com/identity/verification/authentication-verification)

@@ -1,6 +1,6 @@
 # Stați Worship for iPad
 
-**Updated on** November 14, 2026 · **Updated by** Codex for Stați
+**Updated on** November 21, 2026 · **Updated by** Codex for Stați
 
 Stați Worship brings together **Recents**, **Groups**, **Browse**, and **Service**. The computer you select and your church role determine the material you can open.
 
@@ -43,9 +43,7 @@ If you can manage notes, open a song and choose **Reader options (•••) →
 
 ### Choose from an approved Google Drive folder
 
-Open **Features → File Providers**, choose the presentation computer, then tap **Add Google Account**. Starting with build 78, Google’s picker shows the exact approved folder for that computer. Confirm it with a Google account that can open it. While the Google project is in Testing, use a Google account listed under Test users. The Files picker steps above also work with Google Drive enabled in Apple’s Files app.
-
-In development build 79, the computer picker is above the **Google Drive** card. Tap **Add Google Account** on the card and check the **Google Accounts** section for the number of linked accounts.
+Open **Features → File Providers**. In development build 81, tap the computer name below the title to select the presentation computer. Open the **Google Drive** tile, then under **Google Accounts**, tap **Add Google Account**. Use Google’s picker to search your signed-in Drive and select the approved folder for that computer. While the Google project is in Testing, use a Google account listed under Test users. Check **Google Accounts** for the number of linked accounts.
 
 Administrators approve the shared folder and set account limits per person on iPhone. On iPad, open **Service → Song requests and uploads** and tap **Choose from Google Drive**. Choose a file inside the approved folder, then tap **Send Drive attachment**. After the computer receives it, tap **Submit song request** for review. [iPhone administrator setup](https://github.com/Hapi-Products/stati/wiki/iPhone#manage-file-provider-access)
 
@@ -106,3 +104,9 @@ Open **Account → Worship → Groups**. If you own the group or are an administ
 Open your account, then **Features** for reader, library, and update controls or **Worship** for group choices. The account header shows your name and photo. Find the app version in **Settings → Apps → Stazi Beta** on the development build or **Settings → Apps → Stați Worship** on the regular build. In Stazi Beta, turn on **Developer Mode** in Features to use Stați shortcuts on iPadOS 27.3 or later. Open **Account → Diagnostics** inside Stați to review or copy the last 24 hours of errors. [Siri commands](https://github.com/Hapi-Products/stati/wiki/Siri-and-Shortcuts) · [Report a problem](https://github.com/Hapi-Products/stati/wiki/Troubleshooting#report-a-problem-on-iphone-or-ipad)
 
 [Song reader tips](https://github.com/Hapi-Products/stati/wiki/Song-Reader) · [Worship settings walkthrough](https://github.com/Hapi-Products/stati/wiki/Worship-Settings) · [Tablet apps](https://github.com/Hapi-Products/stati/wiki/Tablet-Apps)
+
+## File provider library in build 81
+
+**Features → File Providers** shows a grid of Google Drive and Native Files tiles using the Stați appearance. Choose the destination computer beneath the navigation title. Native Files opens Apple’s file picker and previews the selected document. Google Drive opens account and approved-folder settings. Dropbox and TurboScan are planned and are not available yet.
+
+The signed build has passed compilation and scanner tests. Build 81 is installed on the development iPhone and iPad. Signed-in Google Picker and the full Ilumin8 clicker workflow still require a device check.

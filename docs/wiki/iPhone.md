@@ -1,6 +1,6 @@
 # Stați for iPhone
 
-**Updated on** November 14, 2026 · **Updated by** Codex for Stați
+**Updated on** November 21, 2026 · **Updated by** Codex for Stați
 
 The iPhone app combines **Send**, **Tasks**, **Profile**, and song search where your role allows it. The current development builds target iOS 26.3 or later. Check [Updates](https://github.com/Hapi-Products/stati/wiki/Updates) for the status of a specific build.
 
@@ -26,13 +26,13 @@ In builds 57–62, use the pause icon at the top of **Send**.
 
 ## Manage file provider access
 
-In development build 77, open **Profile → Features → File Providers** and select the presentation computer.
+In development build 77, open **Profile → Features → File Providers → Google Drive** and select the presentation computer.
 
 1. As an administrator, tap **Approve Drive Folder** and choose a shared Google Drive folder named **stati-music**, **stati-folder**, or **stati**.
 2. In **Member Access**, tap a person and set how many Google accounts they can use with this computer. Zero turns off access. Lowering the limit removes the most recently linked accounts that exceed it.
-3. An approved person can open **File Providers** and tap **Add Google Account**. Starting with build 78, Google’s picker shows the exact approved folder. Sign in with an account that can open it, then confirm the folder. The count shows how many accounts are linked and how many are allowed. Removing one frees a slot.
+3. An approved person can open **File Providers → Google Drive** and tap **Add Google Account** under **Google Accounts**. In build 81, search the signed-in Google Drive in the picker and select the approved folder. The count shows how many accounts are linked and how many are allowed. Removing one frees a slot.
 
-Starting with development build 79, the selected computer is above the **Google Drive** card. An iPhone administrator can open the card’s options menu to change or disconnect an approved folder. **Member Access** is below the Google accounts. The approved folder and account limits apply to the selected computer. [iPad song requests](https://github.com/Hapi-Products/stati/wiki/iPadOS#choose-from-an-approved-google-drive-folder)
+Starting with development build 81, tap the computer name below **File Providers** in the navigation bar to switch computers. An iPhone administrator can use **Folder options** on the Google Drive page to change or disconnect an approved folder. **Member Access** is below the Google accounts. The approved folder and account limits apply to the selected computer. [iPad song requests](https://github.com/Hapi-Products/stati/wiki/iPadOS#choose-from-an-approved-google-drive-folder)
 
 If you encountered “Google Drive did not respond” after selecting a folder before the November 14 server fix, return to **Approve Drive Folder** and make a fresh selection. Build 78 can use the server fix.
 
@@ -78,3 +78,9 @@ In Stazi Beta, enable **Developer Mode** in **Profile → Features** to run Sta�
 Song comments and corrections depend on your role and the song you opened. For an authorized correction, open the song and choose the correction action. Review the selected text before submitting.
 
 [Phone apps](https://github.com/Hapi-Products/stati/wiki/Phone-Apps) · [Connect a computer](https://github.com/Hapi-Products/stati/wiki/Connect-a-Computer)
+
+## File provider library in build 81
+
+**Features → File Providers** shows a grid of Google Drive and Native Files tiles using the Stați appearance. Choose the destination computer beneath the navigation title. Native Files opens Apple’s file picker and previews the selected document. Google Drive opens account and approved-folder settings. Dropbox and TurboScan are planned and are not available yet.
+
+The signed build has passed compilation and scanner tests. Build 81 is installed on the development iPhone and iPad. Signed-in Google Picker and the full Ilumin8 clicker workflow still require a device check.
